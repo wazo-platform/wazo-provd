@@ -49,6 +49,10 @@
         allow members of "CiscoSMBSPA509G";
         allow members of "CiscoSMBSPA525G";
         allow members of "CiscoSMBSPA525G2";
+        # Digium
+        allow members of "DigiumD40";
+        allow members of "DigiumD50";
+        allow members of "DigiumD70";
         # Doro
         allow members of "Doro-ip880-DECT";
         # Kirk
