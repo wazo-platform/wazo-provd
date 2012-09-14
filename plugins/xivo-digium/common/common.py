@@ -129,6 +129,7 @@ class BaseDigiumPlugin(StandardPlugin):
 
         raw_config['XX_mac'] = self._format_mac(device)
         raw_config['XX_main_proxy_ip'] = self._get_main_proxy_ip(raw_config)
+        raw_config['XX_funckeys'] = self._transform_funckeys(raw_config)
 
         path = os.path.join(self._digium_dir, filename)
         contact_path = os.path.join(self._digium_dir, contact_filename)
@@ -182,4 +183,9 @@ class BaseDigiumPlugin(StandardPlugin):
     def _dev_contact_filename(self, device):
         contact_filename = '%s-contacts.xml' % self._format_mac(device)
         return contact_filename
+
+    def _transform_funckeys(self, raw_config):
+        return dict(
+            (int(k), v) for k, v in raw_config['funckeys'].iteritems()
+        )
 
