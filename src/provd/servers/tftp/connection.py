@@ -148,9 +148,9 @@ class _AbstractConnection(DatagramProtocol):
         dgram = build_dgram(err_packet(ERR_UNKNWN_TID, 'Unknown TID'))
         self.transport.write(dgram, addr)
 
-    def _handle_invalid_dgram(self):
+    def _handle_invalid_dgram(self, errmsg='Invalid datagram'):
         """Called when a datagram sent by the remote host could not be parsed."""
-        dgram = build_dgram(err_packet(ERR_UNDEF, 'Invalid datagram'))
+        dgram = build_dgram(err_packet(ERR_UNDEF, errmsg))
         self.transport.write(dgram, self._addr)
         self.__do_close()
 
