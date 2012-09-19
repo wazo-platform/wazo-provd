@@ -18,12 +18,11 @@ __license__ = """
 """
 
 import unittest
-from provd.servers.tftp.packet import *
+from provd.servers.tftp.packet import parse_dgram, PacketError, OP_RRQ
 
-RRQ_DGRAM_OPTS_1 = ('\x00\x01filename\x00mode\x00opt1\x00value1\x00',
-                    (OP_RRQ, 'filename', 'mode', {'opt1': 'value1'}))
 
 class TestTFTP(unittest.TestCase):
+
     def test_parse_valid_rrq_dgram_correctly(self):
         self.assertEqual({'opcode': OP_RRQ, 'filename': 'fname', 'mode': 'mode', 'options': {}},
                          parse_dgram('\x00\x01fname\x00mode\x00'))
@@ -33,3 +32,8 @@ class TestTFTP(unittest.TestCase):
         self.assertRaises(PacketError, parse_dgram, '')
         self.assertRaises(PacketError, parse_dgram, '\x01')
         self.assertRaises(PacketError, parse_dgram, '\x00\x01')
+
+    def test_parse_invalid_error_datagram_raise_error(self):
+        datagram = '\x00\x05\x00\x01'
+
+        self.assertRaises(PacketError, parse_dgram, datagram)

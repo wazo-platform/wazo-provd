@@ -188,9 +188,9 @@ class _AbstractConnection(DatagramProtocol):
             else:
                 try:
                     pkt = parse_dgram(dgram)
-                except PacketError:
-                    logger.info('Received an invalid datagram')
-                    self._handle_invalid_dgram('ACK packet')
+                except PacketError as e:
+                    logger.info('Received an invalid datagram: %s', e)
+                    self._handle_invalid_dgram()
                 else:
                     if pkt['opcode'] == OP_ERR:
                         logger.info('Received an error packet')
