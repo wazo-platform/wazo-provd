@@ -26,11 +26,11 @@ import shutil
 import tarfile
 import weakref
 from binascii import a2b_hex
-from fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
+from xivo_fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
     new_downloaders_from_handlers
-from fetchfw.package import PackageManager, InstallerController, \
+from xivo_fetchfw.package import PackageManager, InstallerController, \
     UninstallerController
-from fetchfw.storage import DefaultRemoteFileBuilder, DefaultFilterBuilder, \
+from xivo_fetchfw.storage import DefaultRemoteFileBuilder, DefaultFilterBuilder, \
     DefaultInstallablePkgStorage, DefaultInstallMgrFactoryBuilder, \
     DefaultPkgBuilder, DefaultInstalledPkgStorage
 from provd.download import async_download_with_oip, OperationInProgressHook

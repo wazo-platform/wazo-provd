@@ -22,7 +22,7 @@ __license__ = """
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from fetchfw import download
+from xivo_fetchfw import download
 from provd.operation import OperationInProgress, OIP_SUCCESS, OIP_FAIL, \
     OIP_PROGRESS
 from twisted.internet import threads, defer
