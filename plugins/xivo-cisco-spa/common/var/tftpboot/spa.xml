@@ -40,7 +40,7 @@ usefulness/applicability.
 
 <RTP-Start-Loopback_Codec>G711a</RTP-Start-Loopback_Codec>
 
-<Reorder_Delay>255</Reorder_Delay>
+<Reorder_Delay>5</Reorder_Delay>
 <Interdigit_Long_Timer>10</Interdigit_Long_Timer>
 <Interdigit_Short_Timer>6</Interdigit_Short_Timer>
 
