@@ -118,7 +118,7 @@ class BaseSnomPlugin(StandardPlugin):
         u'fr_FR': (u'Francais', u'FRA'),
         u'fr_CA': (u'Francais', u'USA'),
         u'it_IT': (u'Italiano', u'ITA'),
-        u'nl_NL': (u'Dutch', u'NED'),
+        u'nl_NL': (u'Dutch', u'NLD'),
     }
     _SIP_DTMF_MODE = {
         u'RTP-in-band': u'off',
