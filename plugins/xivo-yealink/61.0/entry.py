@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 
-"""Plugin for Yealink phones using the 60.0.110 firmware.
+"""Plugin for Yealink phones using the 61.0.XX firmware.
 
 The following Yealink phones are supported:
 - T20P
