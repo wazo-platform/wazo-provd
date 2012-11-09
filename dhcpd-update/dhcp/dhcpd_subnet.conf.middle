@@ -70,6 +70,8 @@
         # Nortel
         allow members of "Nortel-SIP";
         allow members of "Nortel-UNIStim";
+        # Panasonic
+        allow members of "Panasonic";
         # Siemens
         allow members of "SiemensC470IP";
         allow members of "SiemensS675IP";
