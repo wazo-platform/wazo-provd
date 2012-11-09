@@ -6,6 +6,11 @@ VLAN_ENABLE="Y"
 VLAN_ID_IP_PHONE="{{ vlan_id }}"
 {% if vlan_pc_port_id is defined -%}
 VLAN_ID_PC="{{ vlan_pc_port_id }}"
+{% endif -%}
+{% else -%}
+VLAN_ENABLE="N"
+{% endif -%}
+
 
 {# NTP settings -#}
 NTP_ADDR="{{ ntp_ip }}"
@@ -14,6 +19,7 @@ NTP_ADDR="{{ ntp_ip }}"
 {% if syslog_enabled -%}
 SYSLOG_ADDR="{{ syslog_ip }}"
 SYSLOG_PORT="{{ syslog_port }}"
+{% endif -%}
 
 
 {# SIP per-line settings -#}
