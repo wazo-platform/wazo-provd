@@ -12,7 +12,7 @@ setup(
     maintainer_email='technique@proformatique.com',
     url='http://wiki.xivo.fr/',
     license='GPLv3',
-    
+
     packages=['provd',
               'provd.devices',
               'provd.persist',
