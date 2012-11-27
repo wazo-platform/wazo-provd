@@ -387,7 +387,7 @@ def _null_function(*args, **kwargs):
 class ProvisioningServiceMaker(object):
     implements(IServiceMaker, IPlugin)
 
-    tapname = 'provd'
+    tapname = 'xivo-provd'
     description = 'A provisioning server.'
     options = provd.config.Options
 
@@ -399,7 +399,7 @@ class ProvisioningServiceMaker(object):
         else:
             handler = UTFFixedSysLogHandler('/dev/log', SysLogHandler.LOG_DAEMON,
                                             add_bom=False)
-            handler.setFormatter(logging.Formatter('provd[%(process)d]: %(message)s'))
+            handler.setFormatter(logging.Formatter('xivo-provd[%(process)d]: %(message)s'))
         root_logger = logging.getLogger()
         root_logger.addHandler(handler)
         if options['verbose']:
