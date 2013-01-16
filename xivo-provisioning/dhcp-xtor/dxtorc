@@ -52,7 +52,7 @@ import socket
 import sys
 import StringIO
 
-UNIX_SERVER_ADDR = '/var/run/dxtora.ctl'
+UNIX_SERVER_ADDR = '/var/run/xivo-dxtora.ctl'
 
 
 def msg_exit(err_msg):
