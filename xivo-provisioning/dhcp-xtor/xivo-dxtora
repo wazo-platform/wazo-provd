@@ -38,12 +38,12 @@ import socket
 import sys
 from logging.handlers import SysLogHandler
 
-CONFIG_FILE      = '/etc/pf-xivo/dxtora.conf'
-PID_FILE         = '/var/run/dxtora.pid'
-UNIX_SERVER_ADDR = '/var/run/dxtora.ctl'
-PROV_MIME_TYPE   = 'application/vnd.proformatique.provd+json'
+CONFIG_FILE = '/etc/pf-xivo/dxtora.conf'
+PID_FILE = '/var/run/xivo-dxtora.pid'
+UNIX_SERVER_ADDR = '/var/run/xivo-dxtora.ctl'
+PROV_MIME_TYPE = 'application/vnd.proformatique.provd+json'
 
-logger = logging.getLogger('dxtora')
+logger = logging.getLogger('xivo-dxtora')
 
 
 class DHCPInfoSourceError(Exception):
@@ -62,27 +62,27 @@ class PidFileError(Exception):
 
 class StreamDHCPInfoSink(object):
     """A destination for DHCP information objects.
-    
+
     Write the DHCP information as a string to a file object.
-    
+
     Useful for testing/debugging...
-    
+
     """
     def __init__(self, fobj):
         self._fobj = fobj
-    
+
     def close(self):
         pass
-    
+
     def push(self, dhcp_info):
         self._fobj.write(str(dhcp_info) + '\n')
 
 
 class ProvServerDHCPInfoSink(object):
     """A destination for DHCP information objects.
-    
+
     Send the DHCP information to a provisioning server via its REST API.
-    
+
     """
     def __init__(self, base_uri, username=None, password=None):
         handlers = []
@@ -94,10 +94,10 @@ class ProvServerDHCPInfoSink(object):
         self._opener = urllib2.build_opener(*handlers)
         self._base_uri = base_uri
         self._resource_uri = None
-    
+
     def close(self):
         pass
-    
+
     def _update_resource_uri(self):
         headers = {'Accept': PROV_MIME_TYPE}
         request = urllib2.Request(self._base_uri, headers=headers)
@@ -106,7 +106,7 @@ class ProvServerDHCPInfoSink(object):
             content = json.load(f)
         finally:
             f.close()
-            
+
         links = content['links']
         for link in links:
             if link['rel'] == 'dev.dhcpinfo':
@@ -114,7 +114,7 @@ class ProvServerDHCPInfoSink(object):
                 break
         else:
             raise DHCPInfoSinkError('no link to DHCP info resource on base resource')
-            
+
     def _do_push(self, dhcp_info, retry_on_404=True):
         if self._resource_uri is None:
             self._update_resource_uri()
@@ -146,16 +146,16 @@ class ProvServerDHCPInfoSink(object):
 
 class UnixSocketDHCPInfoSource(object):
     """A source of DHCP information objects.
-    
+
     Use a Unix datagram socket to get DHCP information.
-    
+
     """
     def __init__(self, ctl_file, remove_file=False):
         """Create a new source.
-        
+
         Raise a socket.error exception if the socket can't be binded to
         ctl_file.
-        
+
         """
         if remove_file:
             try:
@@ -169,16 +169,16 @@ class UnixSocketDHCPInfoSource(object):
         except socket.error:
             self._sock.close()
             raise
-    
+
     def close(self):
         self._sock.close()
         _remove(self._ctl_file)
-    
+
     def _check_op(self, op):
         # check that op is one of the 3 valid values
         if op not in ('commit', 'expiry', 'release'):
             raise DHCPInfoSourceError("invalid 'op' value: %s" % op)
-    
+
     def _check_ip(self, ip):
         # check that ip is a dotted quad ip
         try:
@@ -186,12 +186,12 @@ class UnixSocketDHCPInfoSource(object):
             socket.inet_aton(ip)
         except socket.error:
             raise DHCPInfoSourceError("invalid 'ip' value: %s" % ip)
-    
+
     def _check_mac(self, mac):
         # check that mac is a lowercase, colon separated mac
         # TODO if we really care
         pass
-    
+
     def _check_options(self, options):
         # check that options is a sequence of valid option
         for option in options:
@@ -204,11 +204,11 @@ class UnixSocketDHCPInfoSource(object):
             else:
                 if not 0 <= num <= 255:
                     raise DHCPInfoSourceError("invalid 'option' value: invalid code")
-    
+
     def _decode(self, data):
         """Takes the raw data from a request and return an dhcp_info
         dict ('op', 'ip', 'mac' and 'options').
-        
+
         """
         lines = filter(None, data.split('\n'))
         dhcp_info = {}
@@ -226,12 +226,12 @@ class UnixSocketDHCPInfoSource(object):
             raise DHCPInfoSourceError(e)
         else:
             return dhcp_info
-    
+
     def pull(self):
         """Get a dhcp_info object from the source.
-        
+
         Note: this is a blocking call.
-        
+
         """
         logger.info('Pulling DHCP info from unix socket')
         data = self._sock.recvfrom(2048)[0]
@@ -242,13 +242,13 @@ class UnixSocketDHCPInfoSource(object):
 class Agent(object):
     """An agent that reads DHCP info from a source and send it to a sink in
     a loop.
-    
+
     """
     def __init__(self, source, sink):
         """Create an agent."""
         self._source = source
         self._sink = sink
-    
+
     def run(self):
         """Run the agent in loop."""
         while True:
@@ -293,7 +293,7 @@ class PidFile(object):
                     raise
             else:
                 logger.error('Found fresh pidfile %s', self._pid_file)
-    
+
     def _create_pid_file(self):
         pid = os.getpid()
         tmp_pid_file = self._pid_file + '.' + str(pid)
@@ -312,7 +312,7 @@ class PidFile(object):
                 raise PidFileError("couldn't create pid file: %s" % e)
             finally:
                 os.unlink(tmp_pid_file)
-    
+
     def __init__(self, pid_file):
         self._pid_file = pid_file
         self._remove_stale_pid_file()
@@ -320,7 +320,7 @@ class PidFile(object):
 
     def _remove_pid_file(self):
         _remove(self._pid_file)
-        
+
     def close(self):
         self._remove_pid_file()
 
@@ -341,7 +341,7 @@ def _read_config_from_file(filename):
         config.readfp(fobj)
     finally:
         fobj.close()
-    
+
     result = {'general': {}, 'prov_server': {}}
     def _get(section, option, getname='get'):
         if config.has_option(section, option):
@@ -361,7 +361,7 @@ def _read_config_from_commandline():
     parser.add_option('-f', '--foreground', action='store_true', dest='foreground',
                       help="don't daemonize")
     opt, args = parser.parse_args()
-    
+
     result = {'general': {}, 'prov_server': {}}
     if opt.foreground:
         result['general']['foreground'] = opt.foreground
@@ -404,11 +404,11 @@ def _daemonize():
     except OSError, e:
         logger.exception("first fork() failed: %d (%s)", e.errno, e.strerror)
         sys.exit(1)
-    
+
     os.chdir("/")
     os.setsid()
     os.umask(0)
-    
+
     try:
         pid = os.fork()
         if pid != 0:
@@ -416,9 +416,9 @@ def _daemonize():
     except OSError, e:
         logger.exception("second fork() failed: %d (%s)", e.errno, e.strerror)
         sys.exit(1)
-    
+
     devnull_fd = os.open(os.devnull, os.O_RDWR)
-    try: 
+    try:
         for fd in (0, 1, 2):
             os.dup2(devnull_fd, fd)
     finally:
@@ -434,7 +434,7 @@ def main():
     import signal
 
     config = _read_config(CONFIG_FILE)
-    
+
     logger.setLevel(logging.INFO)
     if config['general']['foreground']:
         handler = logging.StreamHandler()
@@ -442,14 +442,14 @@ def main():
         logger.addHandler(handler)
     else:
         handler = SysLogHandler('/dev/log', SysLogHandler.LOG_DAEMON)
-        handler.setFormatter(logging.Formatter("dxtora[%(process)d]: %(message)s"))
+        handler.setFormatter(logging.Formatter("xivo-dxtora[%(process)d]: %(message)s"))
         logger.addHandler(handler)
 
     if 'dev_mgr_uri' not in config['prov_server']:
         logger.error('error: no device manager URI specified. Exiting.')
         sys.exit(1)
     base_uri = config['prov_server']['dev_mgr_uri']
-    
+
     username = config['prov_server'].get('username')
     password = config['prov_server'].get('password')
     sink = ProvServerDHCPInfoSink(base_uri, username, password)

@@ -29,7 +29,7 @@ setup(
                   'twisted': ['.noinit'],
                   'twisted.plugins': ['provd_plugins.py', '.noinit']},
     scripts=['dhcpd-update/dhcpd-update',
-             'dhcp-xtor/dxtora',
+             'dhcp-xtor/xivo-dxtora',
              'dhcp-xtor/dxtorc',
              'scripts/provd_pycli'],
     data_files=[('/etc/pf-xivo/provd', ['resources/etc/provd.conf',
