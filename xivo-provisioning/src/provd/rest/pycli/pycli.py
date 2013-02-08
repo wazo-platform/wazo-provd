@@ -72,8 +72,11 @@ parameters = client.parameters()
 
 ## test connectivity
 def prompt_continue(err_msg):
+    if opts.command:
+        return
+
     continue_ = raw_input(err_msg + ' Continue anyway ? [y/N] ')
-    if len(continue_) == 1 and continue_[0].lower() == 'y':
+    if continue_ == 'y' or continue_ == 'Y':
         return
     else:
         sys.exit(1)
