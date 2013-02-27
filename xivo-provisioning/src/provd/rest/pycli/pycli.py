@@ -71,32 +71,11 @@ plugins = client.plugins()
 parameters = client.parameters()
 
 ## test connectivity
-def prompt_continue(err_msg):
-    if opts.command:
-        return
-
-    continue_ = raw_input(err_msg + ' Continue anyway ? [y/N] ')
-    if continue_ == 'y' or continue_ == 'Y':
-        return
-    else:
-        sys.exit(1)
-
-print "Testing server connectivity... ",
 try:
     client.test_connectivity()
-except urllib2.HTTPError, e:
-    print e
-    if e.code == 403:
-        prompt_continue('Username/password doesn\'t seem to be good.')
-    elif e.code == 404:
-        prompt_continue('Entry point resource not found.')
-    else:
-        prompt_continue('Received HTTP %s.' % e.code)
-except Exception, e:
-    print e
-    prompt_continue('Error while connecting.')
-else:
-    print "ok."
+except Exception as e:
+    print >>sys.stderr, 'Error while connecting to xivo-provd:', e
+    sys.exit(1)
 
 
 # create help
@@ -507,12 +486,16 @@ except EnvironmentError:
 
 
 # create interpreter and interact with user
+class CustomInteractiveConsole(code.InteractiveConsole):
+
+    def write(self, data):
+        sys.stdout.write(data)
+
 if opts.command:
     exec opts.command in cli_globals
 else:
-    cli = code.InteractiveConsole(cli_globals)
+    cli = CustomInteractiveConsole(cli_globals)
     cli.interact('')
-
 
 # save history file
 readline.set_history_length(DEFAULT_HISTFILESIZE)
