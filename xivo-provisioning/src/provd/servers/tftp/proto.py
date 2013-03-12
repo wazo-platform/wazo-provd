@@ -91,9 +91,9 @@ class TFTPProtocol(DatagramProtocol):
     def datagramReceived(self, dgram, addr):
         try:
             pkt = parse_dgram(dgram)
-        except PacketError:
+        except PacketError as e:
             # invalid datagram - ignore it
-            logger.info('Received invalid TFTP datagram from %s', addr)
+            logger.info('Received invalid TFTP datagram from %s: %s', addr, e)
         else:
             if pkt['opcode'] == OP_WRQ:
                 logger.info('TFTP write request from %s', addr)
