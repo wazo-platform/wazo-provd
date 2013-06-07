@@ -20,6 +20,7 @@
 
 # importing <module> as _<module> so that import are not autocompleted in the CLI
 import operator as _operator
+import sys as _sys
 from provd.persist.common import ID_KEY as _ID_KEY
 
 
@@ -102,6 +103,10 @@ def mass_update_devices_plugin(old_plugin, new_plugin, synchronize=False):
     if not isinstance(new_plugin, basestring):
         raise ValueError(new_plugin)
 
+    installed_plugins = set(_plugins.installed())
+    if not _are_plugins_installed([old_plugin, new_plugin], installed_plugins):
+        return
+
     for device in _devices.find({u'plugin': old_plugin}):
         device[u'plugin'] = new_plugin
         print 'Updating device %s' % device[u'id']
@@ -110,6 +115,21 @@ def mass_update_devices_plugin(old_plugin, new_plugin, synchronize=False):
             print 'Synchronizing device %s' % device[u'id']
             _devices.synchronize(device)
         print
+
+
+def _are_plugins_installed(plugins, installed_plugins):
+    for plugin in plugins:
+        if not _is_plugin_installed(plugin, installed_plugins):
+            return False
+    return True
+
+
+def _is_plugin_installed(plugin, installed_plugins):
+    if plugin in installed_plugins:
+        return True
+
+    print >>_sys.stderr, 'Error: plugin %s is not installed' % plugin
+    return False
 
 
 def mass_synchronize():
