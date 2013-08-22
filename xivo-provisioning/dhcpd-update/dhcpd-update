@@ -90,7 +90,7 @@ def new_empty_dhcpd_update_file(dhcpd_dir):
 def _read_config_from_default(config):
     return {'general':
                 {'config_file': '/etc/pf-xivo/dhcpd-update.conf',
-                 'update_url': 'http://provd.xivo.fr/xivo/dhcpd-update/1.2/',
+                 'update_url': 'http://provd.xivo.fr/xivo/dhcpd-update/13.17/',
                  'dhcpd_dir': '/etc/dhcp/',
                  'subnet_file': 'dhcpd_subnet.conf'},
             }
