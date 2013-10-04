@@ -22,6 +22,8 @@
 
 import struct
 import logging
+from twisted.internet import epollreactor
+epollreactor.install()
 from provd.servers.tftp.packet import *
 from twisted.internet.protocol import DatagramProtocol
 
