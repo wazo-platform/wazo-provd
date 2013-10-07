@@ -22,9 +22,8 @@
 
 import struct
 import logging
-from twisted.internet import epollreactor
-epollreactor.install()
 from provd.servers.tftp.packet import *
+from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
 logger = logging.getLogger(__name__)
@@ -79,8 +78,6 @@ class _AbstractConnection(DatagramProtocol):
         self._last_blk_no = None
         self._retry_cnt = 0
         self._timeout_timer = None
-        from twisted.internet import reactor
-        self._reactor = reactor
 
     def _close(self):
         """Close this connection.
@@ -115,7 +112,7 @@ class _AbstractConnection(DatagramProtocol):
 
     def _set_timeout(self):
         logger.debug('Setting %ss timeout', self.timeout)
-        self._timeout_timer = self._reactor.callLater(self.timeout, self._timeout_expired)
+        self._timeout_timer = reactor.callLater(self.timeout, self._timeout_expired)
 
     def _timeout_expired(self):
         logger.info('Timeout has expired with current retry count %s', self._retry_cnt)

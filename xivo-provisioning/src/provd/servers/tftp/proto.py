@@ -18,6 +18,7 @@
 import logging
 from provd.servers.tftp.connection import RFC2347Connection, RFC1350Connection
 from provd.servers.tftp.packet import *
+from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
 logger = logging.getLogger(__name__)
@@ -73,10 +74,6 @@ class TFTPProtocol(DatagramProtocol):
                     connection.blksize = blksize
                 else:
                     connection = RFC1350Connection(addr, fobj)
-                from twisted.internet import reactor
-                # XXX although I see no reason why, if we want to run the
-                # protocol on any kind of datagram service, we'll need to
-                # change the next line
                 reactor.listenUDP(0, connection)
             request = {'address': addr, 'packet': pkt}
             response = _Response(on_reject, on_accept)
