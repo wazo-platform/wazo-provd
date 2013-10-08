@@ -544,7 +544,7 @@ class SimpleBackendDocumentCollection(object):
                 yield document[ID_KEY], value
 
     def _create_index(self, complex_key):
-        logger.debug('Creating index on complex key %s', complex_key)
+        logger.info('Creating index on complex key %s', complex_key)
         index = {}
         for id, value in self._new_id_and_value_iterator(complex_key):
             self._new_value_for_index(index, id, value)
