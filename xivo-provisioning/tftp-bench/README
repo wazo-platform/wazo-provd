@@ -1,0 +1,22 @@
+Usage
+=====
+
+On the target XiVO:
+
+#. install the "zero" xivo-provd plugin
+#. execute the following command::
+
+	cd /var/lib/xivo-provd/plugins/zero/var/tftpboot
+	for size in 16 256 768 1400 2K 4K 16K 1M; do
+		filename="test$size"
+		dd if=/dev/urandom of="$filename" bs="$size" count=1
+	done
+	cd -
+
+On your machine:
+
+#. make sure atftp is installed
+#. make a manual read request with atftp; this will
+   create a new device in xivo-provd, which you'll need to edit
+   to associate to the "zero" plugin
+#. run tftpb.py

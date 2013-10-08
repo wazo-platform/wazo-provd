@@ -23,6 +23,7 @@
 import struct
 import logging
 from provd.servers.tftp.packet import *
+from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,6 @@ class _AbstractConnection(DatagramProtocol):
         self._last_blk_no = None
         self._retry_cnt = 0
         self._timeout_timer = None
-        from twisted.internet import reactor
-        self._reactor = reactor
 
     def _close(self):
         """Close this connection.
@@ -98,7 +97,6 @@ class _AbstractConnection(DatagramProtocol):
     def __do_close(self):
         """Cleanup and make sure self._close is called once."""
         if not self._closed:
-            logger.debug('Closing connection')
             self._cancel_timeout()
             self._close()
             self._closed = True
@@ -106,14 +104,12 @@ class _AbstractConnection(DatagramProtocol):
 
     def _cancel_timeout(self):
         if self._timeout_timer:
-            logger.debug('Cancelling timeout')
             self._retry_cnt = 0
             self._timeout_timer.cancel()
             self._timeout_timer = None
 
     def _set_timeout(self):
-        logger.debug('Setting %ss timeout', self.timeout)
-        self._timeout_timer = self._reactor.callLater(self.timeout, self._timeout_expired)
+        self._timeout_timer = reactor.callLater(self.timeout, self._timeout_expired)
 
     def _timeout_expired(self):
         logger.info('Timeout has expired with current retry count %s', self._retry_cnt)
@@ -132,15 +128,12 @@ class _AbstractConnection(DatagramProtocol):
         try:
             dgram = self._next_dgram()
         except _NoMoreDatagramError:
-            logger.debug('No more datagram to send')
             self.__do_close()
         else:
-            logger.debug('Sending next datagram')
             self._send_dgram(dgram)
             self._last_dgram = dgram
 
     def _send_last_dgram(self):
-        logger.debug('Resending last datagram')
         self._send_dgram(self._last_dgram)
 
     def _handle_wrong_tid(self, addr):
@@ -161,25 +154,19 @@ class _AbstractConnection(DatagramProtocol):
     def _handle_ack(self, pkt):
         blk_no = _unpack_to_uint16(pkt['blkno'])
         if blk_no == self._blk_no:
-            logger.debug('Received ACK for current packet')
             self._last_blk_no = blk_no
             self._dup_ack = False
             self._cancel_timeout()
             self._send_next_dgram()
         elif blk_no == self._last_blk_no:
-            logger.debug('Received ACK for last packet')
             if not self._dup_ack:
                 self._dup_ack = True
                 self._cancel_timeout()
                 self._send_last_dgram()
-            else:
-                logger.debug('Duplicated ACK - ignoring')
         else:
-            logger.debug('Received ACK with an illegal block number')
             self._handle_illegal_pkt('Illegal block number')
 
     def datagramReceived(self, dgram, addr):
-        logger.debug('Datagram received')
         if not self._closed:
             if addr != self._addr:
                 logger.info('Datagram received with wrong TID')
@@ -201,11 +188,9 @@ class _AbstractConnection(DatagramProtocol):
                         self._handle_illegal_pkt()
 
     def startProtocol(self):
-        logger.debug('In startProtocol')
         self._send_next_dgram()
 
     def stopProtocol(self):
-        logger.debug('In stopProtocol')
         self.__do_close()
 
 
