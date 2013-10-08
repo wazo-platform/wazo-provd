@@ -132,7 +132,7 @@ class DefaultConfigSource(object):
         ('general.asterisk_ami_servers', '[("127.0.0.1", 5038, False, "provd", "provd")]'),
         ('database.type', 'json'),
         ('database.generator', 'default'),
-        ('database.ensure_common_indexes', 'False'),
+        ('database.ensure_common_indexes', 'True'),
         ('database.json_db_dir', 'jsondb'),
         ('database.shelve_db_dir', 'shelvedb'),
     ]
