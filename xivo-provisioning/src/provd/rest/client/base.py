@@ -698,6 +698,7 @@ def new_server_resource(server_uri, credentials=None):
         pwd_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
         pwd_manager.add_password(None, server_uri, user, passwd)
         handlers.append(urllib2.HTTPDigestAuthHandler(pwd_manager))
+    handlers.append(urllib2.ProxyHandler({}))
     opener = urllib2.build_opener(*handlers)
     broker = RequestBroker(opener)
     return ServerResource(server_uri, broker)
