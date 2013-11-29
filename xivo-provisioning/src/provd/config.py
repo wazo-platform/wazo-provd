@@ -55,7 +55,6 @@ configuration file are documented in provd.conf):
     database.generator
     database.ensure_common_indexes
     database.json_db_dir
-    database.shelve_db_dir
     plugin_config.*.*
         where the first * is a plugin ID and the second * is a parameter
         name for the plugin with the given ID
@@ -134,7 +133,6 @@ class DefaultConfigSource(object):
         ('database.generator', 'default'),
         ('database.ensure_common_indexes', 'True'),
         ('database.json_db_dir', 'jsondb'),
-        ('database.shelve_db_dir', 'shelvedb'),
     ]
 
     def pull(self):
@@ -417,10 +415,6 @@ def _post_update_raw_config(raw_config):
     if 'database.json_db_dir' in raw_config:
         raw_config['database.json_db_dir'] = os.path.join(raw_config['general.base_storage_dir'],
                                                           raw_config['database.json_db_dir'])
-    # update json_db_dir to absolute dir
-    if 'database.shelve_db_dir' in raw_config:
-        raw_config['database.shelve_db_dir'] = os.path.join(raw_config['general.base_storage_dir'],
-                                                            raw_config['database.shelve_db_dir'])
 
 
 def get_config(config_sources):
