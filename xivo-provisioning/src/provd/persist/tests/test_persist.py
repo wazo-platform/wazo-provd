@@ -16,58 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 import unittest
-import provd.persist.memory as memory
-from provd.persist.common import ID_KEY
-from provd.persist.id import numeric_id_generator
 from provd.persist.util import _retrieve_doc_values, _create_pred_from_selector
-
-
-def new_dict_collection():
-    return memory.new_dict_collection(numeric_id_generator())
-
-
-def new_list_collection():
-    return memory.new_list_collection(numeric_id_generator())
-
-
-class TestListCollection(unittest.TestCase):
-    def setUp(self):
-        self._collection = new_list_collection()
-
-    def test_return_id_on_insert(self):
-        id = self._collection.insert({'k': 'v'})
-        self.assertNotEqual(None, id)
-
-    def test_add_id_to_document_if_absent(self):
-        doc = {'k': 'v'}
-        self._collection.insert(doc)
-        self.assertTrue(ID_KEY in doc)
-
-    def test_leave_id_unchanged_if_present(self):
-        id = 'test_id'
-        doc = {'k': 'v', ID_KEY: id}
-        self._collection.insert(doc)
-        self.assertEqual(id, doc[ID_KEY])
-
-
-class TestDictCollection(unittest.TestCase):
-    def setUp(self):
-        self._collection = new_dict_collection()
-
-    def test_return_id_on_insert(self):
-        id = self._collection.insert({'k': 'v'})
-        self.assertNotEqual(None, id)
-
-    def test_add_id_to_document_if_absent(self):
-        doc = {'k': 'v'}
-        self._collection.insert(doc)
-        self.assertTrue(ID_KEY in doc)
-
-    def test_leave_id_unchanged_if_present(self):
-        id = 'test_id'
-        doc = {'k': 'v', ID_KEY: id}
-        self._collection.insert(doc)
-        self.assertEqual(id, doc[ID_KEY])
 
 
 class TestSelectorSelectValue(unittest.TestCase):
