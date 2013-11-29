@@ -19,7 +19,6 @@ import logging
 from itertools import ifilter, imap
 from provd.persist.common import ID_KEY, InvalidIdError
 from twisted.internet import defer
-from zope.interface import Interface
 
 logger = logging.getLogger(__name__)
 
@@ -210,26 +209,6 @@ def _create_pred_from_selector(selector):
                 return False
         return True
     return aux
-
-
-class ISimpleBackend(Interface):
-    def close(self):
-        pass
-
-    def __getitem__(self, id):
-        pass
-
-    def __setitem__(self, id, document):
-        pass
-
-    def __delitem__(self, id):
-        pass
-
-    def __contains__(self, id):
-        pass
-
-    def itervalues(self):
-        pass
 
 
 class SimpleBackendDocumentCollection(object):
