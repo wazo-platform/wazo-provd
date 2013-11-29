@@ -34,9 +34,7 @@ from provd.devices.config import ConfigCollection
 from provd.devices.device import DeviceCollection
 from provd.servers.tftp.proto import TFTPProtocol
 from provd.servers.http_site import Site
-from provd.persist.memory import MemoryDatabaseFactory
 from provd.persist.json_backend import JsonDatabaseFactory
-from provd.persist.shelve import ShelveDatabaseFactory
 from provd.rest.server.server import new_server_resource, \
     new_restricted_server_resource
 from twisted.application.service import IServiceMaker, Service, MultiService
@@ -54,10 +52,7 @@ class ProvisioningService(Service):
     # has an 'app' attribute after starting
 
     _DB_FACTORIES = {
-        'list': MemoryDatabaseFactory(),
-        'dict': MemoryDatabaseFactory(),
         'json': JsonDatabaseFactory(),
-        'shelve': ShelveDatabaseFactory()
     }
 
     def __init__(self, config):

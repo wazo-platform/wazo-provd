@@ -19,7 +19,6 @@ import logging
 from itertools import ifilter, imap
 from provd.persist.common import ID_KEY, InvalidIdError
 from twisted.internet import defer
-from zope.interface import Interface
 
 logger = logging.getLogger(__name__)
 
@@ -210,26 +209,6 @@ def _create_pred_from_selector(selector):
                 return False
         return True
     return aux
-
-
-class ISimpleBackend(Interface):
-    def close(self):
-        pass
-
-    def __getitem__(self, id):
-        pass
-
-    def __setitem__(self, id, document):
-        pass
-
-    def __delitem__(self, id):
-        pass
-
-    def __contains__(self, id):
-        pass
-
-    def itervalues(self):
-        pass
 
 
 class SimpleBackendDocumentCollection(object):
@@ -428,7 +407,14 @@ class SimpleBackendDocumentCollection(object):
         return documents
 
     def _do_find_unsorted(self, selector, fields, skip, limit):
-        documents = self._new_iterator_over_matching_documents(selector)
+        # common case optimization when only ID_KEY is present
+        if ID_KEY in selector and len(selector) == 1 and not _contains_operator(selector[ID_KEY]):
+            try:
+                documents = [self._backend[selector[ID_KEY]]]
+            except KeyError:
+                documents = []
+        else:
+            documents = self._new_iterator_over_matching_documents(selector)
         documents = self._new_skip_iterator(skip, documents)
         documents = self._new_limit_iterator(limit, documents)
         documents = imap(self._new_fields_map_function(fields), documents)
