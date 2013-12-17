@@ -31,7 +31,7 @@ setup(
              'dhcp-xtor/xivo-dxtora',
              'dhcp-xtor/dxtorc',
              'scripts/provd_pycli'],
-    data_files=[('/etc/pf-xivo/provd', ['resources/etc/provd.conf',
+    data_files=[('/etc/xivo/provd', ['resources/etc/provd.conf',
                                         'resources/etc/base_raw_config.json',
                                         'resources/etc/info_extractor.py.conf.default',
                                         'resources/etc/retriever.py.conf.default',
@@ -39,7 +39,7 @@ setup(
                                         'resources/etc/router.py.conf.default',
                                         'resources/etc/updater.py.conf.default',
                                         'resources/etc/updater.py.conf.secure']),
-                ('/etc/pf-xivo', ['dhcpd-update/dhcpd-update.conf',
+                ('/etc/xivo', ['dhcpd-update/dhcpd-update.conf',
                                   'dhcp-xtor/dxtora.conf']),
                 ('/usr/share/doc/dhcp-xtor/', ['dhcp-xtor/dhcpd.conf.example'])],
 )

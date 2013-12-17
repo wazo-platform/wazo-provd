@@ -26,7 +26,7 @@ configuration file are documented in provd.conf):
     general.base_raw_config_file
     general.base_raw_config
         The dictionary holding the base raw config.
-    general.request_config_dir 
+    general.request_config_dir
     general.cache_dir
     general.cache_plugin
     general.check_compat_min
@@ -90,7 +90,7 @@ class ConfigError(Exception):
 class ConfigSourceError(ConfigError):
     """Raise when an error occur while pulling raw parameter values from
     a config source.
-    
+
     """
     pass
 
@@ -98,14 +98,14 @@ class ConfigSourceError(ConfigError):
 class DefaultConfigSource(object):
     """A source of raw parameter values that always return the same default
     values.
-    
+
     """
 
     _DEFAULT_RAW_PARAMETERS = [
         # (parameter name, parameter value)
-        ('general.config_file', '/etc/pf-xivo/provd/provd.conf'),
-        ('general.base_raw_config_file', '/etc/pf-xivo/provd/base_raw_config.json'),
-        ('general.request_config_dir', '/etc/pf-xivo/provd'),
+        ('general.config_file', '/etc/xivo/provd/provd.conf'),
+        ('general.base_raw_config_file', '/etc/xivo/provd/base_raw_config.json'),
+        ('general.request_config_dir', '/etc/xivo/provd'),
         ('general.cache_dir', '/var/cache/xivo-provd'),
         ('general.cache_plugin', 'True'),
         ('general.check_compat_min', 'True'),
@@ -124,8 +124,8 @@ class DefaultConfigSource(object):
         ('general.rest_password', 'admin'),
         ('general.rest_authentication', 'False'),
         ('general.rest_ssl', 'False'),
-        ('general.rest_ssl_certfile', '/etc/pf-xivo/provd/keys/cert.pem'),
-        ('general.rest_ssl_keyfile', '/etc/pf-xivo/provd/keys/key.pem'),
+        ('general.rest_ssl_certfile', '/etc/xivo/provd/keys/cert.pem'),
+        ('general.rest_ssl_keyfile', '/etc/xivo/provd/keys/key.pem'),
         ('general.verbose', 'False'),
         ('general.sync_service_type', 'none'),
         ('general.asterisk_ami_servers', '[("127.0.0.1", 5038, False, "provd", "provd")]'),
@@ -165,7 +165,7 @@ class Options(usage.Options):
 class CommandLineConfigSource(object):
     """A source of raw parameter values coming from the an instance of the
     Options class defined above.
-    
+
     """
 
     _OPTION_TO_PARAM_LIST = [
@@ -193,7 +193,7 @@ class CommandLineConfigSource(object):
 class ConfigFileConfigSource(object):
     """A source of raw parameter values coming from a configuration file.
     See the example file to see what is the syntax of the configuration file.
-    
+
     """
 
     _BASE_SECTIONS = ['general', 'database', 'proxy']
@@ -420,10 +420,10 @@ def _post_update_raw_config(raw_config):
 def get_config(config_sources):
     """Pull the raw parameters values from the configuration sources and
     return a config dictionary.
-    
+
     config_source is a sequence/iterable of objects with a pull method taking
     no arguments and returning a dictionary of raw parameter values.
-    
+
     """
     raw_config = _pull_config_from_sources(config_sources)
     _process_aliases(raw_config)
