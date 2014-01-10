@@ -38,7 +38,7 @@ import socket
 import sys
 from logging.handlers import SysLogHandler
 
-CONFIG_FILE = '/etc/pf-xivo/dxtora.conf'
+CONFIG_FILE = '/etc/xivo/dxtora.conf'
 PID_FILE = '/var/run/xivo-dxtora.pid'
 UNIX_SERVER_ADDR = '/var/run/xivo-dxtora.ctl'
 PROV_MIME_TYPE = 'application/vnd.proformatique.provd+json'
