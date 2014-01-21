@@ -1,0 +1,2 @@
+debian/tmp/etc/xivo/provd/* etc/xivo/provd
+debian/tmp/usr/bin/provd_pycli   usr/bin/

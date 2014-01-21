@@ -1,0 +1,5 @@
+debian/tmp/etc/xivo/dxtora.conf  etc/xivo
+debian/tmp/usr/bin/xivo-dxtora   usr/sbin/
+debian/tmp/usr/bin/dxtorc   usr/bin/
+debian/tmp/usr/share/doc/dhcp-xtor/dhcpd.conf.example usr/share/doc/dhcp-xtor/
+

@@ -1,0 +1,393 @@
+xivo-provisioning (14.01~20140110.152923.0990432-wheezy-2) xivo-dev; urgency=low
+
+  * use maintscript to rename pf-xivo to xivo
+
+ -- Pascal Cadotte Michaud <pcadottemichaud@avencall.com>  Tue, 14 Jan 2014 10:45:34 -0500
+
+xivo-provisioning (13.04~20130208.151433.f97c02c-4) squeeze-xivo-skaro-dev; urgency=low
+
+  * revert init script 
+
+ -- Nicolas HICHER <nhicher@avencall.com>  Sat, 23 Feb 2013 08:53:11 -0500
+
+xivo-provisioning (13.04~20130208.151433.f97c02c-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * fix init script (status on stopped service must return 3)
+
+ -- Nicolas HICHER <nhicher@avencall.com>  Fri, 22 Feb 2013 12:38:12 -0500
+
+xivo-provisioning (13.03~20130122.213143.ac30299-3) squeeze-xivo-skaro-dev; urgency=low
+
+  * add default file for xivo in xivo-dxtora
+
+ -- Cedric Abunar <cabunar@avencall.com>  Wed, 06 Feb 2013 13:31:31 -0500
+
+xivo-provisioning (13.03~20130122.213143.ac30299-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * add default file for xivo
+
+ -- Cedric Abunar <cabunar@avencall.com>  Tue, 05 Feb 2013 10:07:56 -0500
+
+xivo-provisioning (13.01~20130116.125546.a92c671-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * for version 
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Wed, 16 Jan 2013 08:41:20 -0500
+
+xivo-provisioning (13.01~20121213.161604.7be16d9-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * handle renaming of dxtora to xivo-dxtora
+
+ -- Etienne Lessard <elessard@avencall.com>  Wed, 16 Jan 2013 08:03:48 -0500
+
+xivo-provisioning (12.23~20121127.145026.b50145b-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * fix version 
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Tue, 27 Nov 2012 10:01:32 -0500
+
+xivo-provisioning (12.23~20121126.194943.bd61459-3) squeeze-xivo-skaro-dev; urgency=low
+
+  * fix init script 
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Tue, 27 Nov 2012 09:42:57 -0500
+
+xivo-provisioning (12.23~20121126.194943.bd61459-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * rename package
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Tue, 09 Oct 2012 15:52:48 -0400
+
+pf-xivo-provisioning (6:1.2~beta-1-rc2-1) squeeze-xivo-skaro-dev; urgency=low
+
+  * fix for packaging-farm 
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Fri, 09 Dec 2011 10:16:43 -0500
+
+pf-xivo-provisioning (5:1.2-dev~20111123.152935.a7dcae2-3) squeeze-xivo-skaro-dev; urgency=low
+
+  * Add missing python-openssl dependency to pf-xivo-libprovd.
+
+ -- Etienne Lessard <edesrocherslessard@avencall.com>  Mon, 28 Nov 2011 13:14:40 -0500
+
+pf-xivo-provisioning (5:1.2-dev~20111123.152935.a7dcae2-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * fix epoch 
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Mon, 28 Nov 2011 09:47:36 -0500
+
+pf-xivo-provisioning (4:squeeze~xivo-skaro-1.2-dev~20111118.140711.0872cb7-1) squeeze-xivo-skaro-dev; urgency=low
+
+  * Remove --logfile option to pf-xivo-provd, was rotating /dev/null.
+
+ -- Etienne Lessard <edesrocherslessard@avencall.com>  Fri, 18 Nov 2011 14:02:07 -0500
+
+pf-xivo-provisioning (4:1.2~20110811.100719.9df4d01-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * add status in initscript help message.
+
+ -- Etienne Lessard <edesrocherslessard@avencall.com>  Thu, 11 Aug 2011 10:58:08 -0400
+
+pf-xivo-provisioning (4:1.2~svn11094-0) squeeze-xivo-skaro-dev; urgency=low
+
+  * Replace /var/{cache,lib}/pf-xivo/provd to /var/{cache,lib}/pf-xivo-provd
+
+ -- Etienne Lessard <edesrocherslessard@avencall.com>  Wed, 22 Jun 2011 09:08:38 -0400
+
+pf-xivo-provisioning (4:1.2~svn11058-0) squeeze-xivo-skaro-dev; urgency=low
+
+  * Replace /var/lib/pf-xivo/provd/plugins for /var/lib/pf-xivo/provd.
+
+ -- Etienne Lessard <edesrocherslessard@avencall.com>  Fri, 17 Jun 2011 14:32:02 -0400
+
+pf-xivo-provisioning (4:1.2~svn10220-0) squeeze-xivo-skaro-dev; urgency=low
+
+  * Add --logfile option to pf-xivo-provd init script.
+
+ -- Etienne Lessard <edesrocherslessard@proformatique.com>  Thu, 17 Feb 2011 08:14:21 -0500
+
+pf-xivo-provisioning (4:1.2~svn10190-0) squeeze-xivo-skaro-dev; urgency=low
+
+  * Fix missing informations
+
+ -- Sylvain Boily <sboily@proformatique.com>  Mon, 14 Feb 2011 15:02:31 -0500
+
+pf-xivo-provisioning (4:1.2~svn10181-2) squeeze-xivo-skaro-dev; urgency=low
+
+  * Removed all informations from old package
+
+ -- Sylvain Boily <sboily@proformatique.com>  Mon, 14 Feb 2011 14:44:25 -0500
+
+pf-xivo-provisioning (4:1.2~svn10181-0) squeeze-xivo-skaro-dev; urgency=low
+
+  * Uport to Squeeze
+
+ -- Sylvain Boily <sboily@proformatique.com>  Mon, 14 Feb 2011 13:50:14 -0500
+
+pf-xivo-provisioning (4:1.2~svn10112-0) lenny-xivo-skaro-dev; urgency=low
+
+  * new uptream release
+
+ -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Fri, 04 Feb 2011 16:07:18 +0100
+
+pf-xivo-provisioning (4:1.2~svn9769-3) lenny-xivo-skaro-dev; urgency=low
+
+  * [AUTOBUILD] Rebuild.
+
+ -- Proformatique Maintainance Team <technique@proformatique.com>  Thu, 13 Jan 2011 10:40:52 +0100
+
+pf-xivo-provisioning (3:1.1~svn7578-2) lenny-xivo-gallifrey-dev; urgency=low
+
+  * Reviewed init script.
+
+ -- Adrien DELLE CAVE (Decryptus) <decryptus@proformatique.com>  Tue,  9 Feb 2010 08:46:59 +0100
+
+pf-xivo-provisioning (2:1.1~svn7414-2) lenny-xivo-gallifrey-dev; urgency=low
+
+  * Updated for Python 2.5.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Wed, 03 Feb 2010 11:27:52 +0100
+
+pf-xivo-provisioning (2:1.1~svn6892-3) etch-xivo-gallifrey-dev; urgency=low
+
+  * Removed output info on startup to init script. 
+
+ -- Adrien DELLE CAVE (Decryptus) <decryptus@proformatique.com>  Sat, 19 Sep 2009 16:32:15 +0200
+
+pf-xivo-provisioning (2:1.1~svn6892-2) etch-xivo-gallifrey-dev; urgency=low
+
+  * Added action status to init script.
+
+ -- Adrien DELLE CAVE (Decryptus) <decryptus@proformatique.com>  Sat, 19 Sep 2009 16:12:42 +0200
+
+pf-xivo-provisioning (0.4~svn3485-3) etch-xivo-k-9-dev; urgency=low
+
+  * Replaced all occurrences to Xivo by XIVO in copyright file.
+
+ -- Adrien DELLE CAVE (Decryptus) <decryptus@proformatique.com>  Wed, 23 Jul 2008 00:29:38 +0200
+
+pf-xivo-provisioning (0.4~svn3485-2) etch-xivo-k-9-dev; urgency=low
+
+  * Added ${python:Versions} and ${python:Depends} 
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Thu, 10 Jul 2008 16:56:41 +0200
+
+pf-xivo-provisioning (0.4~svn3274-3) etch-xivo-k-9-dev; urgency=low
+
+  * Disable dh_pysupport workaround because we do not have any Python package
+    in pf-xivo-provisioning anymore
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Fri, 27 Jun 2008 13:28:18 +0200
+
+pf-xivo-provisioning (0.4~svn3274-2) etch-xivo-k-9-dev; urgency=low
+
+  * Correctly fixed provisioning init script.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Fri, 27 Jun 2008 13:00:26 +0200
+
+pf-xivo-provisioning (0.4~svn3274-0) etch-xivo-k-9-dev; urgency=low
+
+  * Added atftpd in dependencies
+  * Removed prerm that was used to work around a bug where
+    update-python-modules was called too soon, because we now have a cleaner
+    work around that lets debhelpers generate the buggy file which is fixed
+    just after.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Fri, 27 Jun 2008 12:31:17 +0200
+
+pf-xivo-provisioning (0.4~svn3178-0) etch-xivo-k-9-dev; urgency=low
+
+  * Removed local modified copy of debhelper.mk
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Fri,  6 Jun 2008 15:41:03 +0200
+
+pf-xivo-provisioning (0.4~svn3113-1) etch-xivo-k-9-dev; urgency=low
+
+  * simple-patchsys.mk not used, removed.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Tue, 27 May 2008 19:08:47 +0200
+
+pf-xivo-provisioning (0.4~svn3113-0) etch-xivo-k-9-dev; urgency=low
+
+  * Removed examples
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Mon, 26 May 2008 16:55:35 +0200
+
+pf-xivo-provisioning (0.4~svn2691-0) etch-xivo-k-9-dev; urgency=low
+
+  * Work around debian bug that triggered bug #62
+    Work around method inspired by
+    http://www.mail-archive.com/debian-python@lists.debian.org/msg04432.html
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Tue, 25 Mar 2008 16:28:14 +0100
+
+pf-xivo-provisioning (0.4~svn2539-2) etch-xivo-k-9-dev; urgency=low
+
+  * Fixed Section in control files.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Fri, 07 Mar 2008 11:31:40 +0100
+
+pf-xivo-provisioning (0.4~svn2539-0) etch-xivo-k-9-dev; urgency=low
+
+  * Preparing new development snapshot.
+  * Added mv .../site-packages/xivo_provisioning
+             .../site-packages/xivo_provisioning_old in preinst.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Wed,  5 Mar 2008 16:41:45 +0100
+
+pf-xivo-provisioning (0.4~svn2529-0) etch-xivo-k-9-dev; urgency=low
+
+  * New upstream development snapshot.
+  * Converted to DistUtils.
+  * License changed to GNU GPLv2 (so switched from non-free to main as well).
+  * New preinst script that migrates /etc/xivo/provisioning.conf to
+    /etc/pf-xivo/provisioning.conf
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Tue,  4 Mar 2008 21:17:09 +0100
+
+pf-xivo-provisioning (0.3~svn2213-0) etch-testing; urgency=low
+
+  * Removed python-ldap from dependencies.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Tue, 18 Dec 2007 16:33:00 +0100
+
+pf-xivo-provisioning (0.2~svn1819-0) etch-testing; urgency=low
+
+  * Preparing new development snapshot.
+    Added curl as required package.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Tue,  6 Nov 2007 15:16:43 +0100
+
+pf-xivo-provisioning (0.2~svn1738-0) etch-testing; urgency=low
+
+  * Updated Polycom paths.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Fri,  2 Nov 2007 20:24:29 +0100
+
+pf-xivo-provisioning (0.2~svn1726-0) etch-testing; urgency=low
+
+  * Preparing new development snapshot.
+    New Linksys phones.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Wed, 31 Oct 2007 19:05:54 +0100
+
+pf-xivo-provisioning (0.2~svn1723-0) etch-testing; urgency=low
+
+  * Preparing new development snapshot.
+    New Linksys phones.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Wed, 31 Oct 2007 17:20:24 +0100
+
+pf-xivo-provisioning (0.2~svn1713-2) etch-testing; urgency=low
+
+  * Install template files for Linksys and Polycom.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Wed, 31 Oct 2007 11:56:07 +0100
+
+pf-xivo-provisioning (0.1.1~svn1682-0) etch; urgency=low
+
+  * Preparing new development snapshot.
+    Upstream now contains a xivo_provisioning subdir.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Tue, 23 Oct 2007 15:41:21 +0200
+
+pf-xivo-provisioning (0.1~svn996-0) etch; urgency=low
+
+  * Preparing new development snapshot.
+    Let the 'scan_ifaces_prefix' configuration properly work.
+
+ -- Guillaume Knispel <gknispel@proformatique.com>  Sat, 30 Jun 2007 15:37:31 +0200
+
+pf-xivo-provisioning (0.1~svn924-0) etch; urgency=low
+
+  * Preparing new development snapshot.
+    Manual removal of PIDFILE.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Mon, 18 Jun 2007 16:41:37 +0200
+
+pf-xivo-provisioning (0.1~svn913-0) etch; urgency=low
+
+  * Preparing new development snapshot.
+    Installs ST2022S template file and does not generate PID file.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Fri, 15 Jun 2007 15:57:26 +0200
+
+pf-xivo-provisioning (0.1~svn900-0) etch; urgency=low
+
+  * Preparing new development snapshot.
+    Install template files for Swissvoice.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Thu, 14 Jun 2007 10:38:36 +0200
+
+pf-xivo-provisioning (0.1~svn722-1) etch; urgency=low
+
+  * New upstream development snapshot.
+  * Fixed install path s#usr/share/xivo-provisioning#usr/share/pf-xivo-
+    provisioning#.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Fri, 25 May 2007 11:24:28 +0200
+
+pf-xivo-provisioning (0.1~svn713-1) etch; urgency=low
+
+  * New upstream development snapshot.
+  * Moved Phones directory and installed new .pyc files.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Fri, 25 May 2007 02:16:03 +0200
+
+pf-xivo-provisioning (0.1~svn710-1) etch; urgency=low
+
+  * New upstream development snapshot.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Thu, 24 May 2007 15:03:53 +0200
+
+pf-xivo-provisioning (0.1~svn706-1) etch; urgency=low
+
+  * New upstream development snapshot.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Thu, 24 May 2007 12:41:00 +0200
+
+pf-xivo-provisioning (0.1~svn696-1) etch; urgency=low
+
+  * New upstream development snapshot.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Wed, 23 May 2007 15:35:45 +0200
+
+pf-xivo-provisioning (0.1~svn690-1) etch; urgency=low
+
+  * New upstream development snapshot.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Wed, 23 May 2007 12:35:43 +0200
+
+pf-xivo-provisioning (0.1~svn689-2) etch; urgency=low
+
+  * Improved init script using start-stop-daemon (thus allowing proper
+    exit codes).
+  * Fixed maintainer scripts.
+  * Added missing dependency on pf-xivo-lib-python.
+
+ -- Marc Dequènes (Duck) <mdequenes@proformatique.com>  Tue, 22 May 2007 21:25:55 +0200
+
+pf-xivo-provisioning (0.1~svn689-1) etch; urgency=low
+
+  * All configs are in base-config. /etc/sudoers managed by postinst through visudo.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Tue, 22 May 2007 18:48:44 +0200
+
+pf-xivo-provisioning (0.1~svn684-1) etch; urgency=low
+
+  * Removed the ports.conf management from this package.
+
+ -- Corentin Le Gall <clegall@proformatique.com>  Tue, 22 May 2007 16:07:55 +0200
+
+pf-xivo-provisioning (0.1~svn670-1) etch; urgency=low
+
+  * New upstream development snapshot.
+
+ -- Corentin Le Gall <corentin@proformatique.com>  Tue, 17 Apr 2007 18:12:35 +0200
+
+pf-xivo-provisioning (0.1~svn626-1) etch; urgency=low
+
+  * Initial Release.
+
+ -- Corentin Le Gall <corentin@proformatique.com>  Tue, 17 Apr 2007 18:12:35 +0200
+

@@ -1,0 +1,115 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          xivo-dxtora
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $local_fs $remote_fs $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: XiVO DHCP info extractor agent
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+name=xivo-dxtora
+daemon=/usr/sbin/$name
+rundir=/var/run/
+pidfile=$rundir/xivo-dxtora.pid
+ctlfile=$rundir/xivo-dxtora.ctl
+XIVO_DEFAULT_FILE="/etc/default/xivo"
+
+. /lib/lsb/init-functions
+
+[ -r /etc/default/xivo-dxtora ] && . /etc/default/xivo-dxtora
+
+test -x $daemon || exit 0
+
+is_enabled() {
+    # Check if startup variable is set to 1, if not we exit.
+    if [ -f $XIVO_DEFAULT_FILE ]; then
+        . $XIVO_DEFAULT_FILE
+        if [ "$startup" != "yes" ]; then
+           echo "${name} startup is disabled in $XIVO_DEFAULT_FILE"
+           exit 0
+        fi
+    fi
+}
+
+# return true if at least one pid is alive
+alive()
+{
+		if [ -z "$*" ]; then
+			return 1
+		fi
+		for i in $*; do
+			if kill -0 $i 2> /dev/null; then
+				return 0
+			fi
+		done
+
+		return 1
+}
+
+
+case "$1" in
+	start)
+        is_enabled
+		log_daemon_msg "Starting" "$name"
+
+		[ ! -d $rundir ] && mkdir $rundir
+
+		umask 022
+		start-stop-daemon --start --quiet --exec $daemon
+		log_end_msg $?
+		;;
+
+	stop)
+		log_daemon_msg "Stopping" "$name"
+		start-stop-daemon --stop --quiet --pidfile $pidfile
+
+		#
+		# Continue stopping until daemon finished or time over
+		#
+		count=0
+		pid=$(cat $pidfile 2>/dev/null)
+		while alive $pid; do
+			if [ $count -gt 20 ]; then
+				log_progress_msg " aborted"
+				break;
+			elif [ $count = 1 ]; then
+				log_progress_msg " [wait $count"
+			elif [ $count -gt 1 ]; then
+				log_progress_msg " $count"
+			fi
+
+			count=$(expr $count + 1)
+			sleep 1
+			start-stop-daemon --stop --quiet --pidfile $pidfile
+		done
+
+		if [ $count -gt 1 ]; then
+			log_progress_msg "]"
+		fi
+		log_end_msg $?
+		;;
+
+	restart)
+		$0 stop
+		$0 start
+		;;
+    
+	force-reload)
+		$0 restart
+		;;
+
+    status)
+        status_of_proc -p $pidfile $daemon $name && exit 0 || exit $?
+        ;;
+
+	*)
+		log_success_msg "Usage: $0 {start|stop|restart|force-reload|status}"
+		exit 1
+		;;
+esac
+
+exit 0
+

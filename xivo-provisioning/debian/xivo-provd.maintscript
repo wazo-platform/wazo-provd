@@ -1,0 +1,10 @@
+# see: dh_installdeb(1)
+
+mv_conffile /etc/pf-xivo/provd/base_raw_config.json /etc/xivo/provd/base_raw_config.json 14.02
+mv_conffile /etc/pf-xivo/provd/info_extractor.py.conf.default /etc/xivo/provd/info_extractor.py.conf.default 14.02
+mv_conffile /etc/pf-xivo/provd/provd.conf /etc/xivo/provd/provd.conf 14.02
+mv_conffile /etc/pf-xivo/provd/retriever.py.conf.default /etc/xivo/provd/retriever.py.conf.default 14.02
+mv_conffile /etc/pf-xivo/provd/retriever.py.conf.secure /etc/xivo/provd/retriever.py.conf.secure 14.02
+mv_conffile /etc/pf-xivo/provd/router.py.conf.default /etc/xivo/provd/router.py.conf.default 14.02
+mv_conffile /etc/pf-xivo/provd/updater.py.conf.default /etc/xivo/provd/updater.py.conf.default 14.02
+mv_conffile /etc/pf-xivo/provd/updater.py.conf.secure /etc/xivo/provd/updater.py.conf.secure 14.02

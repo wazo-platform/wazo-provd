@@ -1,0 +1,3 @@
+# see: dh_installdeb(1)
+
+mv_conffile /etc/pf-xivo/dhcpd-update.conf /etc/xivo/dhcpd-update.conf 14.02

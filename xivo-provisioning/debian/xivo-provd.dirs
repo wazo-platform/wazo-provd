@@ -1,0 +1,3 @@
+etc/xivo/provd
+var/lib/xivo-provd
+var/cache/xivo-provd
