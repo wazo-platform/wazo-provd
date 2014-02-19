@@ -66,7 +66,7 @@ def gen_incr_fixed_deferred(delay=1.0, incr=0.2):
         delay += incr
 
 
-def rw_lock_test_no_write_while_read(deferred_generator):
+def rw_lock_no_write_while_read(deferred_generator):
     # Expected output:
     #   <r1> Constructing
     #   <r1> Before callback
@@ -80,7 +80,7 @@ def rw_lock_test_no_write_while_read(deferred_generator):
     return dl
 
 
-def rw_lock_test_read_more_while_read_and_no_write_wait(deferred_generator):
+def rw_lock_read_more_while_read_and_no_write_wait(deferred_generator):
     # Expected output:
     #   <r1> Constructing
     #   <r2> Constructing
@@ -94,7 +94,7 @@ def rw_lock_test_read_more_while_read_and_no_write_wait(deferred_generator):
     return dl
 
 
-def rw_lock_test_no_write_while_write(deferred_generator):
+def rw_lock_no_write_while_write(deferred_generator):
     # Expected output:
     #   <w1> Constructing
     #   <w1> Before callback
@@ -146,9 +146,9 @@ def rw_lock_tests():
     # Schedule all the tests and call reactor.stop when all tests are done
     deferreds = []
     lock = defer.DeferredLock()
-    for test_fun in [rw_lock_test_no_write_while_read,
-                     rw_lock_test_read_more_while_read_and_no_write_wait,
-                     rw_lock_test_no_write_while_write,
+    for test_fun in [rw_lock_no_write_while_read,
+                     rw_lock_read_more_while_read_and_no_write_wait,
+                     rw_lock_no_write_while_write,
                      rw_lock_privelege_writers,
                      rw_lock_schedule_all_readers_if_possible]:
         def wrap_test(test_fun_):
