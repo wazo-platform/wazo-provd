@@ -63,18 +63,18 @@ else:
     password = opts.password
 credentials = (opts.user, password)
 
-## create client object
+# # create client object
 client = pyclient.new_pycli_provisioning_client(server_uri, credentials)
 configs = client.configs()
 devices = client.devices()
 plugins = client.plugins()
 parameters = client.parameters()
 
-## test connectivity
+# # test connectivity
 try:
     client.test_connectivity()
 except Exception as e:
-    print >>sys.stderr, 'Error while connecting to xivo-provd:', e
+    print >> sys.stderr, 'Error while connecting to xivo-provd:', e
     sys.exit(1)
 
 
@@ -88,20 +88,20 @@ RAW_HELP_MAP = {
         plugins
 
     Type help(object) (for example help(plugins)) for help about this object.
-    
+
     Type dirr(object) to see all the 'public' attributes of this object.
 
 \x1b[1mExamples\x1b[0m
     Get the list of installable plugins:
-    
+
         plugins.installable()
-    
+
     Synchronize the device 'dev1'
-    
+
         devices['dev1'].synchronize()
-    
+
     Get the raw config of config 'guest'
-    
+
         configs['guest'].get_raw()
 
 \x1b[1mNotes\x1b[0m
@@ -113,64 +113,64 @@ RAW_HELP_MAP = {
 
 \x1b[1mExamples\x1b[0m
     Get config 'foo'
-    
+
         configs.get('foo')
-    
+
     Get config 'foo' in raw form
-    
+
         configs.get_raw('foo')
-    
+
     Get config 'foo' as a config object
-    
+
         configs['foo']
-    
+
     List all known config
-    
+
         configs.find()
-    
+
     Add config 'foo'
-    
+
         configs.add({'id': 'foo', 'parent_ids': [],
                      'raw_config.sip.lines.1.proxy_ip': '192.168.32.101'})
-    
+
     Clone config 'foo' to 'bar'
-    
+
         configs.clone('foo', 'bar')
-    
+
     Update config 'foo' (warning: this is a replace operation)
-    
+
         configs.update({'id': 'foo', 'parent_ids': [], 'raw_config': {})
-    
+
     Remove config 'foo'
-    
+
         configs.remove('foo')
 """,
     pyclient.Config: """\
 \x1b[1mDescription\x1b[0m
     Manage a particular config.
-    
+
     This object is mostly useful if you want to do quick modifications to
     a specific config.
 
 \x1b[1mExamples\x1b[0m
     Set the vlan ID parameter of config 'foo' to 100
-    
+
         configs['foo'].set_config({'vlan.id': '100'})
-    
+
     Unset the vlan ID parameter of config 'foo'
-    
+
         configs['foo'].unset_config('vlan.id')
-    
+
     Set the parent IDs of config 'foo' to 'base'
-    
+
         configs['foo'].set_parents('base')
-    
+
     Get the config 'foo'
-    
+
         configs['foo'].get()
-    
+
     Get the config 'foo' in raw form
-    
+
         configs['foo'].get_raw()
 """,
     pyclient.Devices: """\
@@ -179,65 +179,65 @@ RAW_HELP_MAP = {
 
 \x1b[1mExamples\x1b[0m
     Synchronize device 'foo'
-    
+
         devices.synchronize('foo')
-    
+
     Reconfigure device 'foo'
-    
+
         devices.reconfigure('foo')
-    
+
     Get device 'foo'
-    
+
         devices.get('foo')
-    
+
     Get device 'foo' as a device object
-    
+
         devices['foo']
-    
+
     List all known devices which are using 'xivo-aastra-2.6.0.2010' plugin
-    
+
         devices.find({'plugin': 'xivo-aastra-2.6.0.2010'})
-    
+
     Add device 'foo'
-    
+
         devices.add({'id': 'foo', 'mac': '00:11:22:33:44:55'})
-    
+
     Remove device 'foo'
-    
+
         devices.remove('foo')
-    
+
     Update device 'foo' (warning: this is a replace operation, roughly
     equivalent to a remove than an add)
-    
+
         devices.update({'id': 'foo', 'mac': '00:11:22:33:44:55'})
 """,
     pyclient.Device: """\
 \x1b[1mDescription\x1b[0m
     Manage a particular device.
-    
+
     This object is mostly useful if you want to do quick modifications to
     a specific device. It's always possible to do the same thing via the
     global devices object.
-    
+
 \x1b[1mExamples\x1b[0m
     Set the 'plugin' parameter of device 'foo' to 'xivo-aastra-3.2.0.70'
-    
+
         devices['foo'].set({'plugin': 'xivo-aastra-3.2.0.70'})
-    
+
     Unset the 'plugin' parameter of device 'foo'
-    
+
         devices['foo'].unset('plugin')
-    
+
     Synchronize device 'foo'
-    
+
         devices['foo'].synchronize()
-    
+
     Set and synchronize device 'foo'
-    
+
         devices['foo'].set({'config': 'guest'}).synchronize()
-    
+
     Get device 'foo'
-    
+
         devices['foo'].get()
 """,
     pyclient.Plugins: """\
@@ -246,35 +246,35 @@ RAW_HELP_MAP = {
 
 \x1b[1mExamples\x1b[0m
     Install plugin 'xivo-aastra-2.6.0.2010'
-    
+
         plugins.install('xivo-aastra-2.6.0.2010')
-    
+
     Upgrade plugin 'xivo-aastra-2.6.0.2010'
-    
+
         plugins.upgrade('xivo-aastra-2.6.0.2010')
-    
+
     Uninstall plugin 'xivo-aastra-2.6.0.2010'
-    
+
         plugins.uninstall('xivo-aastra-2.6.0.2010')
-    
+
     Update the installable plugin list
-    
+
         plugins.update()
-    
+
     List the installable plugins
-    
+
         plugins.installable()
-    
+
     List the installed plugins
-    
+
         plugins.installed()
-    
+
     Get the plugin object for plugin 'xivo-aastra-2.6.0.2010'
-    
+
         plugins['xivo-aastra-2.6.0.2010']
 
     Manage the plugin subsystem parameters
-    
+
         plugins.parameters()
 """,
     pyclient.Plugin: """\
@@ -283,15 +283,15 @@ RAW_HELP_MAP = {
 
 \x1b[1mExamples\x1b[0m
     Install plugin-package '6731i-fw'
-    
+
         plugins['xivo-aastra-2.6.0.2010'].install('6731i-fw')
-    
+
     Install all available plugin-packages
-    
+
         plugins['xivo-aastra-2.6.0.2010'].install_all()
-    
+
     Manage this plugin subsystem parameters
-    
+
         plugins['xivo-aastra-2.6.0.2010'].parameters()
 """,
     pyclient.Parameters: """\
@@ -300,19 +300,19 @@ RAW_HELP_MAP = {
 
 \x1b[1mExamples\x1b[0m
     Get the parameters description
-    
+
         parameters.infos()
-    
+
     Get the value of 'locale' parameter
-    
+
         parameters.get('locale')
-    
+
     Set the value of 'locale' parameter
-    
+
         parameters.set('locale', 'en')
-    
+
     Unset the 'locale' parameter
-    
+
         parameters.unset('locale')
 """
 }
@@ -363,7 +363,7 @@ helpers._init_module(configs, devices, plugins)
 
 # import and initialize the tests module
 if opts.tests:
-    import provd.rest.pycli.plugin_tests as plugin_tests
+    import provd.rest.pycli.plugin as plugin_tests
     plugin_tests._init_module(configs, devices, plugins)
 
 
