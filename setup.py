@@ -23,7 +23,6 @@ setup(
               'provd.servers.tftp',
               'twisted',
               'twisted.plugins'],
-    package_dir={'': 'src'},
     package_data={'provd': ['tzinform/tzdatax'],
                   'twisted': ['.noinit'],
                   'twisted.plugins': ['provd_plugins.py', '.noinit']},
