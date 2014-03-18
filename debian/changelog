@@ -1,3 +1,9 @@
+xivo-provisioning (14.06~20140318.155859.ca890eb-2) stable; urgency=low
+
+  * test packaging
+
+ -- Cedric Abunar <cabunar@avencall.com>  Tue, 18 Mar 2014 15:05:56 -0400
+
 xivo-provisioning (14.01~20140110.152923.0990432-wheezy-2) xivo-dev; urgency=low
 
   * use maintscript to rename pf-xivo to xivo

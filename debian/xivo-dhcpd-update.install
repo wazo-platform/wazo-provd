@@ -1,2 +1,2 @@
-debian/tmp/usr/bin/dhcpd-update usr/sbin/
-debian/tmp/etc/xivo/dhcpd-update.conf etc/xivo
+usr/bin/dhcpd-update  usr/sbin
+etc/xivo/dhcpd-update.conf  etc/xivo
