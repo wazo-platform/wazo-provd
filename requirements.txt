@@ -1,0 +1,4 @@
+zope.interface
+twisted
+beautifulsoup
+jinja2
