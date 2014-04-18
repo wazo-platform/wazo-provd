@@ -34,10 +34,6 @@ They both have the following standardized keys:
   vendor -- the vendor name of this device (unicode)
   model -- the model name of this device (unicode)
   version -- the version of the software/firmware of this device (unicode)
-  XXX since it's theoretically possible for some device to be used with different software,
-    and in these cases a 'version' field is not enough to identify which software its
-    using, we might want to add another field like 'firmware' or change the semantic and
-    the name of the 'version' field to include not only the version but the firmware name/id
 
 Device objects have also the following standardized keys:
   id -- the ID of this device object (unicode) (mandatory)
