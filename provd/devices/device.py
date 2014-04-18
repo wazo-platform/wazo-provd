@@ -43,6 +43,7 @@ Device objects have also the following standardized keys:
     configured by a plugin. (boolean) (mandatory)
   added -- how the device has been added to the collection (unicode). Right
     now, only 'auto' has been defined.
+  options -- dictionary of device options
 
 Non-standard keys MUST begin with 'X_'.
 
