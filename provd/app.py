@@ -324,7 +324,7 @@ class ProvisioningApplication(object):
             defer.returnValue(device)
 
     _SIGNIFICANT_KEYS = [u'plugin', u'config', u'mac', u'ip', u'uuid',
-                         u'vendor', u'model', u'version']
+                         u'vendor', u'model', u'version', 'options']
 
     def _dev_need_reconfiguration(self, old_device, new_device):
         # Note that this doesn't check if the device is deconfigurable
