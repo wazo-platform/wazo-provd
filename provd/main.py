@@ -15,23 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-# XXX the names are confusing, sometimes they refer to stuff here sometimes
-#     they refer to similarly named stuff in ident.py. The name process_service
-#     is certainly the most confusing of them. We should really try to fix this
-
 import codecs
 import logging
 import os.path
 import socket
 import provd.config
-import provd.devices.ident
-import provd.devices.pgasso
 import provd.localization
 import provd.synchronize
 from logging.handlers import SysLogHandler
 from provd.app import ProvisioningApplication
 from provd.devices.config import ConfigCollection
 from provd.devices.device import DeviceCollection
+from provd.devices import ident
+from provd.devices import pgasso
 from provd.servers.tftp.proto import TFTPProtocol
 from provd.servers.http_site import Site
 from provd.persist.json_backend import JsonDatabaseFactory
@@ -122,8 +118,8 @@ class ProcessService(Service):
     def _get_conffile_globals(self):
         # Pre: hasattr(self._prov_service, 'app')
         conffile_globals = {}
-        conffile_globals.update(provd.devices.ident.__dict__)
-        conffile_globals.update(provd.devices.pgasso.__dict__)
+        conffile_globals.update(ident.__dict__)
+        conffile_globals.update(pgasso.__dict__)
         conffile_globals['app'] = self._prov_service.app
         return conffile_globals
 
@@ -143,7 +139,7 @@ class ProcessService(Service):
 
     def startService(self):
         # Pre: hasattr(self._prov_service, 'app')
-        self.request_processing = provd.devices.ident.RequestProcessingService(self._prov_service.app)
+        self.request_processing = ident.RequestProcessingService(self._prov_service.app)
         request_config_dir = self._config['general.request_config_dir']
         for name in ['info_extractor', 'retriever', 'updater']:
             setattr(self.request_processing, 'dev_' + name,
@@ -160,8 +156,7 @@ class HTTPProcessService(Service):
     def startService(self):
         app = self._prov_service.app
         process_service = self._process_service.request_processing
-        http_process_service = provd.devices.ident.HTTPRequestProcessingService(process_service,
-                                                                                app.pg_mgr)
+        http_process_service = ident.HTTPRequestProcessingService(process_service, app.pg_mgr)
         site = Site(http_process_service)
         port = self._config['general.http_port']
         logger.info('Binding HTTP provisioning service to port %s', port)
@@ -183,8 +178,7 @@ class TFTPProcessService(Service):
     def startService(self):
         app = self._prov_service.app
         process_service = self._process_service.request_processing
-        tftp_process_service = provd.devices.ident.TFTPRequestProcessingService(process_service,
-                                                                                app.pg_mgr)
+        tftp_process_service = ident.TFTPRequestProcessingService(process_service, app.pg_mgr)
         tftp_protocol = TFTPProtocol(tftp_process_service)
         port = self._config['general.tftp_port']
         logger.info('Binding TFTP provisioning service to port %s', port)
@@ -204,7 +198,7 @@ class DHCPProcessService(Service):
 
     def startService(self):
         process_service = self._process_service.request_processing
-        self.dhcp_request_processing_service = provd.devices.ident.DHCPRequestProcessingService(process_service)
+        self.dhcp_request_processing_service = ident.DHCPRequestProcessingService(process_service)
         Service.startService(self)
 
 
