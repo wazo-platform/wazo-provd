@@ -145,7 +145,7 @@ class ProcessService(Service):
         # Pre: hasattr(self._prov_service, 'app')
         self.request_processing = provd.devices.ident.RequestProcessingService(self._prov_service.app)
         request_config_dir = self._config['general.request_config_dir']
-        for name in ['info_extractor', 'retriever', 'updater', 'router']:
+        for name in ['info_extractor', 'retriever', 'updater']:
             setattr(self.request_processing, 'dev_' + name,
                     self._create_processor(request_config_dir, name, self._config['general.' + name]))
         Service.startService(self)

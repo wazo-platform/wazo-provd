@@ -759,73 +759,6 @@ class CompositeDeviceUpdater(object):
         defer.returnValue(force_reconfigure)
 
 
-class IDeviceRouter(Interface):
-    """A device router object return plugin ID (i.e. a routing destination)
-    from device objects.
-    
-    """
-
-    def route(device, dev_info):
-        """Return a plugin ID from a device object, or None if there's no
-        route.
-        
-        device -- either a device object or None.
-        dev_info -- a potentially empty device info object
-        
-        """
-
-
-class PluginDeviceRouter(object):
-    """A device router that return the 'plugin' key from the device object if
-    it exists, or None in any other cases.
-    
-    """
-
-    implements(IDeviceRouter)
-
-    def route(self, device, dev_info):
-        logger.debug('In PluginDeviceRouter')
-        if device is None:
-            return None
-        else:
-            return device.get(u'plugin')
-
-
-class StaticDeviceRouter(object):
-    """A device router that always returns the same plugin ID."""
-
-    implements(IDeviceRouter)
-
-    def __init__(self, pg_id):
-        self._pg_id = pg_id
-
-    def route(self, device, dev_info):
-        logger.debug('In StaticDeviceRouter')
-        return self._pg_id
-
-
-def NullDeviceRouter():
-    """A device router that always returns None."""
-    return StaticDeviceRouter(None)
-
-
-class FirstCompositeDeviceRouter(object):
-    """A composite device router that returns the first not None route ID."""
-
-    implements(IDeviceRouter)
-
-    def __init__(self, routers):
-        self.routers = [] if routers is None else routers
-
-    def route(self, device, dev_info):
-        logger.debug('In FirstCompositeDeviceRouter')
-        for router in self.routers:
-            pg_id = router.route(device, dev_info)
-            if pg_id is not None:
-                return pg_id
-        return None
-
-
 class RequestProcessingService(object):
     """The base object responsible for dynamically modifying the process state
     when processing a request from a device.
@@ -834,7 +767,6 @@ class RequestProcessingService(object):
     dev_info_extractor = NullDeviceInfoExtractor()
     dev_retriever = NullDeviceRetriever()
     dev_updater = NullDeviceUpdater()
-    dev_router = NullDeviceRouter()
 
     def __init__(self, app):
         self._app = app
@@ -897,13 +829,17 @@ class RequestProcessingService(object):
                 self._app.dev_reconfigure(device[ID_KEY])
 
         # 4. Return a plugin ID
-        logger.debug('<%s> Finding route', req_id)
-        pg_id = self.dev_router.route(device, dev_info)
+        pg_id = self._get_plugin_id(device)
         if pg_id is None:
             logger.info('<%s> No route found', req_id)
         else:
             logger.info('<%s> Routing request to plugin %s', req_id, pg_id)
         defer.returnValue((device, pg_id))
+
+    def _get_plugin_id(self, device):
+        if device is None:
+            return None
+        return device.get(u'plugin')
 
 
 def _null_service_factory(pg_id, pg_service):
