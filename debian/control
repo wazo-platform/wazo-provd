@@ -10,7 +10,7 @@ Homepage: http://xivo.fr/
 
 Package: xivo-provd
 Architecture: all
-Pre-depends: xivo-libprovd
+Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
 Depends: ${python:Depends}, ${misc:Depends}
 Provides: pf-xivo-provd
 Conflicts: pf-xivo-provd
@@ -37,6 +37,7 @@ Description: XIVO provisioning daemon
 
 Package: xivo-dxtora
 Architecture: all
+Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
 Depends: ${python:Depends}, ${misc:Depends}
 Provides: pf-xivo-dxtora
 Conflicts: pf-xivo-dxtora
@@ -50,10 +51,11 @@ Description: XIVO dhcp extractor agent
 
 Package: xivo-dhcpd-update
 Architecture: all
+Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
+Depends: ${python:Depends}, ${misc:Depends}
 Provides: pf-xivo-dhcpd-update
 Conflicts: pf-xivo-dhcpd-update
 Replaces: pf-xivo-dhcpd-update
-Depends: ${python:Depends}, ${misc:Depends}
 Description: XIVO dhcpd configuration file for XiVO
  XIVO is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
