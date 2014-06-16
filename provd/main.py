@@ -123,29 +123,30 @@ class ProcessService(Service):
         conffile_globals['app'] = self._prov_service.app
         return conffile_globals
 
-    def _create_processor(self, request_config_dir, name):
+    def _create_processor(self, name):
         # name is the name of the processor, for example 'info_extractor'
+        dirname = self._config['general.request_config_dir']
         config_name = self._config['general.' + name]
-        filename = os.path.join(request_config_dir, name + '.py.conf.' + config_name)
+        filename = '%s.py.conf.%s' % (name, config_name)
+        pathname = os.path.join(dirname, filename)
         conffile_globals = self._get_conffile_globals()
         try:
-            execfile(filename, conffile_globals)
+            execfile(pathname, conffile_globals)
         except Exception, e:
-            logger.error('error while executing process config file "%s": %s', filename, e)
+            logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
         if name not in conffile_globals:
             raise Exception('process config file "%s" doesn\'t define a "%s" name',
-                            filename, name)
+                            pathname, name)
         return conffile_globals[name]
 
     def startService(self):
         # Pre: hasattr(self._prov_service, 'app')
-        request_config_dir = self._config['general.request_config_dir']
-        dev_info_extractor = self._create_processor(request_config_dir, 'info_extractor')
-        self.request_processing = ident.RequestProcessingService(self._prov_service.app, dev_info_extractor)
-        for name in ['retriever', 'updater']:
-            setattr(self.request_processing, 'dev_' + name,
-                    self._create_processor(request_config_dir, name))
+        dev_info_extractor = self._create_processor('info_extractor')
+        dev_retriever = self._create_processor('retriever')
+        dev_updater = self._create_processor('updater')
+        self.request_processing = ident.RequestProcessingService(self._prov_service.app, dev_info_extractor,
+                                                                 dev_retriever, dev_updater)
         Service.startService(self)
 
 

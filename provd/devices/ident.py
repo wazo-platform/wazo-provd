@@ -608,12 +608,12 @@ class RequestProcessingService(object):
     when processing a request from a device.
     
     """
-    dev_retriever = NullDeviceRetriever()
-    dev_updater = NullDeviceUpdater()
 
-    def __init__(self, app, dev_info_extractor):
+    def __init__(self, app, dev_info_extractor, dev_retriever, dev_updater):
         self._app = app
         self._dev_info_extractor = dev_info_extractor
+        self._dev_retriever = dev_retriever
+        self._dev_updater = dev_updater
         self._req_id = 0    # used for logging
 
 
@@ -646,7 +646,7 @@ class RequestProcessingService(object):
 
         # 2. Get a device object
         logger.debug('<%s> Retrieving device', req_id)
-        device = yield self.dev_retriever.retrieve(dev_info)
+        device = yield self._dev_retriever.retrieve(dev_info)
         if device is None:
             logger.info('<%s> No device retrieved', req_id)
         else:
@@ -657,8 +657,8 @@ class RequestProcessingService(object):
             logger.debug('<%s> Updating device', req_id)
             # 3.1 Update the device
             orig_device = copy.deepcopy(device)
-            force_reconfigure = yield self.dev_updater.update(device, dev_info,
-                                                              request, request_type)
+            force_reconfigure = yield self._dev_updater.update(device, dev_info,
+                                                               request, request_type)
 
             # 3.2 Persist the modification if there was a change
             if device != orig_device:
