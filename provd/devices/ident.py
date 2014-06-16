@@ -99,109 +99,6 @@ class StandardDeviceInfoExtractor(object):
             return defer.succeed(method(request))
 
 
-class StaticDeviceInfoExtractor(object):
-    """Device info extractor that always return the same device information."""
-
-    implements(IDeviceInfoExtractor)
-
-    def __init__(self, dev_info):
-        self._dev_info = dev_info
-
-    def extract(self, request, request_type):
-        logger.debug('In StaticDeviceInfoExtractor')
-        return defer.succeed(self._dev_info)
-
-
-def NullDeviceInfoExtractor():
-    """Device info extractor that always return None."""
-    return StaticDeviceInfoExtractor(None)
-
-
-class CompositeDeviceInfoExtractor(object):
-    """Abstract base class for device info extractor that return a result
-    based on zero or more underlying device info extractors. Not made to
-    be instantiated.
-    
-    """
-
-    def __init__(self, extractors=None):
-        self.extractors = [] if extractors is None else extractors
-
-
-class FirstCompositeDeviceInfoExtractor(CompositeDeviceInfoExtractor):
-    """Composite device info extractor that return the device info object of
-    the first extractor that returned a nonempty device info object.
-    
-    """
-
-    implements(IDeviceInfoExtractor)
-
-    @defer.inlineCallbacks
-    def extract(self, request, request_type):
-        logger.debug('In FirstCompositeDeviceInfoExtractor')
-        extractors = self.extractors[:]
-        for extractor in extractors:
-            dev_info = yield extractor.extract(request, request_type)
-            if dev_info:
-                defer.returnValue(dev_info)
-        defer.returnValue(None)
-
-
-class LongestDeviceInfoExtractor(CompositeDeviceInfoExtractor):
-    """Composite device info extractor that return the device info object
-    with the most items.
-    
-    In the case where at least two extractors return a device info object
-    of the same length, the result of the first extractor will be returned.
-    
-    """
-
-    implements(IDeviceInfoExtractor)
-
-    @defer.inlineCallbacks
-    def extract(self, request, request_type):
-        logger.debug('In LongestDeviceInfoExtractor')
-        dlist = defer.DeferredList([extractor.extract(request, request_type)
-                                    for extractor in self.extractors])
-        dlist_results = yield dlist
-        dev_info, length = None, 0
-        for success, result in dlist_results:
-            if success and result and len(result) > length:
-                dev_info, length = result, len(result)
-        defer.returnValue(dev_info)
-
-
-def _find_key_conflicts(base, new):
-    """Split the new dictionary into a conflicts and nonconflicts
-    dictionaries, such that:
-    - for key in conflicts: key in base
-    - for key in nonconflicts: key not in base
-    - conflicts.update(nonconflicts) == new
-    - nonconflicts.update(conflicts) == new
-    
-    """
-    conflicts, nonconflicts = {}, {}
-    for k, v in new.iteritems():
-        if k in base:
-            conflicts[k] = v
-        else:
-            nonconflicts[k] = v
-    return conflicts, nonconflicts
-
-
-class FirstSeenUpdater(object):
-    """Updater for CollaboratingDeviceInfoExtractor that, on conflict, keep
-    the first seen value.
-    
-    """
-    def __init__(self):
-        self.dev_info = {}
-
-    def update(self, dev_info):
-        nonconflicts = _find_key_conflicts(self.dev_info, dev_info)[1]
-        self.dev_info.update(nonconflicts)
-
-
 class LastSeenUpdater(object):
     """Updater for CollaboratingDeviceInfoExtractor that, on conflict, keep
     the last seen value.
@@ -212,27 +109,6 @@ class LastSeenUpdater(object):
 
     def update(self, dev_info):
         self.dev_info.update(dev_info)
-
-
-class RemoveUpdater(object):
-    """Updater for CollaboratingDeviceInfoExtractor that will return a device
-    info object with only keys that are not in conflict.
-    
-    """
-
-    def __init__(self):
-        self.dev_info = {}
-        self._conflicts = set()
-
-    def update(self, dev_info):
-        conflicts, nonconflicts = _find_key_conflicts(self.dev_info, dev_info)
-        for k, v in nonconflicts.iteritems():
-            if k not in self._conflicts:
-                self.dev_info[k] = v
-        for k, v in conflicts.iteritems():
-            if v != self.dev_info[k]:
-                del self.dev_info[k]
-                self._conflicts.add(k)
 
 
 class VotingUpdater(object):
@@ -268,7 +144,7 @@ class VotingUpdater(object):
             self._vote(item)
 
 
-class CollaboratingDeviceInfoExtractor(CompositeDeviceInfoExtractor):
+class CollaboratingDeviceInfoExtractor(object):
     """Composite device info extractor that return a device info object
     which is the composition of every device info objects returned.
 
@@ -283,54 +159,21 @@ class CollaboratingDeviceInfoExtractor(CompositeDeviceInfoExtractor):
 
     implements(IDeviceInfoExtractor)
 
-    def __init__(self, updater_factory, extractors=None):
-        CompositeDeviceInfoExtractor.__init__(self, extractors)
+    def __init__(self, updater_factory, extractors):
         self._updater_factory = updater_factory
+        self._extractors = extractors
 
     @defer.inlineCallbacks
     def extract(self, request, request_type):
         logger.debug('In CollaboratingDeviceInfoExtractor')
         dlist = defer.DeferredList([extractor.extract(request, request_type)
-                                    for extractor in self.extractors])
+                                    for extractor in self._extractors])
         dlist_results = yield dlist
         updater = self._updater_factory()
         for success, result in dlist_results:
             if success and result:
                 updater.update(result)
         defer.returnValue(updater.dev_info)
-
-
-class PluginDeviceInfoExtractor(object):
-    """Device info extractor that forward extraction requests to the
-    device info extractors of a plugin, if the plugin is loaded.
-    
-    """
-
-    implements(IDeviceInfoExtractor)
-
-    def __init__(self, pg_id, pg_mgr):
-        self._pg_id = pg_id
-        self._pg_mgr = pg_mgr
-        self._set_pg()
-        # observe plugin loading/unloading and keep a reference to the weakly
-        # referenced observer
-        self._obs = BasePluginManagerObserver(self._on_plugin_load_or_unload,
-                                              self._on_plugin_load_or_unload)
-        pg_mgr.attach(self._obs)
-
-    def _set_pg(self):
-        self._pg = self._pg_mgr.get(self._pg_id)
-
-    def _on_plugin_load_or_unload(self, pg_id):
-        self._set_pg()
-
-    def extract(self, request, request_type):
-        logger.debug('In PluginDeviceInfoExtractor')
-        if self._pg is None:
-            return defer.succeed(None)
-        else:
-            xtor = getattr(self._pg, request_type + '_dev_info_extractor')
-            return xtor.extract(request, request_type)
 
 
 class AllPluginsDeviceInfoExtractor(object):
@@ -764,13 +607,14 @@ class RequestProcessingService(object):
     when processing a request from a device.
     
     """
-    dev_info_extractor = NullDeviceInfoExtractor()
     dev_retriever = NullDeviceRetriever()
     dev_updater = NullDeviceUpdater()
 
-    def __init__(self, app):
+    def __init__(self, app, dev_info_extractor):
         self._app = app
+        self._dev_info_extractor = dev_info_extractor
         self._req_id = 0    # used for logging
+
 
     def _new_request_id(self):
         req_id = "%d" % self._req_id
@@ -792,7 +636,7 @@ class RequestProcessingService(object):
 
         # 1. Get a device info object
         logger.debug('<%s> Extracting device info', req_id)
-        dev_info = yield self.dev_info_extractor.extract(request, request_type)
+        dev_info = yield self._dev_info_extractor.extract(request, request_type)
         if not dev_info:
             logger.info('<%s> No device info extracted', req_id)
             dev_info = {}

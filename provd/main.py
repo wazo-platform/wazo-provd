@@ -123,8 +123,9 @@ class ProcessService(Service):
         conffile_globals['app'] = self._prov_service.app
         return conffile_globals
 
-    def _create_processor(self, request_config_dir, name, config_name):
+    def _create_processor(self, request_config_dir, name):
         # name is the name of the processor, for example 'info_extractor'
+        config_name = self._config['general.' + name]
         filename = os.path.join(request_config_dir, name + '.py.conf.' + config_name)
         conffile_globals = self._get_conffile_globals()
         try:
@@ -139,11 +140,12 @@ class ProcessService(Service):
 
     def startService(self):
         # Pre: hasattr(self._prov_service, 'app')
-        self.request_processing = ident.RequestProcessingService(self._prov_service.app)
         request_config_dir = self._config['general.request_config_dir']
-        for name in ['info_extractor', 'retriever', 'updater']:
+        dev_info_extractor = self._create_processor(request_config_dir, 'info_extractor')
+        self.request_processing = ident.RequestProcessingService(self._prov_service.app, dev_info_extractor)
+        for name in ['retriever', 'updater']:
             setattr(self.request_processing, 'dev_' + name,
-                    self._create_processor(request_config_dir, name, self._config['general.' + name]))
+                    self._create_processor(request_config_dir, name))
         Service.startService(self)
 
 
