@@ -240,15 +240,6 @@ class IDeviceRetriever(Interface):
         """
 
 
-class NullDeviceRetriever(object):
-    """Device retriever who never retrieves anything."""
-    implements(IDeviceRetriever)
-
-    def retrieve(self, dev_info):
-        logger.debug('In NullDeviceRetriever')
-        return defer.succeed(None)
-
-
 class SearchDeviceRetriever(object):
     """Device retriever who search in the application for a device with a
     key's value the same as a device info key's value, and return the first
@@ -413,31 +404,6 @@ class NullDeviceUpdater(object):
         return defer.succeed(False)
 
 
-class StaticDeviceUpdater(object):
-    """Device updater that updates one of the device key with a fixed value.
-    
-    If the key is already present in the device, then the device will be
-    updated only if force_update is true.
-    
-    Its update method always return false, i.e. does not force a device
-    reconfiguration.
-    
-    """
-
-    implements(IDeviceUpdater)
-
-    def __init__(self, key, value, force_update=False):
-        self._key = key
-        self._value = value
-        self._force_update = force_update
-
-    def update(self, device, dev_info, request, request_type):
-        logger.debug('In StaticDeviceUpdater')
-        if self._force_update or self._key not in device:
-            device[self._key] = self._value
-        return defer.succeed(False)
-
-
 class DynamicDeviceUpdater(object):
     """Device updater that updates zero or more of the device key with the
     value of the device info key.
@@ -486,72 +452,6 @@ class AddInfoDeviceUpdater(object):
             if key not in device:
                 device[key] = dev_info[key]
         return defer.succeed(False)
-
-
-class ReplaceDeviceUpdater(object):
-    """Device updater that replace the device with the device info.
-    
-    This SHOULD NOT be used in normal situation.
-    
-    """
-
-    implements(IDeviceUpdater)
-
-    def update(self, device, dev_info, request, request_type):
-        logger.debug('In ReplaceDeviceUpdater')
-        device.clear()
-        device.update(copy.deepcopy(dev_info))
-        return defer.succeed(False)
-
-
-def IpDeviceUpdater():
-    """Device updater that updates the IP address."""
-    return DynamicDeviceUpdater(u'ip', True)
-
-
-class VersionDeviceUpdater(object):
-    """If 'model' in dev and 'version' in dev_info, then update dev['version']
-    to dev_info['version'].
-    
-    """
-
-    implements(IDeviceUpdater)
-
-    delete_on_no_version = True
-
-    def update(self, device, dev_info, request, request_type):
-        logger.debug('In VersionDeviceUpdater')
-        if u'vendor' in device and u'model' in device:
-            if u'version' in dev_info:
-                device[u'version'] = dev_info[u'version']
-            else:
-                if self.delete_on_no_version and u'version' in device:
-                    del device[u'version']
-        return defer.succeed(False)
-
-
-class DefaultConfigDeviceUpdater(object):
-    """Device updater that set a default config to the device if the device
-    has no config.
-    
-    The way it works is that when a device with no config is found, a search
-    for a config with type 'default' is done and the first config found is
-    associated with the device.
-    
-    """
-    def __init__(self, app):
-        self._app = app
-
-    @defer.inlineCallbacks
-    def update(self, device, dev_info, request, request_type):
-        logger.debug('In DefaultConfigDeviceUpdater')
-        if u'config' not in device:
-            config = yield self._app.cfg_find_one({u'role': u'default'})
-            if config:
-                device[u'config'] = config[ID_KEY]
-            else:
-                logger.warning('No config with the default role found')
-        defer.returnValue(False)
 
 
 class AutocreateConfigDeviceUpdater(object):
