@@ -85,45 +85,11 @@ class IConflictSolver(Interface):
         """
 
 
-class PreferredConflictSolver(object):
-    implements(IConflictSolver)
-
-    def __init__(self, preferred_pg_ids):
-        self._pref_pg_ids = preferred_pg_ids
-
-    def solve(self, pg_ids):
-        for pg_id in self._pref_pg_ids:
-            if pg_id in pg_ids:
-                return pg_id
-        return None
-
-
-class AlphabeticConflictSolver(object):
-    implements(IConflictSolver)
-
-    def solve(self, pg_ids):
-        return min(pg_ids)
-
-
 class ReverseAlphabeticConflictSolver(object):
     implements(IConflictSolver)
 
     def solve(self, pg_ids):
         return max(pg_ids)
-
-
-class CompositeConflictSolver(object):
-    implements(IConflictSolver)
-
-    def __init__(self, solvers):
-        self._solvers = solvers
-
-    def solve(self, pg_ids):
-        for solver in self._solvers:
-            pg_id = solver.solve(pg_ids)
-            if pg_id:
-                return pg_id
-        return None
 
 
 class PluginAssociatorDeviceUpdater(object):
