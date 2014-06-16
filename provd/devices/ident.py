@@ -20,6 +20,7 @@
 
 import copy
 import logging
+from collections import defaultdict
 from operator import itemgetter
 from provd.persist.common import ID_KEY
 from provd.plugins import BasePluginManagerObserver
@@ -120,10 +121,10 @@ class VotingUpdater(object):
     """
 
     def __init__(self):
-        self._votes = {}
+        self._votes = defaultdict(dict)
 
-    def _vote(self, (key, value)):
-        key_pool = self._votes.setdefault(key, {})
+    def _vote(self, key, value):
+        key_pool = self._votes[key]
         key_pool[value] = key_pool.get(value, 0) + 1
 
     def _get_winner(self, key_pool):
@@ -140,8 +141,8 @@ class VotingUpdater(object):
         return dev_info
 
     def update(self, dev_info):
-        for item in dev_info.iteritems():
-            self._vote(item)
+        for key, value in dev_info.iteritems():
+            self._vote(key, value)
 
 
 class CollaboratingDeviceInfoExtractor(object):
