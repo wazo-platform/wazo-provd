@@ -5,6 +5,7 @@ mv_conffile /etc/pf-xivo/provd/info_extractor.py.conf.default /etc/xivo/provd/in
 mv_conffile /etc/pf-xivo/provd/provd.conf /etc/xivo/provd/provd.conf 14.02
 mv_conffile /etc/pf-xivo/provd/retriever.py.conf.default /etc/xivo/provd/retriever.py.conf.default 14.02
 mv_conffile /etc/pf-xivo/provd/retriever.py.conf.secure /etc/xivo/provd/retriever.py.conf.secure 14.02
-mv_conffile /etc/pf-xivo/provd/router.py.conf.default /etc/xivo/provd/router.py.conf.default 14.02
 mv_conffile /etc/pf-xivo/provd/updater.py.conf.default /etc/xivo/provd/updater.py.conf.default 14.02
 mv_conffile /etc/pf-xivo/provd/updater.py.conf.secure /etc/xivo/provd/updater.py.conf.secure 14.02
+rm_conffile /etc/pf-xivo/provd/router.py.conf.default 14.02
+rm_conffile /etc/xivo/provd/router.py.conf.default
