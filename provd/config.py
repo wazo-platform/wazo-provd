@@ -36,7 +36,6 @@ configuration file are documented in provd.conf):
     general.info_extractor
     general.retriever
     general.updater
-    general.router
     general.external_ip
     general.http_port
     general.tftp_port
@@ -115,7 +114,6 @@ class DefaultConfigSource(object):
         ('general.info_extractor', 'default'),
         ('general.retriever', 'default'),
         ('general.updater', 'default'),
-        ('general.router', 'default'),
         ('general.http_port', '8667'),
         ('general.tftp_port', '69'),
         ('general.rest_ip', '127.0.0.1'),
@@ -335,7 +333,6 @@ _PARAMS_DEFINITION = [
     ('general.info_extractor', (str, True)),
     ('general.retriever', (str, True)),
     ('general.updater', (str, True)),
-    ('general.router', (str, True)),
     ('general.external_ip', (_ip_address, False)),
     ('general.http_port', (_port_number, True)),
     ('general.tftp_port', (_port_number, True)),
