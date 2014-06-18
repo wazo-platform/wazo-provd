@@ -36,9 +36,11 @@ import urllib2
 import urlparse
 import socket
 import sys
-from logging.handlers import SysLogHandler
+
+from xivo.xivo_logging import setup_logging
 
 CONFIG_FILE = '/etc/xivo/dxtora.conf'
+LOG_FILE_NAME = '/var/log/xivo-dxtora.log'
 PID_FILE = '/var/run/xivo-dxtora.pid'
 UNIX_SERVER_ADDR = '/var/run/xivo-dxtora.ctl'
 PROV_MIME_TYPE = 'application/vnd.proformatique.provd+json'
@@ -435,15 +437,7 @@ def main():
 
     config = _read_config(CONFIG_FILE)
 
-    logger.setLevel(logging.INFO)
-    if config['general']['foreground']:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(asctime)s - %(filename)s:%(lineno)3d - %(name)s: %(message)s"))
-        logger.addHandler(handler)
-    else:
-        handler = SysLogHandler('/dev/log', SysLogHandler.LOG_DAEMON)
-        handler.setFormatter(logging.Formatter("xivo-dxtora[%(process)d]: %(message)s"))
-        logger.addHandler(handler)
+    setup_logging(LOG_FILE_NAME, config['general']['foreground'], debug=False)
 
     if 'dev_mgr_uri' not in config['prov_server']:
         logger.error('error: no device manager URI specified. Exiting.')
