@@ -381,12 +381,7 @@ class IDeviceUpdater(Interface):
 
     def update(device, dev_info, request, request_type):
         """Update a device object, returning a deferred that will fire once
-        the device object has been updated, with either true if the device
-        should be forced to be reconfigured, else false.
-        
-        Forcing device reconfiguration is only useful if you are using some
-        non standard keys. Device reconfiguration is normally automatically
-        handled.
+        the device object has been updated.
         
         device -- a nonempty device object
         dev_info -- a potentially empty device info object
@@ -401,7 +396,7 @@ class NullDeviceUpdater(object):
 
     def update(self, device, dev_info, request, request_type):
         logger.debug('In NullDeviceUpdater')
-        return defer.succeed(False)
+        return defer.succeed(None)
 
 
 class DynamicDeviceUpdater(object):
@@ -432,7 +427,7 @@ class DynamicDeviceUpdater(object):
             if key in dev_info:
                 if self._force_update or key not in device:
                     device[key] = dev_info[key]
-        return defer.succeed(False)
+        return defer.succeed(None)
 
 
 class AddInfoDeviceUpdater(object):
@@ -451,7 +446,7 @@ class AddInfoDeviceUpdater(object):
         for key in dev_info:
             if key not in device:
                 device[key] = dev_info[key]
-        return defer.succeed(False)
+        return defer.succeed(None)
 
 
 class AutocreateConfigDeviceUpdater(object):
@@ -469,7 +464,7 @@ class AutocreateConfigDeviceUpdater(object):
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
                 device[u'config'] = new_config_id
-        defer.returnValue(False)
+        defer.returnValue(None)
 
 
 class RemoveOutdatedIpDeviceUpdater(object):
@@ -496,11 +491,8 @@ class CompositeDeviceUpdater(object):
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
         logger.debug('In CompositeDeviceUpdater')
-        force_reconfigure = False
         for updater in self.updaters:
-            d = updater.update(device, dev_info, request, request_type)
-            force_reconfigure = (yield d) or force_reconfigure
-        defer.returnValue(force_reconfigure)
+            yield updater.update(device, dev_info, request, request_type)
 
 
 class RequestProcessingService(object):
@@ -557,21 +549,12 @@ class RequestProcessingService(object):
             logger.debug('<%s> Updating device', req_id)
             # 3.1 Update the device
             orig_device = copy.deepcopy(device)
-            force_reconfigure = yield self._dev_updater.update(device, dev_info,
-                                                               request, request_type)
+            yield self._dev_updater.update(device, dev_info, request, request_type)
 
             # 3.2 Persist the modification if there was a change
             if device != orig_device:
                 logger.info('<%s> Device has been updated', req_id)
                 yield self._app.dev_update(device)
-
-            # 3.3 Reconfigure the device if needed
-            # XXX we should check that the call to _app.dev_update did not lead
-            #     to a device reconfiguration; if this is the case, we should
-            #     not reconfigure the device (i.e. this is inefficient)
-            if force_reconfigure:
-                logger.info('<%s> Reconfiguring device', req_id)
-                self._app.dev_reconfigure(device[ID_KEY])
 
         # 4. Return a plugin ID
         pg_id = self._get_plugin_id(device)
