@@ -21,6 +21,7 @@ import functools
 import os.path
 import urlparse
 from provd.devices.config import RawConfigError, DefaultConfigFactory
+from provd.devices.device import needs_reconfiguration
 from provd.localization import get_localization_service
 from provd.operation import OIP_PROGRESS, OIP_FAIL, OIP_SUCCESS
 from provd.persist.common import ID_KEY, InvalidIdError as PersistInvalidIdError
@@ -323,17 +324,6 @@ class ProvisioningApplication(object):
         else:
             defer.returnValue(device)
 
-    _SIGNIFICANT_KEYS = [u'plugin', u'config', u'mac', u'ip', u'uuid',
-                         u'vendor', u'model', u'version', 'options']
-
-    def _dev_need_reconfiguration(self, old_device, new_device):
-        # Note that this doesn't check if the device is deconfigurable
-        # and configurable.
-        for key in self._SIGNIFICANT_KEYS:
-            if old_device.get(key) != new_device.get(key):
-                return True
-        return False
-
     @_wlock
     @defer.inlineCallbacks
     def dev_insert(self, device):
@@ -405,7 +395,7 @@ class ProvisioningApplication(object):
             else:
                 logger.info('Updating device %s', id)
                 old_device = yield self._dev_get_or_raise(id)
-                if self._dev_need_reconfiguration(old_device, device):
+                if needs_reconfiguration(old_device, device):
                     # Deconfigure old device it was configured
                     if old_device[u'configured']:
                         self._dev_deconfigure_if_possible(old_device)

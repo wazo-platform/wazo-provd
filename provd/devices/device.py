@@ -51,9 +51,23 @@ Finally, device collection objects are used as a storage for device objects.
 
 """
 
-
+from copy import deepcopy
 from provd.util import is_normed_mac, is_normed_ip
 from provd.persist.util import ForwardingDocumentCollection
+
+_RECONF_KEYS = [u'plugin', u'config', u'mac', u'ip', u'uuid',
+                u'vendor', u'model', u'version', 'options']
+
+
+def copy(device):
+    return deepcopy(device)
+
+
+def needs_reconfiguration(old_device, new_device):
+    for key in _RECONF_KEYS:
+        if old_device.get(key) != new_device.get(key):
+            return True
+    return False
 
 
 def _check_device_validity(device):

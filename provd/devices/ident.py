@@ -18,11 +18,10 @@
 """Request processing service definition."""
 
 
-import copy
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from provd.persist.common import ID_KEY
+from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService
@@ -342,7 +341,7 @@ class AddDeviceRetriever(object):
 
     def retrieve(self, dev_info):
         logger.debug('In AddDeviceRetriever')
-        device = copy.deepcopy(dev_info)
+        device = dict(dev_info)
         device[u'added'] = u'auto'
         d = self._app.dev_insert(device)
         d.addCallbacks(lambda _: device, lambda _: None)
@@ -548,7 +547,7 @@ class RequestProcessingService(object):
         if device is not None:
             logger.debug('<%s> Updating device', req_id)
             # 3.1 Update the device
-            orig_device = copy.deepcopy(device)
+            orig_device = copy_device(device)
             yield self._dev_updater.update(device, dev_info, request, request_type)
 
             # 3.2 Persist the modification if there was a change

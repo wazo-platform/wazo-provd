@@ -19,6 +19,7 @@ from copy import deepcopy
 from time import sleep
 from sys import stdout
 from itertools import chain
+from provd.devices.device import copy as copy_device
 from provd.operation import parse_oip, OIP_SUCCESS, OIP_FAIL, OIP_WAITING, \
     OIP_PROGRESS, OperationInProgress
 from provd.persist.common import ID_KEY
@@ -490,7 +491,7 @@ class Device(object):
 
     def set(self, values):
         old_device = self._dev_mgr.get(self._id)
-        new_device = deepcopy(old_device)
+        new_device = copy_device(old_device)
         for k, v in values.iteritems():
             new_device[k] = v
         if new_device != old_device:
@@ -499,7 +500,7 @@ class Device(object):
 
     def unset(self, *values):
         old_device = self._dev_mgr.get(self._id)
-        new_device = deepcopy(old_device)
+        new_device = copy_device(old_device)
         for k in values:
             if k in old_device:
                 del new_device[k]
