@@ -24,7 +24,7 @@ Description: XIVO provisioning daemon
 
 Package: xivo-libprovd
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, xivo-fetchfw, python-jinja2, python-openssl, python-twisted-core, python-twisted-web
+Depends: ${python:Depends}, ${misc:Depends}, xivo-fetchfw, xivo-lib-python, python-jinja2, python-openssl, python-twisted-core, python-twisted-web
 Provides: pf-xivo-libprovd
 Conflicts: pf-xivo-libprovd
 Replaces: xivo-provisioning, pf-xivo-libprovd
