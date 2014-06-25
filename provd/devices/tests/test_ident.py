@@ -15,8 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-import unittest
-from provd.devices.ident import LastSeenUpdater, VotingUpdater
+from hamcrest import assert_that, equal_to, has_entry
+from mock import Mock
+from twisted.trial import unittest
+from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper
+from twisted.internet import defer
 
 
 class TestLastSeenUpdater(unittest.TestCase):
@@ -85,3 +88,180 @@ class TestVotingUpdater(unittest.TestCase):
             self.updater.update(dev_info)
 
         self.assertEqual(self.updater.dev_info, {'k1': 'v1'})
+
+
+class TestRequestHelper(unittest.TestCase):
+
+    def setUp(self):
+        self.app = Mock()
+        self.request = Mock()
+        self.request_type = Mock()
+        self.helper = _RequestHelper(self.app, self.request, self.request_type, 1)
+
+    @defer.inlineCallbacks
+    def test_extract_device_info_no_info(self):
+        extractor = self._new_dev_info_extractor_mock(None)
+
+        dev_info = yield self.helper.extract_device_info(extractor)
+
+        extractor.extract.assert_called_once_with(self.request, self.request_type)
+        assert_that(dev_info, equal_to({}))
+
+    @defer.inlineCallbacks
+    def test_extract_device_info_with_info(self):
+        expected = {'a': 1}
+        extractor = self._new_dev_info_extractor_mock(expected)
+
+        dev_info = yield self.helper.extract_device_info(extractor)
+
+        extractor.extract.assert_called_once_with(self.request, self.request_type)
+        assert_that(dev_info, equal_to(expected))
+
+    @defer.inlineCallbacks
+    def test_retrieve_device_no_device(self):
+        retriever = self._new_dev_retriever_mock(None)
+        dev_info = {}
+
+        device = yield self.helper.retrieve_device(retriever, dev_info)
+
+        retriever.retrieve.assert_called_once_with(dev_info)
+        assert_that(device, equal_to(None))
+
+    @defer.inlineCallbacks
+    def test_retrieve_device_with_device(self):
+        expected = {u'id': u'a'}
+        retriever = self._new_dev_retriever_mock(expected)
+        dev_info = Mock()
+
+        device = yield self.helper.retrieve_device(retriever, dev_info)
+
+        retriever.retrieve.assert_called_once_with(dev_info)
+        assert_that(device, equal_to(expected))
+
+    @defer.inlineCallbacks
+    def test_update_device_no_device(self):
+        dev_updater = self._new_dev_updater_mock()
+        device = None
+        dev_info = {}
+
+        yield self.helper.update_device(dev_updater, device, dev_info)
+
+        self.assertFalse(dev_updater.update.called)
+
+    @defer.inlineCallbacks
+    def test_update_device_on_no_device_change_and_no_remote_state_update(self):
+        dev_updater = self._new_dev_updater_mock()
+        device = {u'id': u'a'}
+        dev_info = {}
+
+        yield self.helper.update_device(dev_updater, device, dev_info)
+
+        dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
+        self.assertFalse(self.app.cfg_retrieve.called)
+        self.assertFalse(self.app.dev_update.called)
+
+    @defer.inlineCallbacks
+    def test_update_device_on_no_device_change_and_remote_state_update(self):
+        dev_updater = self._new_dev_updater_mock()
+        device = {
+            u'id': u'a',
+            u'configured': True,
+            u'plugin': u'foo',
+            u'config': u'a',
+        }
+        dev_info = {}
+        self.request = Mock()
+        self.request.path = '001122334455.cfg'
+        self.request_type = 'http'
+        plugin = Mock()
+        plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
+        self.app.pg_mgr.get.return_value = plugin
+        self.app.cfg_retrieve.return_value = {
+            u'raw_config': {
+                u'sip_lines': {
+                    u'1': {
+                        u'username': 'foobar',
+                    }
+                }
+            }
+        }
+        self.helper = _RequestHelper(self.app, self.request, self.request_type, 1)
+
+        yield self.helper.update_device(dev_updater, device, dev_info)
+
+        dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
+        self.app.cfg_retrieve.assert_called_once_with(device[u'config'])
+        self.app.dev_update.assert_called_once_with(device)
+        assert_that(device, has_entry(u'remote_state_sip_username', u'foobar'))
+
+    @defer.inlineCallbacks
+    def test_update_device_on_device_change_and_remote_state_update(self):
+        dev_updater = self._new_dev_updater_mock({u'vendor': u'xivo'})
+        device = {
+            u'id': u'a',
+            u'configured': True,
+            u'plugin': u'foo',
+            u'config': u'a',
+        }
+        dev_info = {}
+        self.request = Mock()
+        self.request.path = '001122334455.cfg'
+        self.request_type = 'http'
+        plugin = Mock()
+        plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
+        self.app.pg_mgr.get.return_value = plugin
+        self.app.cfg_retrieve.return_value = {
+            u'raw_config': {
+                u'sip_lines': {
+                    u'1': {
+                        u'username': 'foobar',
+                    }
+                }
+            }
+        }
+        self.helper = _RequestHelper(self.app, self.request, self.request_type, 1)
+
+        yield self.helper.update_device(dev_updater, device, dev_info)
+
+        dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
+        self.app.dev_update.assert_called_once_with(device, pre_update_hook=self.helper._pre_update_hook)
+
+    def test_get_plugin_id_no_device(self):
+        device = None
+
+        pg_id = self.helper.get_plugin_id(device)
+
+        assert_that(pg_id, equal_to(None))
+
+    def test_get_plugin_id_no_plugin_key(self):
+        device = {u'id': u'a'}
+
+        pg_id = self.helper.get_plugin_id(device)
+
+        assert_that(pg_id, equal_to(None))
+
+    def test_get_plugin_id_ok(self):
+        device = {u'id': u'a', u'plugin': u'xivo-foo'}
+
+        pg_id = self.helper.get_plugin_id(device)
+
+        assert_that(pg_id, equal_to(u'xivo-foo'))
+
+    def _new_dev_info_extractor_mock(self, return_value):
+        dev_info_extractor = Mock()
+        dev_info_extractor.extract.return_value = defer.succeed(return_value)
+        return dev_info_extractor
+
+    def _new_dev_retriever_mock(self, return_value):
+        dev_retriever = Mock()
+        dev_retriever.retrieve.return_value = defer.succeed(return_value)
+        return dev_retriever
+
+    def _new_dev_updater_mock(self, device_update={}):
+        dev_updater = Mock()
+        def update_fun(device, dev_info, request, request_type):
+            device.update(device_update)
+            return defer.succeed(None)
+
+        dev_updater.update.side_effect = update_fun
+        return dev_updater

@@ -21,6 +21,7 @@
 import logging
 from collections import defaultdict
 from operator import itemgetter
+from os.path import basename
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.servers.tftp.packet import ERR_UNDEF
@@ -510,41 +511,155 @@ class RequestProcessingService(object):
           continue to process this request.
         
         """
-        req_id = self._new_request_id()
+        helper = _RequestHelper(self._app, request, request_type, self._new_request_id())
 
-        # get a device info object
-        dev_info = yield self._dev_info_extractor.extract(request, request_type)
-        if not dev_info:
-            logger.info('<%s> No device info extracted', req_id)
-            dev_info = {}
-        else:
-            logger.info('<%s> Extracted device info: %s', req_id, dev_info)
-
-        # get a device object
-        device = yield self._dev_retriever.retrieve(dev_info)
-        if device is None:
-            logger.info('<%s> No device retrieved', req_id)
-        else:
-            logger.info('<%s> Retrieved device id: %s', req_id, device[u'id'])
-
-        # update the device
-        if device is not None:
-            orig_device = copy_device(device)
-
-            yield self._dev_updater.update(device, dev_info, request, request_type)
-
-            if device != orig_device:
-                logger.info('<%s> Device has been updated', req_id)
-                yield self._app.dev_update(device)
-
-        # get plugin ID
-        pg_id = self._get_plugin_id(device)
-        if pg_id is None:
-            logger.info('<%s> No route found', req_id)
-        else:
-            logger.info('<%s> Routing request to plugin %s', req_id, pg_id)
+        dev_info = yield helper.extract_device_info(self._dev_info_extractor)
+        device = yield helper.retrieve_device(self._dev_retriever, dev_info)
+        yield helper.update_device(self._dev_updater, device, dev_info)
+        pg_id = helper.get_plugin_id(device)
 
         defer.returnValue((device, pg_id))
+
+
+class _RequestHelper(object):
+
+    def __init__(self, app, request, request_type, request_id):
+        self._app = app
+        self._request = request
+        self._request_type = request_type
+        self._request_id = request_id
+
+    @defer.inlineCallbacks
+    def extract_device_info(self, dev_info_extractor):
+        dev_info = yield dev_info_extractor.extract(self._request, self._request_type)
+        if not dev_info:
+            logger.info('<%s> No device info extracted', self._request_id)
+            dev_info = {}
+        else:
+            logger.info('<%s> Extracted device info: %s', self._request_id, dev_info)
+
+        defer.returnValue(dev_info)
+
+    @defer.inlineCallbacks
+    def retrieve_device(self, dev_retriever, dev_info):
+        device = yield dev_retriever.retrieve(dev_info)
+        if device is None:
+            logger.info('<%s> No device retrieved', self._request_id)
+        else:
+            logger.info('<%s> Retrieved device id: %s', self._request_id, device[u'id'])
+
+        defer.returnValue(device)
+
+    @defer.inlineCallbacks
+    def update_device(self, dev_updater, device, dev_info):
+        if device is None:
+            defer.returnValue(None)
+
+        orig_device = copy_device(device)
+        yield dev_updater.update(device, dev_info, self._request, self._request_type)
+        if device == orig_device:
+            yield self._update_device_on_no_change(device)
+        else:
+            logger.info('<%s> Device has been updated', self._request_id)
+            yield self._update_device_on_change(device)
+
+    @defer.inlineCallbacks
+    def _update_device_on_no_change(self, device):
+        if not device.get(u'configured'):
+            defer.returnValue(None)
+
+        if not self._should_update_remote_state(device):
+            defer.returnValue(None)
+
+        config = yield self._app.cfg_retrieve(device[u'config'])
+        if not config:
+            defer.returnValue(None)
+
+        if self._update_remote_state_sip_username(device, config):
+            yield self._app.dev_update(device)
+
+    def _update_device_on_change(self, device):
+        if self._should_update_remote_state(device):
+            pre_update_hook = self._pre_update_hook
+        else:
+            pre_update_hook = None
+
+        return self._app.dev_update(device, pre_update_hook=pre_update_hook)
+
+    def _should_update_remote_state(self, device):
+        if self._request_type == 'http':
+            filename = basename(self._request.path)
+        elif self._request_type == 'tftp':
+            filename = basename(self._request['packet']['filename'])
+        else:
+            return False
+
+        plugin_id = device.get(u'plugin')
+        if not plugin_id:
+            return False
+
+        plugin = self._app.pg_mgr.get(plugin_id)
+        if plugin is None:
+            return False
+
+        trigger_fun = getattr(plugin, 'get_remote_state_trigger_filename', None)
+        if trigger_fun is None:
+            return False
+
+        trigger_filename = trigger_fun(device)
+        if not trigger_filename:
+            return False
+
+        if trigger_filename != filename:
+            return False
+
+        config_id = device.get(u'config')
+        if not config_id:
+            return False
+
+        return True
+
+    def _pre_update_hook(self, device, config):
+        if not config:
+            return
+
+        if not device[u'configured']:
+            return
+
+        self._update_remote_state_sip_username(device, config)
+
+    def _update_remote_state_sip_username(self, device, config):
+        sip_username = self._get_sip_username(config)
+        if not sip_username:
+            return False
+
+        if sip_username == device.get(u'remote_state_sip_username'):
+            return False
+
+        device[u'remote_state_sip_username'] = sip_username
+        logger.debug('Remote state SIP username updated')
+
+        return True
+
+    def _get_sip_username(self, config):
+        sip_lines = config[u'raw_config'].get(u'sip_lines')
+        if not sip_lines:
+            return None
+
+        sip_line = sip_lines.get(u'1')
+        if not sip_line:
+            return None
+
+        return sip_line.get(u'username')
+
+    def get_plugin_id(self, device):
+        pg_id = self._get_plugin_id(device)
+        if pg_id is None:
+            logger.info('<%s> No route found', self._request_id)
+        else:
+            logger.info('<%s> Routing request to plugin %s', self._request_id, pg_id)
+
+        return pg_id
 
     def _get_plugin_id(self, device):
         if device is None:

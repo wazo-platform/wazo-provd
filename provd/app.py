@@ -371,9 +371,12 @@ class ProvisioningApplication(object):
 
     @_wlock
     @defer.inlineCallbacks
-    def dev_update(self, device):
+    def dev_update(self, device, pre_update_hook=None):
         """Update the device.
         
+        The pre_update_hook function is called with the device and
+        its config just before the device is persisted.
+
         Return a deferred that fire with None once the update is completed.
         
         The deferred will fire its errback with an exception if device has
@@ -403,8 +406,10 @@ class ProvisioningApplication(object):
                     configured = yield self._dev_configure_if_possible(device)
                     device[u'configured'] = configured
                 else:
-                    logger.info('Not reconfiguring device %s: not needed.', id)
                     device[u'configured'] = old_device[u'configured']
+                if pre_update_hook is not None:
+                    config = yield self._cfg_collection.retrieve(device.get(u'config'))
+                    pre_update_hook(device, config)
                 # Update device collection if the device is different from
                 # the old device
                 if device != old_device:
