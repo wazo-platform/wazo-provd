@@ -88,7 +88,6 @@ class StandardDeviceInfoExtractor(object):
         return {u'ip': request[u'ip'], u'mac': request[u'mac']}
 
     def extract(self, request, request_type):
-        logger.debug('In StandardDeviceInfoExtractor')
         method_name = '_extract_%s' % request_type
         try:
             method = getattr(self, method_name)
@@ -165,7 +164,6 @@ class CollaboratingDeviceInfoExtractor(object):
 
     @defer.inlineCallbacks
     def extract(self, request, request_type):
-        logger.debug('In CollaboratingDeviceInfoExtractor')
         dlist = defer.DeferredList([extractor.extract(request, request_type)
                                     for extractor in self._extractors])
         dlist_results = yield dlist
@@ -219,7 +217,6 @@ class AllPluginsDeviceInfoExtractor(object):
         self._set_xtors()
 
     def extract(self, request, request_type):
-        logger.debug('In AllPluginsDeviceInfoExtractor')
         xtor = getattr(self, self._xtor_name(request_type))
         return xtor.extract(request, request_type)
 
@@ -253,7 +250,6 @@ class SearchDeviceRetriever(object):
         self._key = key
 
     def retrieve(self, dev_info):
-        logger.debug('In SearchDeviceRetriever')
         if self._key in dev_info:
             return self._app.dev_find_one({self._key: dev_info[self._key]})
         return defer.succeed(None)
@@ -267,7 +263,6 @@ class IpDeviceRetriever(object):
 
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
-        logger.debug('In IpDeviceRetriever')
         if u'ip' in dev_info:
             devices = yield self._app.dev_find({u'ip': dev_info[u'ip']})
             matching_device = self._get_matching_device(devices, dev_info)
@@ -340,7 +335,6 @@ class AddDeviceRetriever(object):
         self._app = app
 
     def retrieve(self, dev_info):
-        logger.debug('In AddDeviceRetriever')
         device = dict(dev_info)
         device[u'added'] = u'auto'
         d = self._app.dev_insert(device)
@@ -361,7 +355,6 @@ class FirstCompositeDeviceRetriever(object):
 
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
-        logger.debug('In FirstCompositeDeviceRetriever')
         retrievers = self.retrievers[:]
         for retriever in retrievers:
             device = yield retriever.retrieve(dev_info)
@@ -394,7 +387,6 @@ class NullDeviceUpdater(object):
     implements(IDeviceUpdater)
 
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In NullDeviceUpdater')
         return defer.succeed(None)
 
 
@@ -421,7 +413,6 @@ class DynamicDeviceUpdater(object):
         self._force_update = force_update
 
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In DynamicDeviceUpdater')
         for key in self._keys:
             if key in dev_info:
                 if self._force_update or key not in device:
@@ -441,7 +432,6 @@ class AddInfoDeviceUpdater(object):
     implements(IDeviceUpdater)
 
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In AddInfoDeviceUpdater')
         for key in dev_info:
             if key not in device:
                 device[key] = dev_info[key]
@@ -458,7 +448,6 @@ class AutocreateConfigDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In AutocreateConfigDeviceUpdater')
         if u'config' not in device:
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
@@ -472,7 +461,6 @@ class RemoveOutdatedIpDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In RemoveOutdatedIpDeviceUpdater')
         if u'ip' in dev_info:
             selector = {u'ip': dev_info[u'ip'], u'id': {'$ne': device[u'id']}}
             outdated_devices = yield self._app.dev_find(selector)
@@ -489,7 +477,6 @@ class CompositeDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In CompositeDeviceUpdater')
         for updater in self.updaters:
             yield updater.update(device, dev_info, request, request_type)
 

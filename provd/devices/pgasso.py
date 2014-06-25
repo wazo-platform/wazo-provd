@@ -103,7 +103,6 @@ class PluginAssociatorDeviceUpdater(object):
         self._solver = conflict_solver
 
     def update(self, dev, dev_info, request, request_type):
-        logger.debug('In %s', self.__class__.__name__)
         if self.force_update or u'plugin' not in dev:
             pg_id = self._do_update(dev_info)
             if pg_id:
