@@ -55,7 +55,7 @@ from copy import deepcopy
 from provd.util import is_normed_mac, is_normed_ip
 from provd.persist.util import ForwardingDocumentCollection
 
-_RECONF_KEYS = [u'plugin', u'config', u'mac', u'ip', u'uuid',
+_RECONF_KEYS = [u'plugin', u'config', u'mac', u'uuid',
                 u'vendor', u'model', u'version', 'options']
 
 
