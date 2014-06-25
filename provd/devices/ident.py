@@ -494,7 +494,6 @@ class RequestProcessingService(object):
         self._dev_updater = dev_updater
         self._req_id = 0    # used for logging
 
-
     def _new_request_id(self):
         req_id = "%d" % self._req_id
         self._req_id = (self._req_id + 1) % 100
@@ -513,8 +512,7 @@ class RequestProcessingService(object):
         """
         req_id = self._new_request_id()
 
-        # 1. Get a device info object
-        logger.debug('<%s> Extracting device info', req_id)
+        # get a device info object
         dev_info = yield self._dev_info_extractor.extract(request, request_type)
         if not dev_info:
             logger.info('<%s> No device info extracted', req_id)
@@ -522,32 +520,30 @@ class RequestProcessingService(object):
         else:
             logger.info('<%s> Extracted device info: %s', req_id, dev_info)
 
-        # 2. Get a device object
-        logger.debug('<%s> Retrieving device', req_id)
+        # get a device object
         device = yield self._dev_retriever.retrieve(dev_info)
         if device is None:
             logger.info('<%s> No device retrieved', req_id)
         else:
             logger.info('<%s> Retrieved device id: %s', req_id, device[u'id'])
 
-        # 3. Update the device
+        # update the device
         if device is not None:
-            logger.debug('<%s> Updating device', req_id)
-            # 3.1 Update the device
             orig_device = copy_device(device)
+
             yield self._dev_updater.update(device, dev_info, request, request_type)
 
-            # 3.2 Persist the modification if there was a change
             if device != orig_device:
                 logger.info('<%s> Device has been updated', req_id)
                 yield self._app.dev_update(device)
 
-        # 4. Return a plugin ID
+        # get plugin ID
         pg_id = self._get_plugin_id(device)
         if pg_id is None:
             logger.info('<%s> No route found', req_id)
         else:
             logger.info('<%s> Routing request to plugin %s', req_id, pg_id)
+
         defer.returnValue((device, pg_id))
 
     def _get_plugin_id(self, device):
