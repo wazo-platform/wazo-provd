@@ -393,6 +393,21 @@ class Plugin(object):
         """
         return defer.fail(Exception("Resynchronization not supported"))
 
+    def get_remote_state_trigger_filename(self, device):
+        """Return the name of the filename for the given device that,
+        when the device retrieve this file, implies that the configuration of
+        the device is the same as the the one in the plugin (i.e. the device
+        configuration is in sync with the plugin configuration).
+
+        Return None is there's no such file or if there is not enough information
+        in the device to generate the file name.
+
+        Pre: device is a device object, not necessarily configured, because
+             the configuration might happens just after.
+
+        """
+        return None
+
 
 class StandardPlugin(Plugin):
     """Abstract base class for plugin classes.
