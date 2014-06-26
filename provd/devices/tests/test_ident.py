@@ -17,9 +17,9 @@
 
 from hamcrest import assert_that, equal_to, has_entry
 from mock import Mock
-from twisted.trial import unittest
 from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper
 from twisted.internet import defer
+from twisted.trial import unittest
 
 
 class TestLastSeenUpdater(unittest.TestCase):
