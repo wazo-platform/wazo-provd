@@ -409,7 +409,7 @@ class AsteriskAMISynchronizeService(object):
             except Exception, e:
                 logger.warning('Error while doing %s%s via %s:',
                                method_name, args, client, exc_info=True)
-        # going over all the AMI clients unsuccessfully means it's a failure 
+        # going over all the AMI clients unsuccessfully means it's a failure
         raise AMIError('all AMI servers returned failure')
 
     @_asterisk_ami_sync_lock
@@ -457,30 +457,24 @@ def get_sync_service():
     return _SYNC_SERVICE
 
 
+class SynchronizeException(Exception):
+    pass
+
+
 def standard_sip_synchronize(device):
     sync_service = _SYNC_SERVICE
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
-        return defer.fail(Exception('Incompatible sync service: %s' % sync_service))
+        return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
 
-    for fun in [_synchronize_by_peer, _synchronize_by_ip]:
-        ok, defer = fun(device, sync_service)
-        if ok:
-            return defer
-
-    return defer.fail(Exception('not enough information to synchronize device'))
+    d = _synchronize_by_peer(device, sync_service)
+    if d is None:
+        return defer.fail(SynchronizeException('not enough information to synchronize device'))
+    return d
 
 
 def _synchronize_by_peer(device, ami_sync_service):
     peer = device.get(u'remote_state_sip_username')
     if not peer:
-        return False, None
+        return None
 
-    return True, threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, 'check-sync')
-
-
-def _synchronize_by_ip(device, ami_sync_service):
-    ip = device.get(u'ip')
-    if not ip:
-        return False, None
-
-    return True, threads.deferToThread(ami_sync_service.sip_notify_by_ip, ip, 'check-sync')
+    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, 'check-sync')

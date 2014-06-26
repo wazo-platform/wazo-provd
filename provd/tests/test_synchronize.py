@@ -33,6 +33,20 @@ class TestStandardSipSynchronize(unittest.TestCase):
         synchronize._SYNC_SERVICE = self._old_sync_service
 
     @defer.inlineCallbacks
+    def test_no_sync_service(self):
+        synchronize._SYNC_SERVICE = None
+        device = {
+            u'id': u'a',
+        }
+
+        try:
+            yield synchronize.standard_sip_synchronize(device)
+        except synchronize.SynchronizeException:
+            pass
+        else:
+            self.fail('Exception should have been raised')
+
+    @defer.inlineCallbacks
     def test_empty_device(self):
         device = {
             u'id': u'a',
@@ -40,7 +54,7 @@ class TestStandardSipSynchronize(unittest.TestCase):
 
         try:
             yield synchronize.standard_sip_synchronize(device)
-        except Exception:
+        except synchronize.SynchronizeException:
             pass
         else:
             self.fail('Exception should have been raised')
@@ -49,23 +63,9 @@ class TestStandardSipSynchronize(unittest.TestCase):
     def test_device_with_remote_state_sip_username(self):
         device = {
             u'id': u'a',
-            u'ip': u'1.1.1.1',
             u'remote_state_sip_username': u'foobar',
         }
 
         yield synchronize.standard_sip_synchronize(device)
 
         self.sync_service.sip_notify_by_peer.assert_called_once_with(u'foobar', 'check-sync')
-        self.assertFalse(self.sync_service.sip_notify_by_ip.called)
-
-    @defer.inlineCallbacks
-    def test_device_with_ip_only(self):
-        device = {
-            u'id': u'a',
-            u'ip': u'1.1.1.1',
-        }
-
-        yield synchronize.standard_sip_synchronize(device)
-
-        self.sync_service.sip_notify_by_ip.assert_called_once_with(u'1.1.1.1', 'check-sync')
-        self.assertFalse(self.sync_service.sip_notify_by_peer.called)
