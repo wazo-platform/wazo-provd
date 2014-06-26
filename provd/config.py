@@ -110,7 +110,7 @@ class DefaultConfigSource(object):
         ('general.check_compat_min', 'True'),
         ('general.check_compat_max', 'True'),
         ('general.base_storage_dir', '/var/lib/xivo-provd'),
-        ('general.plugin_server', 'http://provd.xivo.fr/plugins/1/stable/'),
+        ('general.plugin_server', 'http://provd.xivo.io/plugins/1/stable/'),
         ('general.info_extractor', 'default'),
         ('general.retriever', 'default'),
         ('general.updater', 'default'),

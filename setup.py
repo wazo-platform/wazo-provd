@@ -9,7 +9,7 @@ setup(
     description='XIVO provisioning daemon',
     maintainer='Proformatique',
     maintainer_email='technique@proformatique.com',
-    url='http://wiki.xivo.fr/',
+    url='http://wiki.xivo.io/',
     license='GPLv3',
 
     packages=['provd',
