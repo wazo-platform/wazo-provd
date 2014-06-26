@@ -281,14 +281,6 @@ class _AMIClient(object):
         response = self._recv_msg(aid)
         self._check_response(response, 'SIPnotifyprovd')
 
-    def sccp_reset(self, device_name):
-        aid, msg = self._new_msg_with_action_id('SCCPDeviceRestart',
-                                                [('Devicename', device_name.encode('ascii')),
-                                                 ('Type', 'reset')])
-        self._send_msg(msg)
-        response = self._recv_msg(aid)
-        self._check_response(response, 'SCCPDeviceRestart')
-
 
 class _MaxReconnectionError(Exception):
     pass
@@ -339,9 +331,6 @@ class _ReconnectingAMIClient(object):
 
     def sip_notify(self, ip, event):
         self._do_client_method('sip_notify', (ip, event))
-
-    def sccp_reset(self, device_name):
-        self._do_client_method('sccp_reset', (device_name,))
 
     def __repr__(self):
         return '<_ReconnectingAMIClient to %s:%s (connected, %s)>' % \
@@ -414,10 +403,6 @@ class AsteriskAMISynchronizeService(object):
     @_asterisk_ami_sync_lock
     def sip_notify(self, ip, event):
         self._do_client_method('sip_notify', (ip, event))
-
-    @_asterisk_ami_sync_lock
-    def sccp_reset(self, device_name):
-        self._do_client_method('sccp_reset', (device_name,))
 
 
 def register_sync_service(sync_service):
