@@ -186,6 +186,7 @@ class ProvisioningApplication(object):
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
 
         self.proxies = self._splitted_config.get('proxy', {})
+        self.nat = 0
 
         self.pg_mgr = PluginManager(self,
                                     plugins_dir,
@@ -197,7 +198,7 @@ class ProvisioningApplication(object):
             self.pg_mgr.server = config['general.plugin_server']
 
         # Do not move this line up unless you know what you are doing...
-        cfg_service = ApplicationConfigureService(self.pg_mgr, self.proxies)
+        cfg_service = ApplicationConfigureService(self.pg_mgr, self.proxies, self)
         persister = JsonConfigPersister(os.path.join(base_storage_dir,
                                                      'app.json'))
         self.configure_service = PersistentConfigureServiceDecorator(cfg_service, persister)
@@ -1028,9 +1029,10 @@ def _check_is_https_proxy(value):
 
 
 class ApplicationConfigureService(object):
-    def __init__(self, pg_mgr, proxies):
+    def __init__(self, pg_mgr, proxies, app):
         self._pg_mgr = pg_mgr
         self._proxies = proxies
+        self._app = app
 
     def _get_param_locale(self):
         l10n_service = get_localization_service()
@@ -1092,6 +1094,18 @@ class ApplicationConfigureService(object):
         _check_is_server_url(value)
         self._pg_mgr.server = value
 
+    def _get_param_NAT(self):
+        return self._app.nat
+
+    def _set_param_NAT(self, value):
+        if value is None or value == '0':
+            value = 0
+        elif value == '1':
+            value = 1
+        else:
+            raise InvalidParameterError(value)
+        self._app.nat = value
+
     def get(self, name):
         get_fun_name = '_get_param_%s' % name
         try:
@@ -1116,6 +1130,7 @@ class ApplicationConfigureService(object):
         (u'ftp_proxy', u'The proxy for FTP requests. Format is "http://[user:password@]host:port"'),
         (u'https_proxy', u'The proxy for HTTPS requests. Format is "host:port"'),
         (u'locale', u'The current locale. Example: fr_FR'),
+        (u'NAT', u'Set to 1 if all the devices are behind a NAT.')
     ]
 
     description_fr = [
@@ -1124,4 +1139,5 @@ class ApplicationConfigureService(object):
         (u'ftp_proxy', u'Le proxy pour les requêtes FTP. Le format est "http://[user:password@]host:port"'),
         (u'https_proxy', u'Le proxy pour les requêtes HTTPS. Le format est "host:port"'),
         (u'locale', u'La locale courante. Exemple: en_CA'),
+        (u'NAT', u'Mettre à 1 si toutes les terminaisons sont derrière un NAT.')
     ]

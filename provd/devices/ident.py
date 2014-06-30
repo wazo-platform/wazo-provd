@@ -462,7 +462,7 @@ class RemoveOutdatedIpDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        if u'ip' in dev_info:
+        if not self._app.nat and u'ip' in dev_info:
             selector = {u'ip': dev_info[u'ip'], u'id': {'$ne': device[u'id']}}
             outdated_devices = yield self._app.dev_find(selector)
             for outdated_device in outdated_devices:

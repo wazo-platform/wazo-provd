@@ -17,7 +17,8 @@
 
 from hamcrest import assert_that, equal_to, has_entry
 from mock import Mock
-from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper
+from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper,\
+    RemoveOutdatedIpDeviceUpdater
 from twisted.internet import defer
 from twisted.trial import unittest
 
@@ -88,6 +89,42 @@ class TestVotingUpdater(unittest.TestCase):
             self.updater.update(dev_info)
 
         self.assertEqual(self.updater.dev_info, {'k1': 'v1'})
+
+
+class TestRemoveOutdatedIpDeviceUpdater(unittest.TestCase):
+
+    def setUp(self):
+        self.app = Mock()
+        self.app.nat = 0
+        self.dev_updater = RemoveOutdatedIpDeviceUpdater(self.app)
+
+    @defer.inlineCallbacks
+    def test_nat_disabled(self):
+        device = {
+            u'id': u'abc',
+        }
+        dev_info = {
+            u'ip': u'1.1.1.1',
+        }
+        self.app.dev_find.return_value = defer.succeed([])
+
+        yield self.dev_updater.update(device, dev_info, 'http', Mock())
+
+        self.app.dev_find.assert_called_once_with({u'ip': u'1.1.1.1', u'id': {'$ne': u'abc'}})
+
+    @defer.inlineCallbacks
+    def test_nat_enabled(self):
+        device = {
+            u'id': u'abc',
+        }
+        dev_info = {
+            u'ip': u'1.1.1.1',
+        }
+        self.app.nat = 1
+
+        yield self.dev_updater.update(device, dev_info, 'http', Mock())
+
+        self.assertFalse(self.app.dev_find.called)
 
 
 class TestRequestHelper(unittest.TestCase):
