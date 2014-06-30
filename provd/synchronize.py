@@ -461,20 +461,20 @@ class SynchronizeException(Exception):
     pass
 
 
-def standard_sip_synchronize(device):
+def standard_sip_synchronize(device, event='check-sync'):
     sync_service = _SYNC_SERVICE
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
         return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
 
-    d = _synchronize_by_peer(device, sync_service)
+    d = _synchronize_by_peer(device, event, sync_service)
     if d is None:
         return defer.fail(SynchronizeException('not enough information to synchronize device'))
     return d
 
 
-def _synchronize_by_peer(device, ami_sync_service):
+def _synchronize_by_peer(device, event, ami_sync_service):
     peer = device.get(u'remote_state_sip_username')
     if not peer:
         return None
 
-    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, 'check-sync')
+    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event)
