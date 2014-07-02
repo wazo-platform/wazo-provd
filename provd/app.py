@@ -21,6 +21,7 @@ import functools
 import os.path
 import urlparse
 from provd.devices.config import RawConfigError, DefaultConfigFactory
+from provd.devices.device import needs_reconfiguration
 from provd.localization import get_localization_service
 from provd.operation import OIP_PROGRESS, OIP_FAIL, OIP_SUCCESS
 from provd.persist.common import ID_KEY, InvalidIdError as PersistInvalidIdError
@@ -185,6 +186,7 @@ class ProvisioningApplication(object):
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
 
         self.proxies = self._splitted_config.get('proxy', {})
+        self.nat = 0
 
         self.pg_mgr = PluginManager(self,
                                     plugins_dir,
@@ -196,7 +198,7 @@ class ProvisioningApplication(object):
             self.pg_mgr.server = config['general.plugin_server']
 
         # Do not move this line up unless you know what you are doing...
-        cfg_service = ApplicationConfigureService(self.pg_mgr, self.proxies)
+        cfg_service = ApplicationConfigureService(self.pg_mgr, self.proxies, self)
         persister = JsonConfigPersister(os.path.join(base_storage_dir,
                                                      'app.json'))
         self.configure_service = PersistentConfigureServiceDecorator(cfg_service, persister)
@@ -323,17 +325,6 @@ class ProvisioningApplication(object):
         else:
             defer.returnValue(device)
 
-    _SIGNIFICANT_KEYS = [u'plugin', u'config', u'mac', u'ip', u'uuid',
-                         u'vendor', u'model', u'version', 'options']
-
-    def _dev_need_reconfiguration(self, old_device, new_device):
-        # Note that this doesn't check if the device is deconfigurable
-        # and configurable.
-        for key in self._SIGNIFICANT_KEYS:
-            if old_device.get(key) != new_device.get(key):
-                return True
-        return False
-
     @_wlock
     @defer.inlineCallbacks
     def dev_insert(self, device):
@@ -381,9 +372,12 @@ class ProvisioningApplication(object):
 
     @_wlock
     @defer.inlineCallbacks
-    def dev_update(self, device):
+    def dev_update(self, device, pre_update_hook=None):
         """Update the device.
         
+        The pre_update_hook function is called with the device and
+        its config just before the device is persisted.
+
         Return a deferred that fire with None once the update is completed.
         
         The deferred will fire its errback with an exception if device has
@@ -405,7 +399,7 @@ class ProvisioningApplication(object):
             else:
                 logger.info('Updating device %s', id)
                 old_device = yield self._dev_get_or_raise(id)
-                if self._dev_need_reconfiguration(old_device, device):
+                if needs_reconfiguration(old_device, device):
                     # Deconfigure old device it was configured
                     if old_device[u'configured']:
                         self._dev_deconfigure_if_possible(old_device)
@@ -413,8 +407,10 @@ class ProvisioningApplication(object):
                     configured = yield self._dev_configure_if_possible(device)
                     device[u'configured'] = configured
                 else:
-                    logger.info('Not reconfiguring device %s: not needed.', id)
                     device[u'configured'] = old_device[u'configured']
+                if pre_update_hook is not None:
+                    config = yield self._cfg_collection.retrieve(device.get(u'config'))
+                    pre_update_hook(device, config)
                 # Update device collection if the device is different from
                 # the old device
                 if device != old_device:
@@ -1033,9 +1029,10 @@ def _check_is_https_proxy(value):
 
 
 class ApplicationConfigureService(object):
-    def __init__(self, pg_mgr, proxies):
+    def __init__(self, pg_mgr, proxies, app):
         self._pg_mgr = pg_mgr
         self._proxies = proxies
+        self._app = app
 
     def _get_param_locale(self):
         l10n_service = get_localization_service()
@@ -1097,6 +1094,18 @@ class ApplicationConfigureService(object):
         _check_is_server_url(value)
         self._pg_mgr.server = value
 
+    def _get_param_NAT(self):
+        return self._app.nat
+
+    def _set_param_NAT(self, value):
+        if value is None or value == '0':
+            value = 0
+        elif value == '1':
+            value = 1
+        else:
+            raise InvalidParameterError(value)
+        self._app.nat = value
+
     def get(self, name):
         get_fun_name = '_get_param_%s' % name
         try:
@@ -1121,6 +1130,7 @@ class ApplicationConfigureService(object):
         (u'ftp_proxy', u'The proxy for FTP requests. Format is "http://[user:password@]host:port"'),
         (u'https_proxy', u'The proxy for HTTPS requests. Format is "host:port"'),
         (u'locale', u'The current locale. Example: fr_FR'),
+        (u'NAT', u'Set to 1 if all the devices are behind a NAT.')
     ]
 
     description_fr = [
@@ -1129,4 +1139,5 @@ class ApplicationConfigureService(object):
         (u'ftp_proxy', u'Le proxy pour les requêtes FTP. Le format est "http://[user:password@]host:port"'),
         (u'https_proxy', u'Le proxy pour les requêtes HTTPS. Le format est "host:port"'),
         (u'locale', u'La locale courante. Exemple: en_CA'),
+        (u'NAT', u'Mettre à 1 si toutes les terminaisons sont derrière un NAT.')
     ]

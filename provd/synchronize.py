@@ -23,6 +23,7 @@ import logging
 import functools
 import socket
 import threading
+from twisted.internet import defer, threads
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +274,7 @@ class _AMIClient(object):
             self._ll_client.close()
             self._ll_client_closed = True
 
-    def sip_notify(self, ip, event):
+    def sip_notify_by_ip(self, ip, event):
         aid, msg = self._new_msg_with_action_id('SIPnotifyprovd',
                                                 [('PeerIP', ip.encode('ascii')),
                                                  ('Variable', 'Event=%s' % event.encode('ascii'))])
@@ -281,13 +282,13 @@ class _AMIClient(object):
         response = self._recv_msg(aid)
         self._check_response(response, 'SIPnotifyprovd')
 
-    def sccp_reset(self, device_name):
-        aid, msg = self._new_msg_with_action_id('SCCPDeviceRestart',
-                                                [('Devicename', device_name.encode('ascii')),
-                                                 ('Type', 'reset')])
+    def sip_notify_by_peer(self, peer, event):
+        aid, msg = self._new_msg_with_action_id('SIPnotify',
+                                                [('Channel', peer.encode('ascii')),
+                                                 ('Variable', 'Event=%s' % event.encode('ascii'))])
         self._send_msg(msg)
         response = self._recv_msg(aid)
-        self._check_response(response, 'SCCPDeviceRestart')
+        self._check_response(response, 'SIPnotifyd')
 
 
 class _MaxReconnectionError(Exception):
@@ -337,11 +338,11 @@ class _ReconnectingAMIClient(object):
             raise _MaxReconnectionError('giving up connection after %s try' %
                                         self._max_try)
 
-    def sip_notify(self, ip, event):
-        self._do_client_method('sip_notify', (ip, event))
+    def sip_notify_by_ip(self, ip, event):
+        self._do_client_method('sip_notify_by_ip', (ip, event))
 
-    def sccp_reset(self, device_name):
-        self._do_client_method('sccp_reset', (device_name,))
+    def sip_notify_by_peer(self, peer, event):
+        self._do_client_method('sip_notify_by_peer', (peer, event))
 
     def __repr__(self):
         return '<_ReconnectingAMIClient to %s:%s (connected, %s)>' % \
@@ -408,16 +409,19 @@ class AsteriskAMISynchronizeService(object):
             except Exception, e:
                 logger.warning('Error while doing %s%s via %s:',
                                method_name, args, client, exc_info=True)
-        # going over all the AMI clients unsuccessfully means it's a failure 
+        # going over all the AMI clients unsuccessfully means it's a failure
         raise AMIError('all AMI servers returned failure')
 
     @_asterisk_ami_sync_lock
-    def sip_notify(self, ip, event):
-        self._do_client_method('sip_notify', (ip, event))
+    def sip_notify_by_ip(self, ip, event):
+        self._do_client_method('sip_notify_by_ip', (ip, event))
+
+    # backward compatibility with older plugins
+    sip_notify = sip_notify_by_ip
 
     @_asterisk_ami_sync_lock
-    def sccp_reset(self, device_name):
-        self._do_client_method('sccp_reset', (device_name,))
+    def sip_notify_by_peer(self, peer, event):
+        self._do_client_method('sip_notify_by_peer', (peer, event))
 
 
 def register_sync_service(sync_service):
@@ -451,3 +455,26 @@ def get_sync_service():
     
     """
     return _SYNC_SERVICE
+
+
+class SynchronizeException(Exception):
+    pass
+
+
+def standard_sip_synchronize(device, event='check-sync'):
+    sync_service = _SYNC_SERVICE
+    if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
+        return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
+
+    d = _synchronize_by_peer(device, event, sync_service)
+    if d is None:
+        return defer.fail(SynchronizeException('not enough information to synchronize device'))
+    return d
+
+
+def _synchronize_by_peer(device, event, ami_sync_service):
+    peer = device.get(u'remote_state_sip_username')
+    if not peer:
+        return None
+
+    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event)

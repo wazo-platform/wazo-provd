@@ -18,11 +18,11 @@
 """Request processing service definition."""
 
 
-import copy
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from provd.persist.common import ID_KEY
+from os.path import basename
+from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService
@@ -89,7 +89,6 @@ class StandardDeviceInfoExtractor(object):
         return {u'ip': request[u'ip'], u'mac': request[u'mac']}
 
     def extract(self, request, request_type):
-        logger.debug('In StandardDeviceInfoExtractor')
         method_name = '_extract_%s' % request_type
         try:
             method = getattr(self, method_name)
@@ -166,7 +165,6 @@ class CollaboratingDeviceInfoExtractor(object):
 
     @defer.inlineCallbacks
     def extract(self, request, request_type):
-        logger.debug('In CollaboratingDeviceInfoExtractor')
         dlist = defer.DeferredList([extractor.extract(request, request_type)
                                     for extractor in self._extractors])
         dlist_results = yield dlist
@@ -220,7 +218,6 @@ class AllPluginsDeviceInfoExtractor(object):
         self._set_xtors()
 
     def extract(self, request, request_type):
-        logger.debug('In AllPluginsDeviceInfoExtractor')
         xtor = getattr(self, self._xtor_name(request_type))
         return xtor.extract(request, request_type)
 
@@ -254,7 +251,6 @@ class SearchDeviceRetriever(object):
         self._key = key
 
     def retrieve(self, dev_info):
-        logger.debug('In SearchDeviceRetriever')
         if self._key in dev_info:
             return self._app.dev_find_one({self._key: dev_info[self._key]})
         return defer.succeed(None)
@@ -268,7 +264,6 @@ class IpDeviceRetriever(object):
 
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
-        logger.debug('In IpDeviceRetriever')
         if u'ip' in dev_info:
             devices = yield self._app.dev_find({u'ip': dev_info[u'ip']})
             matching_device = self._get_matching_device(devices, dev_info)
@@ -341,8 +336,7 @@ class AddDeviceRetriever(object):
         self._app = app
 
     def retrieve(self, dev_info):
-        logger.debug('In AddDeviceRetriever')
-        device = copy.deepcopy(dev_info)
+        device = dict(dev_info)
         device[u'added'] = u'auto'
         d = self._app.dev_insert(device)
         d.addCallbacks(lambda _: device, lambda _: None)
@@ -362,7 +356,6 @@ class FirstCompositeDeviceRetriever(object):
 
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
-        logger.debug('In FirstCompositeDeviceRetriever')
         retrievers = self.retrievers[:]
         for retriever in retrievers:
             device = yield retriever.retrieve(dev_info)
@@ -381,12 +374,7 @@ class IDeviceUpdater(Interface):
 
     def update(device, dev_info, request, request_type):
         """Update a device object, returning a deferred that will fire once
-        the device object has been updated, with either true if the device
-        should be forced to be reconfigured, else false.
-        
-        Forcing device reconfiguration is only useful if you are using some
-        non standard keys. Device reconfiguration is normally automatically
-        handled.
+        the device object has been updated.
         
         device -- a nonempty device object
         dev_info -- a potentially empty device info object
@@ -400,8 +388,7 @@ class NullDeviceUpdater(object):
     implements(IDeviceUpdater)
 
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In NullDeviceUpdater')
-        return defer.succeed(False)
+        return defer.succeed(None)
 
 
 class DynamicDeviceUpdater(object):
@@ -427,12 +414,11 @@ class DynamicDeviceUpdater(object):
         self._force_update = force_update
 
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In DynamicDeviceUpdater')
         for key in self._keys:
             if key in dev_info:
                 if self._force_update or key not in device:
                     device[key] = dev_info[key]
-        return defer.succeed(False)
+        return defer.succeed(None)
 
 
 class AddInfoDeviceUpdater(object):
@@ -447,11 +433,10 @@ class AddInfoDeviceUpdater(object):
     implements(IDeviceUpdater)
 
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In AddInfoDeviceUpdater')
         for key in dev_info:
             if key not in device:
                 device[key] = dev_info[key]
-        return defer.succeed(False)
+        return defer.succeed(None)
 
 
 class AutocreateConfigDeviceUpdater(object):
@@ -464,12 +449,11 @@ class AutocreateConfigDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In AutocreateConfigDeviceUpdater')
         if u'config' not in device:
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
                 device[u'config'] = new_config_id
-        defer.returnValue(False)
+        defer.returnValue(None)
 
 
 class RemoveOutdatedIpDeviceUpdater(object):
@@ -478,8 +462,7 @@ class RemoveOutdatedIpDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In RemoveOutdatedIpDeviceUpdater')
-        if u'ip' in dev_info:
+        if not self._app.nat and u'ip' in dev_info:
             selector = {u'ip': dev_info[u'ip'], u'id': {'$ne': device[u'id']}}
             outdated_devices = yield self._app.dev_find(selector)
             for outdated_device in outdated_devices:
@@ -495,12 +478,8 @@ class CompositeDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        logger.debug('In CompositeDeviceUpdater')
-        force_reconfigure = False
         for updater in self.updaters:
-            d = updater.update(device, dev_info, request, request_type)
-            force_reconfigure = (yield d) or force_reconfigure
-        defer.returnValue(force_reconfigure)
+            yield updater.update(device, dev_info, request, request_type)
 
 
 class RequestProcessingService(object):
@@ -515,7 +494,6 @@ class RequestProcessingService(object):
         self._dev_retriever = dev_retriever
         self._dev_updater = dev_updater
         self._req_id = 0    # used for logging
-
 
     def _new_request_id(self):
         req_id = "%d" % self._req_id
@@ -533,53 +511,155 @@ class RequestProcessingService(object):
           continue to process this request.
         
         """
-        req_id = self._new_request_id()
+        helper = _RequestHelper(self._app, request, request_type, self._new_request_id())
 
-        # 1. Get a device info object
-        logger.debug('<%s> Extracting device info', req_id)
-        dev_info = yield self._dev_info_extractor.extract(request, request_type)
+        dev_info = yield helper.extract_device_info(self._dev_info_extractor)
+        device = yield helper.retrieve_device(self._dev_retriever, dev_info)
+        yield helper.update_device(self._dev_updater, device, dev_info)
+        pg_id = helper.get_plugin_id(device)
+
+        defer.returnValue((device, pg_id))
+
+
+class _RequestHelper(object):
+
+    def __init__(self, app, request, request_type, request_id):
+        self._app = app
+        self._request = request
+        self._request_type = request_type
+        self._request_id = request_id
+
+    @defer.inlineCallbacks
+    def extract_device_info(self, dev_info_extractor):
+        dev_info = yield dev_info_extractor.extract(self._request, self._request_type)
         if not dev_info:
-            logger.info('<%s> No device info extracted', req_id)
+            logger.info('<%s> No device info extracted', self._request_id)
             dev_info = {}
         else:
-            logger.info('<%s> Extracted device info: %s', req_id, dev_info)
+            logger.info('<%s> Extracted device info: %s', self._request_id, dev_info)
 
-        # 2. Get a device object
-        logger.debug('<%s> Retrieving device', req_id)
-        device = yield self._dev_retriever.retrieve(dev_info)
+        defer.returnValue(dev_info)
+
+    @defer.inlineCallbacks
+    def retrieve_device(self, dev_retriever, dev_info):
+        device = yield dev_retriever.retrieve(dev_info)
         if device is None:
-            logger.info('<%s> No device retrieved', req_id)
+            logger.info('<%s> No device retrieved', self._request_id)
         else:
-            logger.info('<%s> Retrieved device id: %s', req_id, device[u'id'])
+            logger.info('<%s> Retrieved device id: %s', self._request_id, device[u'id'])
 
-        # 3. Update the device
-        if device is not None:
-            logger.debug('<%s> Updating device', req_id)
-            # 3.1 Update the device
-            orig_device = copy.deepcopy(device)
-            force_reconfigure = yield self._dev_updater.update(device, dev_info,
-                                                               request, request_type)
+        defer.returnValue(device)
 
-            # 3.2 Persist the modification if there was a change
-            if device != orig_device:
-                logger.info('<%s> Device has been updated', req_id)
-                yield self._app.dev_update(device)
+    @defer.inlineCallbacks
+    def update_device(self, dev_updater, device, dev_info):
+        if device is None:
+            defer.returnValue(None)
 
-            # 3.3 Reconfigure the device if needed
-            # XXX we should check that the call to _app.dev_update did not lead
-            #     to a device reconfiguration; if this is the case, we should
-            #     not reconfigure the device (i.e. this is inefficient)
-            if force_reconfigure:
-                logger.info('<%s> Reconfiguring device', req_id)
-                self._app.dev_reconfigure(device[ID_KEY])
+        orig_device = copy_device(device)
+        yield dev_updater.update(device, dev_info, self._request, self._request_type)
+        if device == orig_device:
+            yield self._update_device_on_no_change(device)
+        else:
+            logger.info('<%s> Device has been updated', self._request_id)
+            yield self._update_device_on_change(device)
 
-        # 4. Return a plugin ID
+    @defer.inlineCallbacks
+    def _update_device_on_no_change(self, device):
+        if not device.get(u'configured'):
+            defer.returnValue(None)
+
+        if not self._should_update_remote_state(device):
+            defer.returnValue(None)
+
+        config = yield self._app.cfg_retrieve(device[u'config'])
+        if not config:
+            defer.returnValue(None)
+
+        if self._update_remote_state_sip_username(device, config):
+            yield self._app.dev_update(device)
+
+    def _update_device_on_change(self, device):
+        if self._should_update_remote_state(device):
+            pre_update_hook = self._pre_update_hook
+        else:
+            pre_update_hook = None
+
+        return self._app.dev_update(device, pre_update_hook=pre_update_hook)
+
+    def _should_update_remote_state(self, device):
+        if self._request_type == 'http':
+            filename = basename(self._request.path)
+        elif self._request_type == 'tftp':
+            filename = basename(self._request['packet']['filename'])
+        else:
+            return False
+
+        plugin_id = device.get(u'plugin')
+        if not plugin_id:
+            return False
+
+        plugin = self._app.pg_mgr.get(plugin_id)
+        if plugin is None:
+            return False
+
+        trigger_fun = getattr(plugin, 'get_remote_state_trigger_filename', None)
+        if trigger_fun is None:
+            return False
+
+        trigger_filename = trigger_fun(device)
+        if not trigger_filename:
+            return False
+
+        if trigger_filename != filename:
+            return False
+
+        config_id = device.get(u'config')
+        if not config_id:
+            return False
+
+        return True
+
+    def _pre_update_hook(self, device, config):
+        if not config:
+            return
+
+        if not device[u'configured']:
+            return
+
+        self._update_remote_state_sip_username(device, config)
+
+    def _update_remote_state_sip_username(self, device, config):
+        sip_username = self._get_sip_username(config)
+        if not sip_username:
+            return False
+
+        if sip_username == device.get(u'remote_state_sip_username'):
+            return False
+
+        device[u'remote_state_sip_username'] = sip_username
+        logger.debug('Remote state SIP username updated')
+
+        return True
+
+    def _get_sip_username(self, config):
+        sip_lines = config[u'raw_config'].get(u'sip_lines')
+        if not sip_lines:
+            return None
+
+        sip_line = sip_lines.get(u'1')
+        if not sip_line:
+            return None
+
+        return sip_line.get(u'username')
+
+    def get_plugin_id(self, device):
         pg_id = self._get_plugin_id(device)
         if pg_id is None:
-            logger.info('<%s> No route found', req_id)
+            logger.info('<%s> No route found', self._request_id)
         else:
-            logger.info('<%s> Routing request to plugin %s', req_id, pg_id)
-        defer.returnValue((device, pg_id))
+            logger.info('<%s> Routing request to plugin %s', self._request_id, pg_id)
+
+        return pg_id
 
     def _get_plugin_id(self, device):
         if device is None:

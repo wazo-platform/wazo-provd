@@ -1,5 +1,7 @@
 git+https://github.com/xivo-pbx/xivo-fetchfw.git
-zope.interface==3.6.1
-twisted==12.0.0
 beautifulsoup==3.2.1
 jinja2==2.6
+mock
+pyhamcrest
+twisted==12.0.0
+zope.interface==3.6.1
