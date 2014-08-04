@@ -163,7 +163,7 @@ class HTTPProcessService(Service):
         site = Site(http_process_service)
         port = self._config['general.http_port']
         logger.info('Binding HTTP provisioning service to port %s', port)
-        self._tcp_server = internet.TCPServer(port, site)
+        self._tcp_server = internet.TCPServer(port, site, backlog=128)
         self._tcp_server.startService()
         Service.startService(self)
 
