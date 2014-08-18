@@ -467,9 +467,9 @@ def standard_sip_synchronize(device, event='check-sync'):
         return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
 
     for fun in [_synchronize_by_peer, _synchronize_by_ip]:
-	d = fun(device, event, sync_service)
-	if d is not None:
-	    return d
+        d = fun(device, event, sync_service)
+        if d is not None:
+            return d
 
     return defer.fail(SynchronizeException('not enough information to synchronize device'))
 
