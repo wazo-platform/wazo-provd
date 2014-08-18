@@ -466,10 +466,12 @@ def standard_sip_synchronize(device, event='check-sync'):
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
         return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
 
-    d = _synchronize_by_peer(device, event, sync_service)
-    if d is None:
-        return defer.fail(SynchronizeException('not enough information to synchronize device'))
-    return d
+    for fun in [_synchronize_by_peer, _synchronize_by_ip]:
+	d = fun(device, event, sync_service)
+	if d is not None:
+	    return d
+
+    return defer.fail(SynchronizeException('not enough information to synchronize device'))
 
 
 def _synchronize_by_peer(device, event, ami_sync_service):
@@ -478,3 +480,11 @@ def _synchronize_by_peer(device, event, ami_sync_service):
         return None
 
     return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event)
+
+
+def _synchronize_by_ip(device, event, ami_sync_service):
+    ip = device.get(u'ip')
+    if not ip:
+        return None
+
+    return threads.deferToThread(ami_sync_service.sip_notify_by_ip, ip, event)
