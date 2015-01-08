@@ -19,6 +19,7 @@ WORKDIR /root/xivo-provisioning
 RUN pip install -r requirements.txt
 RUN python setup.py install
 RUN mkdir -p /etc/xivo/provd/
+RUN mkdir /var/cache/xivo-provd/
 RUN cp etc/xivo/provd/provd.conf /etc/xivo/provd/
 
 WORKDIR /root
