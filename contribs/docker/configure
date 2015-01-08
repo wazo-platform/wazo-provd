@@ -53,13 +53,6 @@ class HTTPRequest(object):
 
 
 def provd():
-    data = {
-        'category': 'general',
-        'var_name': 'autocreate_prefix',
-        # code generated from '2346789bcdfghjkmnpqrtvwxyzBCDFGHJKLMNPQRTVWXYZ'
-        'var_val': 'ap%s' % '12345678'
-    }
-
     config = {
         'X_type': 'registrar',
         'id': 'default',
@@ -87,6 +80,50 @@ def provd():
     data = {'config': config}
     provd_http_request.run('provd/cfg_mgr/configs', data=data)
 
+    config = {
+        'X_type': 'device', 
+        'deletable': False, 
+        'id': 'defaultconfigdevice', 
+        'label': 'Default config device', 
+        'parent_ids': [], 
+        'raw_config': {
+            'ntp_enabled': True, 
+            'ntp_ip': ADDRESS
+        }
+    }
+    data = {'config': config}
+    provd_http_request.run('provd/cfg_mgr/configs', data=data)
+
+
+    config = {
+        'X_type': 'internal', 
+        'deletable': False, 
+        'id': 'autoprov', 
+        'parent_ids': [
+            'base', 
+            'defaultconfigdevice'
+        ], 
+        'raw_config': {
+            'sccp_call_managers': {
+                '1': {
+                    'ip':  ADDRESS
+                }
+            }, 
+            'sip_lines': {
+                '1': {
+                    'display_name': 'Autoprov', 
+                    'number': 'autoprov', 
+                    'password': 'autoprov', 
+                    'proxy_ip': ADDRESS, 
+                    'registrar_ip': ADDRESS, 
+                    'username': 'apYgW48ycP'
+                }
+            }
+        }, 
+        'role': 'autocreate'
+    }
+    data = {'config': config}
+    provd_http_request.run('provd/cfg_mgr/configs', data=data)
 
 
 if __name__ == '__main__':
