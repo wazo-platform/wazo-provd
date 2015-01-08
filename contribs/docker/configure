@@ -1,0 +1,98 @@
+#!/usr/bin/python
+
+# Basic configuration provd for XiVO
+
+import json
+import urllib
+import urllib2
+
+ADDRESS = '192.168.113.99' # XiVO ip address
+PROVD_ADDRESS = '192.168.32.41'
+
+class HTTPRequest(object):
+
+    def __init__(self, host='127.0.0.1', port=80, headers=None, username=None, password=None):
+        self._host = host
+        self._port = port
+        self._url = '%s:%s' % (self._host, self._port)
+        self._headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'text/plain'
+        }
+        if headers:
+            self._headers.update(headers)
+        self._opener = self._build_opener(username, password)
+
+    def run(self, uri='', qry=None, data=None):
+        url = self._url
+        if uri:
+            url = '%s/%s' % (url, uri)
+        if qry is not None:
+            url = '%s?%s' % (url, self._build_qry(qry))
+        if isinstance(data, dict):
+            data = json.dumps(data)
+        request = urllib2.Request(url=url, data=data, headers=self._headers)
+        handle = self._opener.open(request)
+        try:
+            response = handle.read()
+            response_code = handle.code
+        finally:
+            handle.close()
+        return response_code, response
+
+    def _build_opener(self, username, password):
+        handlers = []
+        if username is not None and password is not None:
+            pwd_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            pwd_manager.add_password(None, self._host, username, password)
+            handlers.append(urllib2.HTTPDigestAuthHandler(pwd_manager))
+        return urllib2.build_opener(*handlers)
+
+    def _build_qry(self, qry):
+        return urllib.urlencode(qry)
+
+
+def provd():
+    data = {
+        'category': 'general',
+        'var_name': 'autocreate_prefix',
+        # code generated from '2346789bcdfghjkmnpqrtvwxyzBCDFGHJKLMNPQRTVWXYZ'
+        'var_val': 'ap%s' % '12345678'
+    }
+
+    config = {
+        'X_type': 'registrar',
+        'id': 'default',
+        'deletable': False,
+        'displayname': 'local',
+        'parent_ids': [],
+        'raw_config': {'X_key':'xivo'},
+        'proxy_main': ADDRESS,
+        'registrar_main': ADDRESS
+    }
+    data = {'config': config}
+    provd_http_request.run('provd/cfg_mgr/configs', data=data)
+
+    config = {
+        'X_type': 'internal',
+        'id': 'base',
+        'deletable': False,
+        'displayname': 'base',
+        'parent_ids': [],
+        'raw_config': {'X_key':'xivo',
+                       'ntp_enabled': True,
+                       'ntp_ip': ADDRESS,
+                       'X_xivo_phonebook_ip': ADDRESS},
+    }
+    data = {'config': config}
+    provd_http_request.run('provd/cfg_mgr/configs', data=data)
+
+
+
+if __name__ == '__main__':
+    provd_http_request = HTTPRequest('http://%s' % PROVD_ADDRESS,
+                                     8666,
+                                     {'Content-Type': 'application/vnd.proformatique.provd+json'},
+                                     'admin',
+                                     'admin')
+    provd()
