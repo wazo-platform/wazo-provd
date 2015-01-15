@@ -8,4 +8,4 @@ and launch the xivo-provd
 
 or
 
-    docker run -d -p 69:69/udp -p 8666:8666 -p 8667:8667 -v /config/ctid/:/etc/xivo/provd/conf.d -t xivo-provd
+    docker run --name xivo-provd -d -p 69:69/udp -p 8666:8666 -p 8667:8667 -v /config/provd/:/etc/xivo/provd/ -t xivo-provd
