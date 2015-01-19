@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-from distutils.core import setup
+from setuptools import setup
+from setuptools import find_packages
 
 setup(
     name='provisioning',
@@ -12,17 +13,7 @@ setup(
     url='http://wiki.xivo.io/',
     license='GPLv3',
 
-    packages=['provd',
-              'provd.devices',
-              'provd.persist',
-              'provd.rest',
-              'provd.rest.client',
-              'provd.rest.pycli',
-              'provd.rest.server',
-              'provd.servers',
-              'provd.servers.tftp',
-              'twisted',
-              'twisted.plugins'],
+    packages=find_packages(),
     package_data={'provd': ['tzinform/tzdatax'],
                   'twisted': ['.noinit'],
                   'twisted.plugins': ['provd_plugins.py', '.noinit']}
