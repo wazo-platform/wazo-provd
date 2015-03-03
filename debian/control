@@ -35,20 +35,6 @@ Description: XIVO provisioning daemon
  This is the provisioning daemon for XIVO.
  .
 
-Package: xivo-dxtora
-Architecture: all
-Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
-Depends: ${python:Depends}, ${misc:Depends}
-Provides: pf-xivo-dxtora
-Conflicts: pf-xivo-dxtora
-Replaces: pf-xivo-dxtora
-Description: XIVO dhcp extractor agent
- XIVO is a system based on a powerful IPBX, to bring an easy to
- install solution for telephony and related services.
- .
- This is the provisioning daemon for XIVO.
- .
-
 Package: xivo-dhcpd-update
 Architecture: all
 Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
