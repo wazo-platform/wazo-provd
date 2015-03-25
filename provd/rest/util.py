@@ -38,13 +38,3 @@ def uri_append_path(base, *path):
         else:
             fmt = '%s/%s'
         return fmt % (base, path_to_append)
-
-
-def uri_append_query(base, query):
-    """Append query to base URI.
-    
-    >>> uri_append_query('http://localhost/', 'id=12')
-    'http://localhost/?id=12
-    
-    """
-    return base + '?' + query

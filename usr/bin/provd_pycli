@@ -1,7 +1,0 @@
-#!/bin/sh
-
-if [ -z "$PYTHON" ]; then
-    PYTHON=python
-fi
-
-"$PYTHON" -m provd.rest.pycli.pycli "$@"

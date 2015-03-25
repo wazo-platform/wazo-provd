@@ -16,8 +16,6 @@ setup(
               'provd.devices',
               'provd.persist',
               'provd.rest',
-              'provd.rest.client',
-              'provd.rest.pycli',
               'provd.rest.server',
               'provd.servers',
               'provd.servers.tftp',
