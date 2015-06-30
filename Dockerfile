@@ -18,9 +18,9 @@ RUN git clone https://github.com/xivo-pbx/xivo-provisioning.git
 WORKDIR /root/xivo-provisioning
 RUN pip install -r requirements.txt
 RUN python setup.py install
-RUN mkdir -p /etc/xivo/provd/
 RUN mkdir /var/cache/xivo-provd/
-RUN cp etc/xivo/provd/provd.conf /etc/xivo/provd/
+RUN mkdir -p /etc/xivo/provd/
+RUN cp -r etc/xivo/provd/* /etc/xivo/provd/
 
 WORKDIR /root
 RUN rm -fr /root/xivo-provisioning
