@@ -16,6 +16,7 @@ WORKDIR /root/
 WORKDIR /root
 RUN git clone https://github.com/xivo-pbx/xivo-provisioning.git
 WORKDIR /root/xivo-provisioning
+RUN pip install -U setuptools
 RUN pip install -r requirements.txt
 RUN python setup.py install
 RUN mkdir /var/cache/xivo-provd/
