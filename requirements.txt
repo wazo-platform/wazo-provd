@@ -1,9 +1,7 @@
 git+https://github.com/xivo-pbx/xivo-fetchfw.git
 git+https://github.com/xivo-pbx/xivo-lib-python.git
-beautifulsoup==3.2.1
+beautifulsoup==3.2.1  # from xivo-fetchfw
 jinja2==2.6
-mock
-pyhamcrest
+pyopenssl==0.13
 twisted==12.0.0
 zope.interface==3.6.1
-pyopenssl
