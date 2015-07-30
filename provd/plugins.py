@@ -606,6 +606,11 @@ class FetchfwPluginHelper(object):
         ctrl_factory = UninstallerController.new_factory()
         self._pkg_mgr.uninstall([pkg_id], self.root_dir, ctrl_factory)
 
+    def upgrade(self, pkg_id):
+        logger.info('Upgrading plugin-package %s', pkg_id)
+        self.uninstall(pkg_id)
+        return self.install(pkg_id)
+
     def _new_localize_description_fun(self):
         locale, lang = get_locale_and_language()
         if locale is None:
