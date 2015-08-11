@@ -2,3 +2,6 @@ _trial_temp
 twisted/plugins/dropin.cache
 *.pyc
 .tox
+MANIFEST
+pep8.txt
+pylint.txt
