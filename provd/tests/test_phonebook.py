@@ -25,7 +25,6 @@ class TestAddXiVOPhonebookURL(unittest.TestCase):
 
     def setUp(self):
         self.raw_config = {
-            u'config_version': 1,
             u'X_xivo_phonebook_ip': u'8.8.8.8',
             u'X_xivo_phonebook_profile': u'prof',
             u'X_xivo_user_uuid': u'12-345',
@@ -49,7 +48,6 @@ class TestAddXiVOPhonebookURLFromFormat(unittest.TestCase):
     def setUp(self):
         self.url_format = u'{scheme}://{hostname}:{port}/{profile}?xivo_user_uuid={user_uuid}'
         self.raw_config = {
-            u'config_version': 1,
             u'X_xivo_phonebook_ip': u'8.8.8.8',
             u'X_xivo_phonebook_profile': u'prof',
             u'X_xivo_user_uuid': u'12-345',
@@ -57,13 +55,6 @@ class TestAddXiVOPhonebookURLFromFormat(unittest.TestCase):
 
     def test_add_xivo_phonebook_url_from_format_no_ip(self):
         del self.raw_config[u'X_xivo_phonebook_ip']
-
-        add_xivo_phonebook_url_from_format(self.raw_config, self.url_format)
-
-        assert_that(self.raw_config, is_not(has_key(u'XX_xivo_phonebook_url')))
-
-    def test_add_xivo_phonebook_url_from_format_wrong_config_version(self):
-        self.raw_config[u'config_version'] = 0
 
         add_xivo_phonebook_url_from_format(self.raw_config, self.url_format)
 

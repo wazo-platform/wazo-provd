@@ -43,14 +43,14 @@ def add_xivo_phonebook_url_from_format(raw_config, url_format):
     if not hostname:
         return
 
-    config_version = raw_config.get(u'config_version', 0)
-    if config_version < 1:
-        logger.warning('Not adding XX_xivo_phonebook_url: config_version is %s', config_version)
+    profile = raw_config.get(u'X_xivo_phonebook_profile')
+    if not profile:
+        logger.warning('Not adding XX_xivo_phonebook_url: no phonebook profile')
         return
 
-    profile = raw_config.get(u'X_xivo_phonebook_profile')
     user_uuid = raw_config.get(u'X_xivo_user_uuid')
-    if not profile or not user_uuid:
+    if not user_uuid:
+        logger.warning('Not adding XX_xivo_phonebook_url: no user uuid')
         return
 
     scheme = raw_config.get(u'X_xivo_phonebook_scheme', u'http')
