@@ -1,0 +1,12 @@
+[Unit]
+Description=xivo-provd server
+ConditionPathExists=!/tmp/xivo-disabled
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/twistd --pidfile=/var/run/xivo-provd.pid --rundir=/var/run --no_save --reactor=epoll xivo-provd
+PIDFile=/var/run/xivo-provd.pid
+
+[Install]
+WantedBy=multi-user.target
