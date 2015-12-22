@@ -9,4 +9,3 @@ mv_conffile /etc/pf-xivo/provd/updater.py.conf.default /etc/xivo/provd/updater.p
 mv_conffile /etc/pf-xivo/provd/updater.py.conf.secure /etc/xivo/provd/updater.py.conf.secure 14.02
 rm_conffile /etc/pf-xivo/provd/router.py.conf.default 14.02
 rm_conffile /etc/xivo/provd/router.py.conf.default
-rm_conffile /etc/init.d/xivo-provd 15.20
