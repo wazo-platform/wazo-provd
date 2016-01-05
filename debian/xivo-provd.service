@@ -2,6 +2,7 @@
 Description=xivo-provd server
 ConditionPathExists=!/var/lib/xivo/disabled
 After=network.target
+Before=monit.service
 
 [Service]
 Type=forking
