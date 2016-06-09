@@ -2,6 +2,9 @@
 
 set -e
 
+LOG_FILENAME='/var/log/xivo-provd.log'
+USER='xivo-provd'
+
 case "$1" in
 	configure)
 		# sync old pf-xivo-provd data
@@ -9,6 +12,26 @@ case "$1" in
 		if [ -d $old_provd_directory ]; then
 			rsync -av $old_provd_directory/ /var/lib/xivo-provd/ > /dev/null
 			rm -rf $old_provd_directory
+		fi
+
+		if ! getent passwd "$USER" > /dev/null; then
+			echo "Adding system user for $USER" 1>&2
+			adduser --system --group --quiet \
+				--home / --no-create-home "$USER"
+		fi
+
+		if [ ! -e "$LOG_FILENAME" ]; then
+			touch "$LOG_FILENAME"
+		fi
+
+		chown "$USER:$USER" "$LOG_FILENAME"
+		chown "$USER:$USER" /var/lib/xivo-provd
+		chown "$USER:$USER" /var/cache/xivo-provd
+
+		previous_version="$2"
+		if dpkg --compare-versions "$previous_version" "<<" "16.08"; then
+			chown -R "$USER:$USER" /var/lib/xivo-provd
+			chown -R "$USER:$USER" /var/cache/xivo-provd
 		fi
 	;;
 	abort-upgrade)

@@ -49,10 +49,18 @@ class _Response(object):
 
 
 class TFTPProtocol(DatagramProtocol):
-    def __init__(self, read_service):
-        self._service = read_service
+    def __init__(self):
+        self._service = None
+
+    def set_tftp_request_processing_service(self, tftp_request_processing_service):
+        self._service = tftp_request_processing_service
 
     def _handle_rrq(self, pkt, addr):
+        if self._service is None:
+            dgram = build_dgram(err_packet(ERR_UNDEF, 'service unavailable'))
+            self.transport.write(dgram, addr)
+            return
+
         # only accept mode octet
         if pkt['mode'] != 'octet':
             logger.warning('TFTP mode not supported: %s', pkt['mode'])

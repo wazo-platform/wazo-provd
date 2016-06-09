@@ -177,16 +177,20 @@ class TFTPProcessService(Service):
         self._prov_service = prov_service
         self._process_service = process_service
         self._config = config
+        self._tftp_protocol = TFTPProtocol()
+
+    def privilegedStartService(self):
+        port = self._config['general.tftp_port']
+        logger.info('Binding TFTP provisioning service to port %s', port)
+        self._udp_server = internet.UDPServer(port, self._tftp_protocol)
+        self._udp_server.privilegedStartService()
+        Service.privilegedStartService(self)
 
     def startService(self):
         app = self._prov_service.app
         process_service = self._process_service.request_processing
         tftp_process_service = ident.TFTPRequestProcessingService(process_service, app.pg_mgr)
-        tftp_protocol = TFTPProtocol(tftp_process_service)
-        port = self._config['general.tftp_port']
-        logger.info('Binding TFTP provisioning service to port %s', port)
-        self._udp_server = internet.UDPServer(port, tftp_protocol)
-        self._udp_server.startService()
+        self._tftp_protocol.set_tftp_request_processing_service(tftp_process_service)
         Service.startService(self)
 
     def stopService(self):
