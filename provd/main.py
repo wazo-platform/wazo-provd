@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ import os.path
 import provd.config
 import provd.localization
 import provd.synchronize
+from provd import security
 from provd.app import ProvisioningApplication
 from provd.devices.config import ConfigCollection
 from provd.devices.device import DeviceCollection
@@ -333,6 +334,7 @@ class ProvisioningServiceMaker(object):
 
     def _configure_logging(self, options):
         setup_logging(LOG_FILE_NAME, options['stderr'], options['verbose'])
+        security.setup_logging()
         # configure twisted.log module
         # ugly hack to disable twistd logging, no sane way to do this
         log.theLogPublisher.observers = [log.PythonLoggingObserver().emit]

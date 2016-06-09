@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -414,6 +414,13 @@ class Plugin(object):
 
         """
         return None
+
+    def is_sensitive_filename(self, filename):
+        """Return true if the given filename could point to a file containing
+        sensitive information (e.g. SIP username, password), false otherwise.
+
+        """
+        return False
 
 
 class StandardPlugin(Plugin):

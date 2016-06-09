@@ -1,4 +1,5 @@
-/var/log/xivo-provd.log {
+/var/log/xivo-provd.log
+/var/log/xivo-provd-fail2ban.log {
     daily
     rotate 15
     compress

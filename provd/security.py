@@ -1,0 +1,19 @@
+# -*- coding: utf-8 -*-
+# Copyright 2016 Avencall
+# SPDX-License-Identifier: GPL-3.0+
+
+import logging
+
+_logger = logging.getLogger('fail2ban')
+
+
+def setup_logging():
+    formatter = logging.Formatter('[%(asctime)s] %(message)s')
+    handler = logging.FileHandler('/var/log/xivo-provd-fail2ban.log')
+    handler.setFormatter(formatter)
+    _logger.addHandler(handler)
+    _logger.propagate = False
+
+
+def log_security_msg(msg, *args):
+    _logger.info(msg, *args)
