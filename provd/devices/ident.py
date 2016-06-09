@@ -351,12 +351,19 @@ class AddDeviceRetriever(object):
     def __init__(self, app):
         self._app = app
 
+    @defer.inlineCallbacks
     def retrieve(self, dev_info):
         device = dict(dev_info)
         device[u'added'] = u'auto'
-        d = self._app.dev_insert(device)
-        d.addCallbacks(lambda _: device, lambda _: None)
-        return d
+        try:
+            device_id = yield self._app.dev_insert(device)
+        except Exception:
+            defer.returnValue(None)
+        else:
+            device_ip = dev_info.get(u'ip')
+            if device_ip:
+                log_security_msg('%s - New device created automatically: %s', device_ip, device_id)
+            defer.returnValue(device)
 
 
 class FirstCompositeDeviceRetriever(object):

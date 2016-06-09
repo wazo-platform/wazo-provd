@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,11 +16,35 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 from hamcrest import assert_that, equal_to, has_entry
-from mock import Mock
+from mock import Mock, patch
 from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper,\
-    RemoveOutdatedIpDeviceUpdater
+    RemoveOutdatedIpDeviceUpdater, AddDeviceRetriever
 from twisted.internet import defer
 from twisted.trial import unittest
+
+
+class TestAddDeviceRetriever(unittest.TestCase):
+
+    def setUp(self):
+        self.app = Mock()
+        self.dev_retriever = AddDeviceRetriever(self.app)
+
+    @patch('provd.devices.ident.log_security_msg')
+    @defer.inlineCallbacks
+    def test_retrieve_log_security_event(self, mock_log_security_msg):
+        device_id = u'some-id'
+        device_ip = u'169.254.1.1'
+        dev_info = {
+            u'ip': device_ip,
+        }
+        self.app.dev_insert.return_value = defer.succeed(device_id)
+
+        device = yield self.dev_retriever.retrieve(dev_info)
+
+        mock_log_security_msg.assert_called_once_with('%s - New device created automatically: %s', device_ip, device_id)
+        expected_device = dict(dev_info)
+        expected_device[u'added'] = u'auto'
+        assert_that(device, equal_to(expected_device))
 
 
 class TestLastSeenUpdater(unittest.TestCase):
