@@ -334,7 +334,7 @@ class TestLogSensitiveRequest(unittest.TestCase):
     def setUp(self):
         self.ip = '169.254.0.1'
         self.filename = 'foobar.cfg'
-        self.request_type = 'http'
+        self.request_type = ident.REQUEST_TYPE_HTTP
         self.request = Mock()
         self.request.getClientIP.return_value = self.ip
         self.request.path = '/{}'.format(self.filename)

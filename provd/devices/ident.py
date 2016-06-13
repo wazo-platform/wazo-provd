@@ -197,8 +197,6 @@ class AllPluginsDeviceInfoExtractor(object):
 
     implements(IDeviceInfoExtractor)
 
-    _REQUEST_TYPES = ['http', 'tftp', 'dhcp']
-
     def __init__(self, extractor_factory, pg_mgr):
         """
         extractor_factory -- a function taking a list of extractors and
@@ -218,7 +216,7 @@ class AllPluginsDeviceInfoExtractor(object):
 
     def _set_xtors(self):
         logger.debug('Updating extractors for %s', self)
-        for request_type in self._REQUEST_TYPES:
+        for request_type in REQUEST_TYPES:
             pg_extractors = []
             for pg in self._pg_mgr.itervalues():
                 pg_extractor = getattr(pg, request_type + '_dev_info_extractor')
@@ -825,5 +823,5 @@ class DHCPRequestProcessingService(Resource):
         logger.debug('DHCP request: %s', request)
         def errback(failure):
             logger.error('Error while processing DHCP request: %s', failure)
-        d = self._process_service.process(request, 'dhcp')
+        d = self._process_service.process(request, REQUEST_TYPE_DHCP)
         d.addErrback(errback)
