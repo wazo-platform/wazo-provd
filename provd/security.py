@@ -4,7 +4,7 @@
 
 import logging
 
-_logger = logging.getLogger('fail2ban')
+_logger = logging.getLogger(__name__)
 
 
 def setup_logging():
@@ -12,7 +12,6 @@ def setup_logging():
     handler = logging.FileHandler('/var/log/xivo-provd-fail2ban.log')
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
-    _logger.propagate = False
 
 
 def log_security_msg(msg, *args):
