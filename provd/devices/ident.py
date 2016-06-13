@@ -362,7 +362,7 @@ class AddDeviceRetriever(object):
         else:
             device_ip = dev_info.get(u'ip')
             if device_ip:
-                log_security_msg('%s - New device created automatically: %s', device_ip, device_id)
+                log_security_msg('New device created automatically from %s: %s', device_ip, device_id)
             defer.returnValue(device)
 
 
@@ -699,7 +699,7 @@ def _log_sensitive_request(plugin, request, request_type):
     filename = _get_filename_from_request(request, request_type)
     if is_sensitive_filename(filename):
         ip = _get_ip_from_request(request, request_type)
-        log_security_msg('%s - Sensitive file requested: %s', ip, filename)
+        log_security_msg('Sensitive file requested from %s: %s', ip, filename)
 
 
 class HTTPRequestProcessingService(Resource):

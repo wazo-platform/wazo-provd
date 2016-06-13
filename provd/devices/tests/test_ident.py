@@ -42,7 +42,7 @@ class TestAddDeviceRetriever(unittest.TestCase):
 
         device = yield self.dev_retriever.retrieve(dev_info)
 
-        mock_log_security_msg.assert_called_once_with('%s - New device created automatically: %s', device_ip, device_id)
+        mock_log_security_msg.assert_called_once_with('New device created automatically from %s: %s', device_ip, device_id)
         expected_device = dict(dev_info)
         expected_device[u'added'] = u'auto'
         assert_that(device, equal_to(expected_device))
@@ -355,5 +355,5 @@ class TestLogSensitiveRequest(unittest.TestCase):
         ident._log_sensitive_request(self.plugin, self.request, self.request_type)
 
         self.plugin.is_sensitive_filename.assert_called_once_with(self.filename)
-        mock_log_security_msg.assert_called_once_with('%s - Sensitive file requested: %s',
+        mock_log_security_msg.assert_called_once_with('Sensitive file requested from %s: %s',
                                                       self.ip, self.filename)
