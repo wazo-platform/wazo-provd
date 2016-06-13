@@ -691,7 +691,7 @@ def _null_service_factory(pg_id, pg_service):
     return pg_service
 
 
-def _check_is_sensitive_request(self, plugin, request, request_type):
+def _log_sensitive_request(plugin, request, request_type):
     is_sensitive_filename = getattr(plugin, 'is_sensitive_filename', None)
     if is_sensitive_filename is None:
         return
@@ -749,7 +749,7 @@ class HTTPRequestProcessingService(Resource):
             if pg_id in self._pg_mgr:
                 plugin = self._pg_mgr[pg_id]
                 if plugin.http_service is not None:
-                    _check_is_sensitive_request(plugin, request, REQUEST_TYPE_HTTP)
+                    _log_sensitive_request(plugin, request, REQUEST_TYPE_HTTP)
                     service = self.service_factory(pg_id, plugin.http_service)
             if service.isLeaf:
                 request.postpath.insert(0, request.prepath.pop())
@@ -784,7 +784,7 @@ class TFTPRequestProcessingService(object):
             if pg_id in self._pg_mgr:
                 plugin = self._pg_mgr[pg_id]
                 if plugin.tftp_service is not None:
-                    _check_is_sensitive_request(plugin, request, REQUEST_TYPE_TFTP)
+                    _log_sensitive_request(plugin, request, REQUEST_TYPE_TFTP)
                     service = self.service_factory(pg_id, plugin.tftp_service)
             service.handle_read_request(request, response)
         def errback(failure):
