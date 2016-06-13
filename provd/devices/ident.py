@@ -27,7 +27,6 @@ from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService
-from provd.util import norm_ip
 from twisted.internet import defer
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
@@ -42,11 +41,10 @@ logger = logging.getLogger(__name__)
 
 
 def _get_ip_from_request(request, request_type):
-    # XXX why are we "normalizing" IP addresses here... ?
     if request_type == REQUEST_TYPE_HTTP:
-        return norm_ip(request.getClientIP().decode('ascii'))
+        return request.getClientIP().decode('ascii')
     elif request_type == REQUEST_TYPE_TFTP:
-        return norm_ip(request['address'][0].decode('ascii'))
+        return request['address'][0].decode('ascii')
     elif request_type == REQUEST_TYPE_DHCP:
         return request[u'ip']
     else:
