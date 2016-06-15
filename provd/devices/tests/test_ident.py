@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,11 +16,36 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 from hamcrest import assert_that, equal_to, has_entry
-from mock import Mock
+from mock import Mock, patch
+from provd.devices import ident
 from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper,\
-    RemoveOutdatedIpDeviceUpdater
+    RemoveOutdatedIpDeviceUpdater, AddDeviceRetriever
 from twisted.internet import defer
 from twisted.trial import unittest
+
+
+class TestAddDeviceRetriever(unittest.TestCase):
+
+    def setUp(self):
+        self.app = Mock()
+        self.dev_retriever = AddDeviceRetriever(self.app)
+
+    @patch('provd.devices.ident.log_security_msg')
+    @defer.inlineCallbacks
+    def test_retrieve_log_security_event(self, mock_log_security_msg):
+        device_id = u'some-id'
+        device_ip = u'169.254.1.1'
+        dev_info = {
+            u'ip': device_ip,
+        }
+        self.app.dev_insert.return_value = defer.succeed(device_id)
+
+        device = yield self.dev_retriever.retrieve(dev_info)
+
+        mock_log_security_msg.assert_called_once_with('New device created automatically from %s: %s', device_ip, device_id)
+        expected_device = dict(dev_info)
+        expected_device[u'added'] = u'auto'
+        assert_that(device, equal_to(expected_device))
 
 
 class TestLastSeenUpdater(unittest.TestCase):
@@ -302,3 +327,33 @@ class TestRequestHelper(unittest.TestCase):
 
         dev_updater.update.side_effect = update_fun
         return dev_updater
+
+
+class TestLogSensitiveRequest(unittest.TestCase):
+
+    def setUp(self):
+        self.ip = '169.254.0.1'
+        self.filename = 'foobar.cfg'
+        self.request_type = ident.REQUEST_TYPE_HTTP
+        self.request = Mock()
+        self.request.getClientIP.return_value = self.ip
+        self.request.path = '/{}'.format(self.filename)
+        self.plugin = Mock()
+
+    @patch('provd.devices.ident.log_security_msg')
+    def test_no_log_when_plugin_doesnt_have_method(self, mock_log_security_msg):
+        del self.plugin.is_sensitive_filename
+
+        ident._log_sensitive_request(self.plugin, self.request, self.request_type)
+
+        assert_that(mock_log_security_msg.called, equal_to(False))
+
+    @patch('provd.devices.ident.log_security_msg')
+    def test_log_when_sensitive_filename(self, mock_log_security_msg):
+        self.plugin.is_sensitive_filename.return_value = True
+
+        ident._log_sensitive_request(self.plugin, self.request, self.request_type)
+
+        self.plugin.is_sensitive_filename.assert_called_once_with(self.filename)
+        mock_log_security_msg.assert_called_once_with('Sensitive file requested from %s: %s',
+                                                      self.ip, self.filename)

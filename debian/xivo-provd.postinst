@@ -2,7 +2,6 @@
 
 set -e
 
-LOG_FILENAME='/var/log/xivo-provd.log'
 USER='xivo-provd'
 
 case "$1" in
@@ -20,11 +19,15 @@ case "$1" in
 				--home / --no-create-home "$USER"
 		fi
 
-		if [ ! -e "$LOG_FILENAME" ]; then
-			touch "$LOG_FILENAME"
-		fi
+		for filename in /var/log/xivo-provd.log \
+		                /var/log/xivo-provd-fail2ban.log; do
+			if [ ! -e $filename ]; then
+				touch $filename
+			fi
 
-		chown "$USER:$USER" "$LOG_FILENAME"
+			chown "$USER:$USER" $filename
+		done
+
 		chown "$USER:$USER" /var/lib/xivo-provd
 		chown "$USER:$USER" /var/cache/xivo-provd
 

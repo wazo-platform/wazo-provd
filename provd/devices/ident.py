@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,15 +24,42 @@ from operator import itemgetter
 from os.path import basename
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
+from provd.security import log_security_msg
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService
-from provd.util import norm_ip
 from twisted.internet import defer
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
 from zope.interface import Interface, implements
 
+REQUEST_TYPE_HTTP = 'http'
+REQUEST_TYPE_TFTP = 'tftp'
+REQUEST_TYPE_DHCP = 'dhcp'
+REQUEST_TYPES = [REQUEST_TYPE_HTTP, REQUEST_TYPE_TFTP, REQUEST_TYPE_DHCP]
+
 logger = logging.getLogger(__name__)
+
+
+def _get_ip_from_request(request, request_type):
+    if request_type == REQUEST_TYPE_HTTP:
+        return request.getClientIP().decode('ascii')
+    elif request_type == REQUEST_TYPE_TFTP:
+        return request['address'][0].decode('ascii')
+    elif request_type == REQUEST_TYPE_DHCP:
+        return request[u'ip']
+    else:
+        raise RuntimeError('invalid request_type: {}'.format(request_type))
+
+
+def _get_filename_from_request(request, request_type):
+    if request_type == REQUEST_TYPE_HTTP:
+        return basename(request.path)
+    elif request_type == REQUEST_TYPE_TFTP:
+        return basename(request['packet']['filename'])
+    elif request_type == REQUEST_TYPE_DHCP:
+        return None
+    else:
+        raise RuntimeError('invalid request_type: {}'.format(request_type))
 
 
 class IDeviceInfoExtractor(Interface):
@@ -79,24 +106,11 @@ class StandardDeviceInfoExtractor(object):
 
     implements(IDeviceInfoExtractor)
 
-    def _extract_tftp(self, request):
-        return {u'ip': norm_ip(request['address'][0].decode('ascii'))}
-
-    def _extract_http(self, request):
-        return {u'ip': norm_ip(request.getClientIP().decode('ascii'))}
-
-    def _extract_dhcp(self, request):
-        return {u'ip': request[u'ip'], u'mac': request[u'mac']}
-
     def extract(self, request, request_type):
-        method_name = '_extract_%s' % request_type
-        try:
-            method = getattr(self, method_name)
-        except AttributeError:
-            logger.warning('No extract method for request type %s', request_type)
-            return defer.succeed(None)
-        else:
-            return defer.succeed(method(request))
+        dev_info = {u'ip': _get_ip_from_request(request, request_type)}
+        if request_type == REQUEST_TYPE_DHCP:
+            dev_info[u'mac'] = request[u'mac']
+        return defer.succeed(dev_info)
 
 
 class LastSeenUpdater(object):
@@ -183,8 +197,6 @@ class AllPluginsDeviceInfoExtractor(object):
 
     implements(IDeviceInfoExtractor)
 
-    _REQUEST_TYPES = ['http', 'tftp', 'dhcp']
-
     def __init__(self, extractor_factory, pg_mgr):
         """
         extractor_factory -- a function taking a list of extractors and
@@ -204,7 +216,7 @@ class AllPluginsDeviceInfoExtractor(object):
 
     def _set_xtors(self):
         logger.debug('Updating extractors for %s', self)
-        for request_type in self._REQUEST_TYPES:
+        for request_type in REQUEST_TYPES:
             pg_extractors = []
             for pg in self._pg_mgr.itervalues():
                 pg_extractor = getattr(pg, request_type + '_dev_info_extractor')
@@ -335,12 +347,19 @@ class AddDeviceRetriever(object):
     def __init__(self, app):
         self._app = app
 
+    @defer.inlineCallbacks
     def retrieve(self, dev_info):
         device = dict(dev_info)
         device[u'added'] = u'auto'
-        d = self._app.dev_insert(device)
-        d.addCallbacks(lambda _: device, lambda _: None)
-        return d
+        try:
+            device_id = yield self._app.dev_insert(device)
+        except Exception:
+            defer.returnValue(None)
+        else:
+            device_ip = dev_info.get(u'ip')
+            if device_ip:
+                log_security_msg('New device created automatically from %s: %s', device_ip, device_id)
+            defer.returnValue(device)
 
 
 class FirstCompositeDeviceRetriever(object):
@@ -587,11 +606,8 @@ class _RequestHelper(object):
         return self._app.dev_update(device, pre_update_hook=pre_update_hook)
 
     def _should_update_remote_state(self, device):
-        if self._request_type == 'http':
-            filename = basename(self._request.path)
-        elif self._request_type == 'tftp':
-            filename = basename(self._request['packet']['filename'])
-        else:
+        filename = _get_filename_from_request(self._request, self._request_type)
+        if not filename:
             return False
 
         plugin_id = device.get(u'plugin')
@@ -671,6 +687,17 @@ def _null_service_factory(pg_id, pg_service):
     return pg_service
 
 
+def _log_sensitive_request(plugin, request, request_type):
+    is_sensitive_filename = getattr(plugin, 'is_sensitive_filename', None)
+    if is_sensitive_filename is None:
+        return
+
+    filename = _get_filename_from_request(request, request_type)
+    if is_sensitive_filename(filename):
+        ip = _get_ip_from_request(request, request_type)
+        log_security_msg('Sensitive file requested from %s: %s', ip, filename)
+
+
 class HTTPRequestProcessingService(Resource):
     """An HTTP service that does HTTP request processing and routing to
     the HTTP service of plugins.
@@ -704,7 +731,7 @@ class HTTPRequestProcessingService(Resource):
         logger.info('Processing HTTP request: %s', request.path)
         logger.debug('HTTP request: %s', request)
         try:
-            device, pg_id = yield self._process_service.process(request, 'http')
+            device, pg_id = yield self._process_service.process(request, REQUEST_TYPE_HTTP)
         except Exception:
             logger.error('Error while processing HTTP request:', exc_info=True)
             defer.returnValue(ErrorPage(INTERNAL_SERVER_ERROR,
@@ -716,9 +743,10 @@ class HTTPRequestProcessingService(Resource):
 
             service = self.default_service
             if pg_id in self._pg_mgr:
-                pg_service = self._pg_mgr[pg_id].http_service
-                if pg_service is not None:
-                    service = self.service_factory(pg_id, pg_service)
+                plugin = self._pg_mgr[pg_id]
+                if plugin.http_service is not None:
+                    _log_sensitive_request(plugin, request, REQUEST_TYPE_HTTP)
+                    service = self.service_factory(pg_id, plugin.http_service)
             if service.isLeaf:
                 request.postpath.insert(0, request.prepath.pop())
                 defer.returnValue(service)
@@ -750,14 +778,15 @@ class TFTPRequestProcessingService(object):
 
             service = self.default_service
             if pg_id in self._pg_mgr:
-                pg_service = self._pg_mgr[pg_id].tftp_service
-                if pg_service is not None:
-                    service = self.service_factory(pg_id, pg_service)
+                plugin = self._pg_mgr[pg_id]
+                if plugin.tftp_service is not None:
+                    _log_sensitive_request(plugin, request, REQUEST_TYPE_TFTP)
+                    service = self.service_factory(pg_id, plugin.tftp_service)
             service.handle_read_request(request, response)
         def errback(failure):
             logger.error('Error while processing TFTP request: %s', failure)
             response.reject(ERR_UNDEF, 'Internal processing error')
-        d = self._process_service.process(request, 'tftp')
+        d = self._process_service.process(request, REQUEST_TYPE_TFTP)
         d.addCallbacks(callback, errback)
 
 
@@ -794,5 +823,5 @@ class DHCPRequestProcessingService(Resource):
         logger.debug('DHCP request: %s', request)
         def errback(failure):
             logger.error('Error while processing DHCP request: %s', failure)
-        d = self._process_service.process(request, 'dhcp')
+        d = self._process_service.process(request, REQUEST_TYPE_DHCP)
         d.addErrback(errback)

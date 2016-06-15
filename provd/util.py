@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ def norm_ip(ip_string):
 
 
 def is_normed_ip(ip_string):
-    """Return true if the given MAC address string is in normalized format,
+    """Return true if the given IP address string is in normalized format,
     else false.
     
     """
