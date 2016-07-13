@@ -28,13 +28,11 @@ case "$1" in
 			chown "$USER:$USER" $filename
 		done
 
-		chown "$USER:$USER" /var/lib/xivo-provd
-		chown "$USER:$USER" /var/cache/xivo-provd
+		chown "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 
 		previous_version="$2"
-		if dpkg --compare-versions "$previous_version" "<<" "16.08"; then
-			chown -R "$USER:$USER" /var/lib/xivo-provd
-			chown -R "$USER:$USER" /var/cache/xivo-provd
+		if dpkg --compare-versions "$previous_version" "<<" "16.09"; then
+			chown -R "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 		fi
 	;;
 	abort-upgrade)
