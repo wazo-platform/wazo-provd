@@ -45,6 +45,11 @@ logger = logging.getLogger(__name__)
 LOG_FILE_NAME = '/var/log/xivo-provd.log'
 
 
+# given in command line to redirect logs to standard logging
+def twistd_logs():
+    return log.PythonLoggingObserver().emit
+
+
 class ProvisioningService(Service):
     # has an 'app' attribute after starting
 
@@ -321,10 +326,6 @@ class _CompositeConfigSource(object):
         return raw_config
 
 
-def _null_function(*args, **kwargs):
-    pass
-
-
 class ProvisioningServiceMaker(object):
     implements(IServiceMaker, IPlugin)
 
@@ -335,11 +336,6 @@ class ProvisioningServiceMaker(object):
     def _configure_logging(self, options):
         setup_logging(LOG_FILE_NAME, options['stderr'], options['verbose'])
         security.setup_logging()
-        # configure twisted.log module
-        # ugly hack to disable twistd logging, no sane way to do this
-        log.theLogPublisher.observers = [log.PythonLoggingObserver().emit]
-        log.addObserver = _null_function
-        log.removeObserver = _null_function
 
     def _read_config(self, options):
         logger.info('Reading application configuration')

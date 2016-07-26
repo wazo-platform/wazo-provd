@@ -7,7 +7,7 @@ Before=monit.service
 [Service]
 Type=forking
 ExecStartPre=/usr/bin/install -d -o xivo-provd -g xivo-provd /var/run/xivo-provd
-ExecStart=/usr/bin/twistd --pidfile=/var/run/xivo-provd/xivo-provd.pid --rundir=/ --uid=xivo-provd --gid=xivo-provd --no_save --reactor=epoll xivo-provd
+ExecStart=/usr/bin/twistd --pidfile=/var/run/xivo-provd/xivo-provd.pid --rundir=/ --uid=xivo-provd --gid=xivo-provd --no_save --reactor=epoll --logger provd.main.twistd_logs xivo-provd
 PIDFile=/var/run/xivo-provd/xivo-provd.pid
 
 [Install]
