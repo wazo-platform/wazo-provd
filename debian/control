@@ -11,7 +11,7 @@ Homepage: http://xivo.io/
 Package: xivo-provd
 Architecture: all
 Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
-Depends: ${python:Depends}, ${misc:Depends}
+Depends: ${python:Depends}, ${misc:Depends}, adduser
 Provides: pf-xivo-provd
 Conflicts: pf-xivo-provd
 Replaces: xivo-provisioning, pf-xivo-provd
