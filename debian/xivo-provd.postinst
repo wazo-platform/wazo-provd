@@ -13,10 +13,16 @@ case "$1" in
 			rm -rf $old_provd_directory
 		fi
 
-		if ! getent passwd "$USER" > /dev/null; then
-			echo "Adding system user for $USER" 1>&2
-			adduser --system --group --quiet \
-				--home / --no-create-home "$USER"
+		# add/update user
+		if ! getent passwd $USER > /dev/null; then
+			echo "Adding system user $USER" 1>&2
+			adduser --quiet --system --group --no-create-home \
+					--home /var/lib/xivo-provd \
+					$USER
+		else
+			if dpkg --compare-versions "$2" lt '16.12~'; then
+				usermod --home /var/lib/xivo-provd $USER
+			fi
 		fi
 
 		for filename in /var/log/xivo-provd.log \
@@ -30,8 +36,7 @@ case "$1" in
 
 		chown "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 
-		previous_version="$2"
-		if dpkg --compare-versions "$previous_version" "<<" "16.09"; then
+		if dpkg --compare-versions "$2" "<<" "16.09"; then
 			chown -R "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 		fi
 	;;
