@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright (C) 2010-2016 Avencall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -616,13 +616,13 @@ class ProvisioningApplication(object):
         Note that device might be reconfigured.
         
         """
-        logger.info('Updating config')
         try:
             try:
                 id = config[ID_KEY]
             except KeyError:
                 raise InvalidIdError('no id key for config %s' % config)
             else:
+                logger.info('Updating config %s', id)
                 old_config = yield self._cfg_get_or_raise(id)
                 if old_config == config:
                     logger.info('config has not changed, ignoring update')
