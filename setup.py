@@ -10,7 +10,7 @@ setup(
     description='XiVO provisioning daemon',
     maintainer='Proformatique',
     maintainer_email='technique@proformatique.com',
-    url='http://github.com/xivo-pbx/xivo-provisioning',
+    url='http://github.com/wazo-pbx/xivo-provisioning',
     license='GPLv3',
 
     packages=find_packages(exclude=['*.tests']) + ['twisted', 'twisted.plugins'],
