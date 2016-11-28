@@ -1,5 +1,5 @@
 FROM python:2.7.9
-MAINTAINER XiVO Team "dev@avencall.com"
+MAINTAINER Wazo Team "dev@avencall.com"
 
 # Install
 ADD . /usr/src/xivo-provisioning
