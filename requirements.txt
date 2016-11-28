@@ -1,5 +1,5 @@
-git+https://github.com/xivo-pbx/xivo-fetchfw.git
-git+https://github.com/xivo-pbx/xivo-lib-python.git
+git+https://github.com/wazo-pbx/xivo-fetchfw.git
+git+https://github.com/wazo-pbx/xivo-lib-python.git
 beautifulsoup==3.2.1  # from xivo-fetchfw
 jinja2==2.7
 pyopenssl==0.14
