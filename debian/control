@@ -1,10 +1,9 @@
 Source: xivo-provisioning
 Section: python
 Priority: extra
-Maintainer: XiVO Dev Team <dev+pkg@proformatique.com>
-Uploaders: XiVO Builder Team <release@xivo.io>
+Maintainer: Wazo Maintainers <dev.wazo@gmail.com>
 Build-Depends: debhelper (>= 9), dh-python, dh-systemd (>= 1.5), python-all (>= 2.7), python-setuptools
-Standards-Version: 3.9.4
+Standards-Version: 3.9.6
 X-Python-Version: >= 2.7
 
 Package: xivo-provd
@@ -14,11 +13,11 @@ Depends: ${python:Depends}, ${misc:Depends}, adduser
 Provides: pf-xivo-provd
 Conflicts: pf-xivo-provd
 Replaces: xivo-provisioning, pf-xivo-provd
-Description: XIVO provisioning daemon
- XIVO is a system based on a powerful IPBX, to bring an easy to
+Description: Wazo provisioning daemon
+ Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
  .
- This is the provisioning daemon for XIVO.
+ This is the provisioning daemon for Wazo.
  .
 
 Package: xivo-libprovd
@@ -27,11 +26,11 @@ Depends: ${python:Depends}, ${misc:Depends}, xivo-fetchfw, xivo-lib-python, pyth
 Provides: pf-xivo-libprovd
 Conflicts: pf-xivo-libprovd
 Replaces: xivo-provisioning, pf-xivo-libprovd
-Description: XIVO provisioning daemon
- XIVO is a system based on a powerful IPBX, to bring an easy to
+Description: Wazo provisioning daemon
+ Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
  .
- This is the provisioning daemon for XIVO.
+ This is the provisioning daemon for Wazo.
  .
 
 Package: xivo-dhcpd-update
@@ -41,9 +40,9 @@ Depends: ${python:Depends}, ${misc:Depends}
 Provides: pf-xivo-dhcpd-update
 Conflicts: pf-xivo-dhcpd-update
 Replaces: pf-xivo-dhcpd-update
-Description: XIVO dhcpd configuration file for XiVO
- XIVO is a system based on a powerful IPBX, to bring an easy to
+Description: Wazo dhcpd configuration file for Wazo
+ Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
  .
- This is dhcpd configuration files for XIVO.
+ This is dhcpd configuration files for Wazo.
  .
