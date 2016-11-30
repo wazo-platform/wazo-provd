@@ -1,29 +1,14 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
+# Copyright 2011-2016 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0+
+
 """Small utility to download and update the configuration files of the DHCP
 server installed on a XiVO, so that any phone that is supported by one
 of the xivo-* provd plugins is able to boot correctly using the DHCP server
 installed on a XiVO.
 
-"""
-
-__license__ = """
-    Copyright (C) 2011  Avencall
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
 """
 
 import contextlib
@@ -90,7 +75,7 @@ def new_empty_dhcpd_update_file(dhcpd_dir):
 def _read_config_from_default(config):
     return {'general':
                 {'config_file': '/etc/xivo/dhcpd-update.conf',
-                 'update_url': 'http://provd.xivo.io/xivo/dhcpd-update/13.17/',
+                 'update_url': 'http://provd.wazo.community/xivo/dhcpd-update/13.17/',
                  'dhcpd_dir': '/etc/dhcp/',
                  'subnet_file': 'dhcpd_subnet.conf'},
             }

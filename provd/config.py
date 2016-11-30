@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2016 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -110,7 +110,7 @@ class DefaultConfigSource(object):
         ('general.check_compat_min', 'True'),
         ('general.check_compat_max', 'True'),
         ('general.base_storage_dir', '/var/lib/xivo-provd'),
-        ('general.plugin_server', 'http://provd.xivo.io/plugins/1/stable/'),
+        ('general.plugin_server', 'http://provd.wazo.community/plugins/1/stable/'),
         ('general.info_extractor', 'default'),
         ('general.retriever', 'default'),
         ('general.updater', 'default'),
