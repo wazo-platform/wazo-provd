@@ -8,9 +8,9 @@ setup(
     name='provisioning',
     version='0.2',
     description='XiVO provisioning daemon',
-    maintainer='Proformatique',
-    maintainer_email='technique@proformatique.com',
-    url='http://github.com/wazo-pbx/xivo-provisioning',
+    author='Wazo Authors',
+    author_email='dev.wazo@gmail.com',
+    url='http://wazo.community',
     license='GPLv3',
 
     packages=find_packages(exclude=['*.tests']) + ['twisted', 'twisted.plugins'],
