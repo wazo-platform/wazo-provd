@@ -6,13 +6,6 @@ USER='xivo-provd'
 
 case "$1" in
 	configure)
-		# sync old pf-xivo-provd data
-		old_provd_directory="/var/lib/pf-xivo-provd"
-		if [ -d $old_provd_directory ]; then
-			rsync -av $old_provd_directory/ /var/lib/xivo-provd/ > /dev/null
-			rm -rf $old_provd_directory
-		fi
-
 		# add/update user
 		if ! getent passwd $USER > /dev/null; then
 			echo "Adding system user $USER" 1>&2
