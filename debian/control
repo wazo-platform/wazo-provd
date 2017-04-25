@@ -10,9 +10,6 @@ Package: xivo-provd
 Architecture: all
 Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
 Depends: ${python:Depends}, ${misc:Depends}, adduser
-Provides: pf-xivo-provd
-Conflicts: pf-xivo-provd
-Replaces: xivo-provisioning, pf-xivo-provd
 Description: Wazo provisioning daemon
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
@@ -23,9 +20,6 @@ Description: Wazo provisioning daemon
 Package: xivo-libprovd
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, xivo-fetchfw, xivo-lib-python, python-jinja2, python-openssl, python-twisted-core, python-twisted-web
-Provides: pf-xivo-libprovd
-Conflicts: pf-xivo-libprovd
-Replaces: xivo-provisioning, pf-xivo-libprovd
 Description: Wazo provisioning daemon
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
@@ -37,9 +31,6 @@ Package: xivo-dhcpd-update
 Architecture: all
 Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
 Depends: ${python:Depends}, ${misc:Depends}
-Provides: pf-xivo-dhcpd-update
-Conflicts: pf-xivo-dhcpd-update
-Replaces: pf-xivo-dhcpd-update
 Description: Wazo dhcpd configuration file for Wazo
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
