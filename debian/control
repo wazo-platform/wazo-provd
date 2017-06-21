@@ -19,7 +19,7 @@ Description: Wazo provisioning daemon
 
 Package: xivo-libprovd
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, xivo-fetchfw, xivo-lib-python, python-jinja2, python-openssl, python-twisted-core, python-twisted-web
+Depends: ${python:Depends}, ${misc:Depends}, xivo-fetchfw, xivo-lib-python, python-jinja2, python-openssl, python-twisted-core, python-twisted-web, unrar-free, unzip
 Description: Wazo provisioning daemon
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
