@@ -1,5 +1,5 @@
-FROM python:2.7.9
-MAINTAINER Wazo Team "dev@avencall.com"
+FROM python:2.7.13
+MAINTAINER Wazo Maintainers <dev@wazo.community>
 
 # Install
 ADD . /usr/src/xivo-provisioning

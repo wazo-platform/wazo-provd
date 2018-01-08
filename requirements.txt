@@ -1,8 +1,8 @@
 git+https://github.com/wazo-pbx/xivo-fetchfw.git
 git+https://github.com/wazo-pbx/xivo-lib-python.git
 beautifulsoup==3.2.1  # from xivo-fetchfw
-cryptography<2.0  # from pyopenssl, but cryptography 2.0 has an incompatibility with the OpenSSL of Ubuntu 16.04 (jenkins)
-jinja2==2.7
-pyopenssl==0.14
-twisted==14.0.2
-zope.interface==4.1.1
+cryptography==1.7.1  # from pyopenssl
+jinja2==2.8
+pyopenssl==16.2.0
+twisted==16.6.0
+zope.interface==4.3.2
