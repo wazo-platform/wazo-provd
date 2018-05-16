@@ -32,6 +32,11 @@ case "$1" in
 		if dpkg --compare-versions "$2" "<<" "16.09"; then
 			chown -R "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 		fi
+
+        if dpkg --compare-versions "$2" lt '17.02'; then
+            ln -sf  /etc/nginx/locations/https-available/xivo-provd \
+                    /etc/nginx/locations/https-enabled/xivo-provd
+        fi
 	;;
 	abort-upgrade)
 	;;
