@@ -12,10 +12,6 @@ case "$1" in
 			adduser --quiet --system --group --no-create-home \
 					--home /var/lib/xivo-provd \
 					$USER
-		else
-			if dpkg --compare-versions "$2" lt '16.12~'; then
-				usermod --home /var/lib/xivo-provd $USER
-			fi
 		fi
 
 		for filename in /var/log/xivo-provd.log \
@@ -28,10 +24,6 @@ case "$1" in
 		done
 
 		chown "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
-
-		if dpkg --compare-versions "$2" "<<" "16.09"; then
-			chown -R "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
-		fi
 	;;
 	abort-upgrade)
 	;;
