@@ -133,6 +133,7 @@ class PluginAssociatorDeviceUpdater(object):
             if sstor is not None:
                 try:
                     score = sstor.associate(dev_info)
+                    logger.debug('Associator: %s = score %s', pg_id, score)
                 except Exception:
                     logger.error('Error during plugin association for plugin %s',
                                  pg_id, exc_info=True)

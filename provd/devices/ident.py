@@ -179,12 +179,14 @@ class CollaboratingDeviceInfoExtractor(object):
 
     @defer.inlineCallbacks
     def extract(self, request, request_type):
+        logging.debug('extractors: %s', self._extractors)
         dlist = defer.DeferredList([extractor.extract(request, request_type)
                                     for extractor in self._extractors])
         dlist_results = yield dlist
         updater = self._updater_factory()
         for success, result in dlist_results:
             if success and result:
+                logger.debug('extract result: %s', result)
                 updater.update(result)
         defer.returnValue(updater.dev_info)
 
