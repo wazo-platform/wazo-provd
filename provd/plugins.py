@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2016 Avencall
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -719,7 +719,7 @@ class PluginManager(object):
     
     """
 
-    PLUGIN_IFACE_VERSION = 0.1
+    PLUGIN_IFACE_VERSION = 0.2
 
     _ENTRY_FILENAME = 'entry.py'
     # name of the python plugin code
