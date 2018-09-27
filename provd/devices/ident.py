@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2016 Avencall
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from os.path import basename
+from os.path import basename, normpath
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
@@ -30,6 +30,7 @@ from provd.servers.tftp.service import TFTPNullService
 from twisted.internet import defer
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
+from twisted.web import rewrite
 from zope.interface import Interface, implements
 
 REQUEST_TYPE_HTTP = 'http'
@@ -732,6 +733,7 @@ class HTTPRequestProcessingService(Resource):
     def getChild(self, path, request):
         logger.info('Processing HTTP request: %s', request.path)
         logger.debug('HTTP request: %s', request)
+        logger.debug('postpath: %s', request.postpath)
         try:
             device, pg_id = yield self._process_service.process(request, REQUEST_TYPE_HTTP)
         except Exception:
@@ -742,13 +744,16 @@ class HTTPRequestProcessingService(Resource):
         else:
             # Here we 'inject' the device object into the request object
             request.prov_dev = device
-
             service = self.default_service
             if pg_id in self._pg_mgr:
                 plugin = self._pg_mgr[pg_id]
                 if plugin.http_service is not None:
                     _log_sensitive_request(plugin, request, REQUEST_TYPE_HTTP)
                     service = self.service_factory(pg_id, plugin.http_service)
+                    # If the plugin specifies a path preprocessing method, use it
+                    if hasattr(service, 'path_preprocess'):
+                        logger.debug('Rewriting paths to the HTTP Service')
+                        service = rewrite.RewriterResource(service, service.path_preprocess)
             if service.isLeaf:
                 request.postpath.insert(0, request.prepath.pop())
                 defer.returnValue(service)
