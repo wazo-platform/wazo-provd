@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -274,18 +274,21 @@ class _AMIClient(object):
             self._ll_client.close()
             self._ll_client_closed = True
 
-    def sip_notify_by_ip(self, ip, event):
-        aid, msg = self._new_msg_with_action_id('SIPnotifyprovd',
-                                                [('PeerIP', ip.encode('ascii')),
-                                                 ('Variable', 'Event=%s' % event.encode('ascii'))])
+    def sip_notify_by_ip(self, ip, event, extra_vars=None):
+        extra_vars = extra_vars or []
+        logger.debug('Notify %s, event %s, extra_vars: %s', ip, event, extra_vars)
+        arr_vars = [('PeerIP', ip.encode('ascii')), ('Variable', 'Event=%s' % event.encode('ascii'))]
+        arr_vars.extend(('Variable', k) for k in extra_vars)
+        aid, msg = self._new_msg_with_action_id('SIPnotifyprovd', arr_vars)
         self._send_msg(msg)
         response = self._recv_msg(aid)
         self._check_response(response, 'SIPnotifyprovd')
 
-    def sip_notify_by_peer(self, peer, event):
-        aid, msg = self._new_msg_with_action_id('SIPnotify',
-                                                [('Channel', peer.encode('ascii')),
-                                                 ('Variable', 'Event=%s' % event.encode('ascii'))])
+    def sip_notify_by_peer(self, peer, event, extra_vars=None):
+        extra_vars = extra_vars or []
+        arr_vars = [('Channel', peer.encode('ascii')), ('Variable', 'Event=%s' % event.encode('ascii'))]
+        arr_vars.extend(('Variable', k) for k in extra_vars)
+        aid, msg = self._new_msg_with_action_id('SIPnotify', arr_vars)
         self._send_msg(msg)
         response = self._recv_msg(aid)
         self._check_response(response, 'SIPnotifyd')
@@ -338,11 +341,11 @@ class _ReconnectingAMIClient(object):
             raise _MaxReconnectionError('giving up connection after %s try' %
                                         self._max_try)
 
-    def sip_notify_by_ip(self, ip, event):
-        self._do_client_method('sip_notify_by_ip', (ip, event))
+    def sip_notify_by_ip(self, ip, event, extra_vars=None):
+        self._do_client_method('sip_notify_by_ip', (ip, event, extra_vars))
 
-    def sip_notify_by_peer(self, peer, event):
-        self._do_client_method('sip_notify_by_peer', (peer, event))
+    def sip_notify_by_peer(self, peer, event, extra_vars=None):
+        self._do_client_method('sip_notify_by_peer', (peer, event, extra_vars))
 
     def __repr__(self):
         return '<_ReconnectingAMIClient to %s:%s (connected, %s)>' % \
@@ -413,15 +416,15 @@ class AsteriskAMISynchronizeService(object):
         raise AMIError('all AMI servers returned failure')
 
     @_asterisk_ami_sync_lock
-    def sip_notify_by_ip(self, ip, event):
-        self._do_client_method('sip_notify_by_ip', (ip, event))
+    def sip_notify_by_ip(self, ip, event, extra_vars=None):
+        self._do_client_method('sip_notify_by_ip', (ip, event, extra_vars))
 
     # backward compatibility with older plugins
     sip_notify = sip_notify_by_ip
 
     @_asterisk_ami_sync_lock
-    def sip_notify_by_peer(self, peer, event):
-        self._do_client_method('sip_notify_by_peer', (peer, event))
+    def sip_notify_by_peer(self, peer, event, extra_vars=None):
+        self._do_client_method('sip_notify_by_peer', (peer, event, extra_vars))
 
 
 def register_sync_service(sync_service):
@@ -461,30 +464,31 @@ class SynchronizeException(Exception):
     pass
 
 
-def standard_sip_synchronize(device, event='check-sync'):
+def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
     sync_service = _SYNC_SERVICE
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
         return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
 
     for fun in [_synchronize_by_peer, _synchronize_by_ip]:
-        d = fun(device, event, sync_service)
+        d = fun(device, event, sync_service, extra_vars)
         if d is not None:
+            logger.debug('Using synchronize function %s', fun)
             return d
 
     return defer.fail(SynchronizeException('not enough information to synchronize device'))
 
 
-def _synchronize_by_peer(device, event, ami_sync_service):
+def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
     peer = device.get(u'remote_state_sip_username')
     if not peer:
         return None
 
-    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event)
+    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event, extra_vars)
 
 
-def _synchronize_by_ip(device, event, ami_sync_service):
+def _synchronize_by_ip(device, event, ami_sync_service, extra_vars=None):
     ip = device.get(u'ip')
     if not ip:
         return None
 
-    return threads.deferToThread(ami_sync_service.sip_notify_by_ip, ip, event)
+    return threads.deferToThread(ami_sync_service.sip_notify_by_ip, ip, event, extra_vars)
