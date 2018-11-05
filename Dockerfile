@@ -19,4 +19,4 @@ EXPOSE 8667
 EXPOSE 8666
 EXPOSE 69/udp
 
-CMD ["twistd", "-no", "-r", "epoll", "xivo-provd", "-s", "-v"]
+CMD ["twistd", "--nodaemon", "--no_save", "--pidfile=", "--reactor=epoll", "xivo-provd", "--stderr", "--verbose"]
