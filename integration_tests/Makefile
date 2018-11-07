@@ -6,7 +6,7 @@ PROVD_DIR ?= ../
 test-setup: egg-info pull-images provd
 
 pull-images:
-	docker pull waisbrot/wait
+	docker pull wazopbx/wait
 
 provd:
 	docker pull python:2.7.13-stretch

@@ -1,7 +1,7 @@
 version: '3'
 services:
   sync:
-    image: waisbrot/wait
+    image: wazopbx/wait
     environment:
       TIMEOUT: "${INTEGRATION_TEST_TIMEOUT}"
 
@@ -9,7 +9,7 @@ services:
     image: wazopbx/xivo-provd
     volumes:
       - "../..:/usr/src/xivo-provisioning/"
-      - "./etc/xivo/provd:/etc/xivo/provd/"
+      - "./etc/xivo/provd/provd.conf:/etc/xivo/provd/provd.conf"
       - "./provd/plugins:/var/lib/xivo-provd/plugins"
     ports:
       - "8666"
