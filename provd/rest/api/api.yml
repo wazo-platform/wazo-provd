@@ -1,0 +1,480 @@
+swagger: '2.0'
+info:
+  title: xivo-provd
+  description: Provisioning application REST API
+  version: '0.2'
+schemes:
+- http
+basePath: /provd
+consumes:
+  - "application/vnd.proformatique.provd+json"
+produces:
+  - "application/vnd.proformatique.provd+json"
+x-xivo-name: provd
+x-xivo-port: 8666
+paths:
+  /:
+    get:
+      summary: Get the Provd Manager resource
+      description: '
+
+        The provd manager resource represents the main entry point to the xivo-provd REST API.
+
+        '
+      tags:
+      - provd
+      responses:
+        200:
+          description: Links to the different provd resources
+          schema:
+            $ref: '#/definitions/ProvdResponse'
+          
+  /dev_mgr:
+    get:
+      summary: Get the Device Manager resource
+      description: '
+
+        The device manager resource represents the entry point to the xivo-provd device REST API.
+
+        '
+      tags:
+      - devices
+      responses:
+        200:
+          description: Links to the different devices resources
+          schema:
+            $ref: '#/definitions/DevMgrResponse'
+  
+  /dev_mgr/devices:
+    get:
+      summary: List and find devices
+      description: '
+
+        List all devices present in the device manager.
+
+        '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/searchQuery'
+        - $ref: '#/parameters/searchFields'
+        - $ref: '#/parameters/skipEntries'
+        - $ref: '#/parameters/sortEntries'
+        - $ref: '#/parameters/sortOrder'
+      responses:
+        200:
+          description: The device listing response
+          schema:
+            $ref: '#/definitions/DevicesResponse'
+    post:
+      summary: Create a device
+      description: '
+
+      Create a device using the information provided.
+
+      '
+      tags:
+      - devices
+      parameters:
+      - name: device
+        in: body
+        description: Device to create
+        schema:
+          $ref: '#/definitions/Device'
+      responses:
+        201:
+          description: The device has been created successfully
+          schema:
+            $ref: '#/definitions/DeviceCreationResponse'
+        400:
+          $ref: '#/definitions/BadRequestError'
+        415:
+          $ref: '#/definitions/UnsupportedMediaError'
+          
+  /dev_mgr/devices/{device_id}:
+    get:
+      summary: Get a device by ID
+      description: '
+
+      Get a device using its ID.
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/deviceid'
+      responses:
+        200:
+          $ref: '#/definitions/DeviceUniqueResponse'
+    put:
+      summary: Update a device
+      description: '
+      
+      Update a device specified by its ID. Every field must be specified, otherwise they will be omitted.
+
+      '
+      tags:
+       - devices
+      parameters:
+        - $ref: '#/parameters/deviceid'
+        - name: device
+          in: body
+          description: Device information to update
+          schema:
+            $ref: '#/definitions/Device'
+      responses:
+        204:
+          $ref: '#/definitions/NoContentResponse'
+        415:
+          $ref: '#/definitions/UnsupportedMediaError'
+        500:
+          description: Internal Server Error. The IP or MAC address may be malformed.
+    delete:
+      summary: Delete a device
+      description: '
+
+      Delete a device specified by its ID.
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/deviceid'
+      responses:
+        204:
+          $ref: '#/definitions/NoContentResponse'
+        415:
+          $ref: '#/definitions/UnsupportedMediaError'
+  /dev_mgr/synchronize:
+    post:
+      summary: Synchronize a device
+      description: '
+
+      Synchronize a device using its ID.
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/deviceidBody'
+      responses:
+        201:
+          description: Device synchronized.
+          headers:
+            Location:
+              description: Location of the OperationInProgress resource.
+              type: string
+              format: url
+        415:
+          $ref: '#/definitions/UnsupportedMediaError'
+  /dev_mgr/reconfigure:
+    post:
+      summary: Reconfigure a device
+      description: '
+      
+      Regenerate the configuration file for the specified device.
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/deviceidBody'
+      responses:
+        204:
+          $ref: '#/definitions/NoContentResponse'
+        400:
+          $ref: '#/definitions/BadRequestError'
+  /dev_mgr/dhcpinfo:
+    post:
+      summary: Push DHCP request information
+      description: '
+
+      Push DHCP request information from the DHCP server. The provisioning server either creates a new device or changes the information of the device with the same MAC address.
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/deviceDHCPInfo'
+      responses:
+        204:
+          $ref: '#/definitions/NoContentResponse'
+  /cfg_mgr:
+    get:
+      summary: Get the Config Manager resource
+      description: '
+
+      The configuration manager resource represents the entry point to the xivo-provd configuration REST API.
+
+      '
+      tags:
+        - configs
+      responses:
+        200:
+          description: Links to the different configuration resources
+          schema:
+            $ref: '#/definitions/CfgMgrResponse'
+  /cfg_mgr/configs:
+    get:
+      summary: List and find configurations
+      description: '
+
+      List and find all available configurations.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/searchQuery'
+        - $ref: '#/parameters/searchFields'
+        - $ref: '#/parameters/skipEntries'
+        - $ref: '#/parameters/sortEntries'
+        - $ref: '#/parameters/sortOrder'
+      responses:
+        200:
+          description: List of all the configurations.
+          schema:
+            $ref: '#/definitions/ConfigsResponse'
+    post:
+      summary: Create a configuration
+      description: '
+
+      Create a complete device configuration.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/configCreation'
+      responses:
+        201:
+          $ref: '#/definitions/ConfigCreationResponse'
+parameters:
+  searchQuery:
+    name: q
+    in: query
+    description: A selector, encoded in JSON, describing which entries should be returned. All entries are returned if not specified. 
+    required: false
+    type: string
+  searchFields:
+    name: fields
+    in: query
+    description: A list of fields, separated by comma. 
+    required: false
+    type: string
+  skipEntries:
+    name: skip
+    in: query
+    description: An integer specifing the number of entries to skip.
+    required: false
+    type: integer
+  sortEntries:
+    name: sort
+    in: query
+    description: The key on which to sort the results. 
+    required: false
+    type: string
+  sortOrder:
+    name: sort_ord
+    in: query
+    description: The order of sort; either ASC or DESC.
+    required: false
+    type: string
+  deviceid:
+    required: true
+    type: string
+    name: device_id
+    in: path
+    description: Device ID.
+  deviceidBody:
+    description: Device ID body definition.
+    name: body
+    in: body
+    schema:
+      properties:
+        id:
+          type: string
+  deviceDHCPInfo:
+    description: DHCP request information
+    name: body
+    in: body
+    schema:
+      properties:
+        dhcp_info:
+          type: object
+          properties:
+            ip:
+              type: string
+              description: The IP address of the device
+            mac:
+              type: string
+              description: The MAC address of the device
+            op:
+              type: string
+              enum:
+              - commit
+              description: The operation to perform
+            options:
+              type: array
+              items:
+                type: string
+                description: The option string. The first 3 characters are the option number, the next pairs of dot-separated characters is.
+  configCreation:
+    description: Body of a configuration creation request
+    name: body
+    in: body
+    schema:
+      $ref: '#/definitions/ConfigSchema'
+definitions:
+  ProvdResponse:
+    allOf:
+      - $ref: '#/definitions/LinksResponse'
+    example:
+      links:
+      - href: "/provd/dev_mgr"
+        rel: "dev"
+      - href: "/provd/cfg_mgr"
+        rel: "cfg"
+      - href: "/provd/pg_mgr"
+        rel: "pg"
+      - href: "/provd/configure"
+        rel: "srv.configure"
+
+  LinksResponse:
+    type: object
+    properties:
+      links:
+        type: array
+        description: Links to different resources
+        items:
+          properties:
+            href:
+              type: string
+              description: Location of the resource
+            rel:
+              type: string
+              description: Relation to the resource
+
+  DevMgrResponse:
+    allOf:
+      - $ref: '#/definitions/LinksResponse'
+    example:
+      links:
+        - href: "/provd/dev_mgr/synchronize"
+          rel: "dev.synchronize"
+        - href: "/provd/dev_mgr/reconfigure"
+          rel: "dev.reconfigure"
+        - href: "/provd/dev_mgr/dhcpinfo"
+          rel: "dev.dhcpinfo"
+        - href: "/provd/dev_mgr/devices"
+          rel: "dev.devices"
+  CfgMgrResponse:
+    allOf:
+      - $ref: '#/definitions/LinksResponse'
+    example:
+      links:
+        - href: "/provd/cfg_mgr/configs"
+          rel: "cfg.configs"
+        - href: "/provd/cfg_mgr/autocreate"
+          rel: "cfg.autocreate"
+
+  DevicesResponse:
+    description: A list of devices
+    properties:
+      devices:
+        type: array
+        description: The list of devices
+        items:
+          $ref: '#/definitions/Device'
+  DeviceUniqueResponse:
+    description: A complete device response.
+    properties:
+      device:
+        $ref: '#/definitions/Device'
+  ConfigsResponse:
+    description: List of configurations
+    properties:
+      configs:
+        type: array
+        items:
+          $ref: '#/definitions/ConfigSchema'
+  ConfigCreationResponse:
+    description: Response for a configuration creation
+    properties:
+      id:
+        type: string
+        description: The ID of the created configuration
+  ConfigSchema:
+    description: A complete configuration response
+    properties:
+      id:
+        type: string
+        description: The unique configuration id
+      deletable:
+        type: boolean
+      parent_ids:
+        type: array
+        items:
+          type: string
+          description: TODO 
+      raw_config:
+        type: object
+  Device:
+    title: Device
+    properties:
+      added: 
+        type: string
+        description: Indicated how the device was added. 
+      config:
+        type: string
+        description: ID of the device configuration. Generally the same as the device ID, except when in autoprov.
+      configured:
+        type: boolean
+        readOnly: true
+      description:
+        type: string
+      id:
+        type: string
+        description: Device ID.
+      ip:
+        type: string
+        description: IP address (10.0.0.0)
+      mac:
+        type: string
+        description: MAC address (aa:bb:cc:dd:ee:ff)
+      model:
+        type: string
+        description: Device model
+      plugin:
+        type: string
+        description: Provisioning plugin used by the device
+      remote_state_sip_username:
+        type: string
+      vendor:
+        type: string
+        description: Vendor name
+      version:
+        type: string
+        description: Firmware version
+    
+  DeviceCreationResponse:
+    description: Device creation response
+    properties:
+      id:
+        description: Server generated ID if an ID was not provided.
+        type: string
+  NoContentResponse:
+    description: No content
+  ErrorMessageResponse:
+    description: Error message response
+    type: string
+  UnsupportedMediaError:
+    allOf:
+      - $ref: '#/definitions/ErrorMessageResponse'
+      - description: Unsupported media type. This error occurs if you forgot to include the Content-Type header.
+    
+  BadRequestError:
+    allOf:
+      - $ref: '#/definitions/ErrorMessageResponse'
+      - description: Bad request. The device ID, IP or MAC may be invalid.
+      
