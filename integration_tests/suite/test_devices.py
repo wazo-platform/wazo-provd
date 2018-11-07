@@ -14,8 +14,10 @@ class TestDevices(BaseIntegrationTest):
     wait_strategy = NoWaitStrategy()
 
     def setUp(self):
-        self._client = Client('localhost', https=False,
-                              port=self.service_port(8666, 'provd'), prefix='/provd')
+        self._client = Client(
+            'localhost', https=False,
+            port=self.service_port(8666, 'provd'), prefix='/provd'
+        )
 
     def tearDown(self):
         pass
@@ -31,23 +33,26 @@ class TestDevices(BaseIntegrationTest):
         assert_that(results, has_key('devices'))
 
     def test_add(self):
-        result_add = self._add_device('10.10.10.10', '00:11:22:33:44:55',
-                                      custom={'id': '1234abcdef1234'})
+        result_add = self._add_device(
+            '10.10.10.10', '00:11:22:33:44:55',
+            custom={'id': '1234abcdef1234'}
+        )
         assert_that(result_add, has_key('id'))
         assert_that(result_add['id'], is_(equal_to('1234abcdef1234')))
 
     def test_add_errors(self):
         assert_that(calling(self._add_device).with_args(
-            '10.0.1.xx', '00:11:22:33:44:55'), raises(ProvdError, pattern='normalized'))
+            '10.0.1.xx', '00:11:22:33:44:55'), raises(ProvdError, pattern='normalized')
+        )
         assert_that(calling(self._add_device).with_args(
-            '10.0.1.1', '00:11:22:33:44:55', custom={'id': ''}), raises(ProvdError))
+            '10.0.1.1', '00:11:22:33:44:55', custom={'id': ''}), raises(ProvdError)
+        )
 
     def test_update(self):
         result_add = self._add_device('1.2.3.4', 'aa:bb:cc:dd:ee:ff')
         id_added = result_add['id']
 
-        new_info = {'id': id_added, 'ip': '5.6.7.8',
-                    'mac': 'aa:bb:cc:dd:ee:ff'}
+        new_info = {'id': id_added, 'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
         self._client.devices.update(new_info)
 
         after_res = self._client.devices.get(id_added)
@@ -58,10 +63,12 @@ class TestDevices(BaseIntegrationTest):
         id_added = result_add['id']
 
         assert_that(calling(self._client.devices.update).with_args(
-            {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}), raises(ProvdError, pattern='resource'))
+            {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}), raises(ProvdError, pattern='resource')
+        )
         assert_that(calling(self._client.devices.update).with_args(
             {'id': id_added, 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}),
-            raises(ProvdError, pattern='normalized'))
+            raises(ProvdError, pattern='normalized')
+        )
 
     def test_synchronize(self):
         result_add = self._add_device('3.3.3.3', '12:bb:34:dd:56:ff')
@@ -77,7 +84,8 @@ class TestDevices(BaseIntegrationTest):
 
     def test_get_errors(self):
         assert_that(calling(self._client.devices.get).with_args(
-            'unknown_id'), raises(ProvdError, pattern='resource'))
+            'unknown_id'), raises(ProvdError, pattern='resource')
+        )
 
     def test_remove(self):
         result_add = self._add_device('6.6.6.6', '0a:0a:00:12:34:ff')
@@ -85,11 +93,13 @@ class TestDevices(BaseIntegrationTest):
 
         self._client.devices.remove(id_added)
         assert_that(calling(self._client.devices.get).with_args(
-            id_added), raises(ProvdError, pattern='resource'))
+            id_added), raises(ProvdError, pattern='resource')
+        )
 
     def test_remove_errors(self):
         assert_that(calling(self._client.devices.remove).with_args(
-            'unknown_id'), raises(ProvdError, pattern='resource'))
+            'unknown_id'), raises(ProvdError, pattern='resource')
+        )
 
     def test_reconfigure(self):
         result_add = self._add_device('5.5.5.5', '0b:0b:01:12:34:ff')
@@ -99,17 +109,19 @@ class TestDevices(BaseIntegrationTest):
 
     def test_reconfigure_errors(self):
         assert_that(calling(self._client.devices.reconfigure).with_args(
-            'unknown_id'), raises(ProvdError, pattern='invalid'))
+            'unknown_id'), raises(ProvdError, pattern='invalid')
+        )
 
     def test_dhcp(self):
         self._client.devices.insert_from_dhcp(
-            {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit', 'options': []})
+            {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit', 'options': []}
+        )
         find_results = self._client.devices.find({'mac': 'ab:bc:cd:de:ff:01'})
         assert_that(find_results, has_key('devices'))
         assert_that(find_results['devices'], has_length(1))
-        assert_that(find_results['devices'][0]['ip'],
-                    is_(equal_to('10.10.0.1')))
+        assert_that(find_results['devices'][0]['ip'], is_(equal_to('10.10.0.1')))
 
     def test_dhcp_errors(self):
         assert_that(calling(self._client.devices.insert_from_dhcp).with_args(
-            {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}), raises(ProvdError))
+            {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}), raises(ProvdError)
+        )
