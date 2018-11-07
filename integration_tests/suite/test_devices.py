@@ -31,24 +31,21 @@ class TestDevices(BaseIntegrationTest):
         assert_that(results, has_key('devices'))
 
     def test_add(self):
-        # When it works
         result_add = self._add_device('10.10.10.10', '00:11:22:33:44:55',
                                       custom={'id': '1234abcdef1234'})
         assert_that(result_add, has_key('id'))
         assert_that(result_add['id'], is_(equal_to('1234abcdef1234')))
 
-        # When it fails
+    def test_add_errors(self):
         assert_that(calling(self._add_device).with_args(
             '10.0.1.xx', '00:11:22:33:44:55'), raises(ProvdError, pattern='normalized'))
         assert_that(calling(self._add_device).with_args(
             '10.0.1.1', '00:11:22:33:44:55', custom={'id': ''}), raises(ProvdError))
 
     def test_update(self):
-        # When it works
-        # Need to insert a device first
         result_add = self._add_device('1.2.3.4', 'aa:bb:cc:dd:ee:ff')
         id_added = result_add['id']
-        # Update the info
+
         new_info = {'id': id_added, 'ip': '5.6.7.8',
                     'mac': 'aa:bb:cc:dd:ee:ff'}
         self._client.devices.update(new_info)
@@ -56,7 +53,10 @@ class TestDevices(BaseIntegrationTest):
         after_res = self._client.devices.get(id_added)
         assert_that(after_res['device']['ip'], is_(equal_to('5.6.7.8')))
 
-        # When it fails
+    def test_update_errors(self):
+        result_add = self._add_device('1.2.3.4', 'aa:bb:cc:dd:ee:ff')
+        id_added = result_add['id']
+
         assert_that(calling(self._client.devices.update).with_args(
             {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}), raises(ProvdError, pattern='resource'))
         assert_that(calling(self._client.devices.update).with_args(
@@ -72,23 +72,22 @@ class TestDevices(BaseIntegrationTest):
         result_add = self._add_device('9.9.9.9', 'ab:ba:00:12:34:ff')
         id_added = result_add['id']
 
-        # When it works
         after_res = self._client.devices.get(id_added)
         assert_that(after_res['device']['ip'], is_(equal_to('9.9.9.9')))
 
-        # When it fails
+    def test_get_errors(self):
         assert_that(calling(self._client.devices.get).with_args(
             'unknown_id'), raises(ProvdError, pattern='resource'))
 
     def test_remove(self):
         result_add = self._add_device('6.6.6.6', '0a:0a:00:12:34:ff')
         id_added = result_add['id']
-        # When it works
+
         self._client.devices.remove(id_added)
         assert_that(calling(self._client.devices.get).with_args(
             id_added), raises(ProvdError, pattern='resource'))
 
-        # when it fails
+    def test_remove_errors(self):
         assert_that(calling(self._client.devices.remove).with_args(
             'unknown_id'), raises(ProvdError, pattern='resource'))
 
@@ -96,15 +95,13 @@ class TestDevices(BaseIntegrationTest):
         result_add = self._add_device('5.5.5.5', '0b:0b:01:12:34:ff')
         id_added = result_add['id']
 
-        # When it works
         self._client.devices.reconfigure(id_added)
 
-        # When it fails
+    def test_reconfigure_errors(self):
         assert_that(calling(self._client.devices.reconfigure).with_args(
             'unknown_id'), raises(ProvdError, pattern='invalid'))
 
     def test_dhcp(self):
-        # When it works
         self._client.devices.insert_from_dhcp(
             {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit', 'options': []})
         find_results = self._client.devices.find({'mac': 'ab:bc:cd:de:ff:01'})
@@ -113,6 +110,6 @@ class TestDevices(BaseIntegrationTest):
         assert_that(find_results['devices'][0]['ip'],
                     is_(equal_to('10.10.0.1')))
 
-        # When it fails
+    def test_dhcp_errors(self):
         assert_that(calling(self._client.devices.insert_from_dhcp).with_args(
             {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}), raises(ProvdError))
