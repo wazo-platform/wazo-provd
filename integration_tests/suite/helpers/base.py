@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-# Copyright 2017-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import os
 
-from contextlib import contextmanager
-from xivo_test_helpers import until
 from xivo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
 
 from .wait_strategy import WaitStrategy
+
 
 class BaseIntegrationTest(AssetLaunchingTestCase):
 

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0+
 
 from wazo_provd_client import Client
-from wazo_provd_client.exceptions import ProvdError, ProvdServiceUnavailable, InvalidProvdError
+from wazo_provd_client.exceptions import ProvdError
 from hamcrest import assert_that, has_key, has_length, is_, equal_to, calling, raises
 from .helpers.base import BaseIntegrationTest
 
