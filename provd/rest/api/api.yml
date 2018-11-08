@@ -22,13 +22,69 @@ paths:
 
         '
       tags:
-      - provd
+        - provd
       responses:
         200:
-          description: Links to the different provd resources
+          description: OK
           schema:
-            $ref: '#/definitions/ProvdResponse'
-          
+            $ref: '#/definitions/LinksObject'
+
+  /configure:
+    get:
+      summary: Get the general provd configuration
+      description: '
+
+      Get the general provd configuration.
+
+      '
+      tags:
+        - provd
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              params:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    description:
+                      type: string
+                    id:
+                      type: string
+                    links:
+                      $ref: '#/definitions/LinksObject'
+                    value:
+                      type: string
+
+  /configure/{param_id}:
+    get:
+      summary: Get the configuration parameter value
+      description: '
+
+      Get the configuration parameter value from the provd general configuration.
+
+      '
+      tags:
+        - provd
+      parameters:
+        - $ref: '#/parameters/paramid'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              param:
+                type: object
+                properties:
+                  value:
+                    type: string
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
   /dev_mgr:
     get:
       summary: Get the Device Manager resource
@@ -43,8 +99,19 @@ paths:
         200:
           description: Links to the different devices resources
           schema:
-            $ref: '#/definitions/DevMgrResponse'
-  
+            $ref: '#/definitions/LinksObject'
+          examples:
+            application/vnd.proformatique.provd+json:
+              links:
+                - href: "/provd/dev_mgr/synchronize"
+                  rel: "dev.synchronize"
+                - href: "/provd/dev_mgr/reconfigure"
+                  rel: "dev.reconfigure"
+                - href: "/provd/dev_mgr/dhcpinfo"
+                  rel: "dev.dhcpinfo"
+                - href: "/provd/dev_mgr/devices"
+                  rel: "dev.devices"
+
   /dev_mgr/devices:
     get:
       summary: List and find devices
@@ -63,9 +130,7 @@ paths:
         - $ref: '#/parameters/sortOrder'
       responses:
         200:
-          description: The device listing response
-          schema:
-            $ref: '#/definitions/DevicesResponse'
+          $ref: '#/responses/DevicesResponse'
     post:
       summary: Create a device
       description: '
@@ -80,17 +145,15 @@ paths:
         in: body
         description: Device to create
         schema:
-          $ref: '#/definitions/Device'
+          $ref: '#/definitions/DeviceSchema'
       responses:
         201:
-          description: The device has been created successfully
-          schema:
-            $ref: '#/definitions/DeviceCreationResponse'
+          $ref: '#/responses/DeviceCreationResponse'
         400:
-          $ref: '#/definitions/BadRequestError'
+          $ref: '#/responses/BadRequestError'
         415:
-          $ref: '#/definitions/UnsupportedMediaError'
-          
+          $ref: '#/responses/UnsupportedMediaError'
+
   /dev_mgr/devices/{device_id}:
     get:
       summary: Get a device by ID
@@ -105,7 +168,9 @@ paths:
         - $ref: '#/parameters/deviceid'
       responses:
         200:
-          $ref: '#/definitions/DeviceUniqueResponse'
+          $ref: '#/responses/DeviceUniqueResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a device
       description: '
@@ -121,14 +186,16 @@ paths:
           in: body
           description: Device information to update
           schema:
-            $ref: '#/definitions/Device'
+            $ref: '#/definitions/DeviceSchema'
       responses:
         204:
-          $ref: '#/definitions/NoContentResponse'
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
         415:
-          $ref: '#/definitions/UnsupportedMediaError'
+          $ref: '#/responses/UnsupportedMediaError'
         500:
-          description: Internal Server Error. The IP or MAC address may be malformed.
+          $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a device
       description: '
@@ -142,9 +209,10 @@ paths:
         - $ref: '#/parameters/deviceid'
       responses:
         204:
-          $ref: '#/definitions/NoContentResponse'
-        415:
-          $ref: '#/definitions/UnsupportedMediaError'
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
   /dev_mgr/synchronize:
     post:
       summary: Synchronize a device
@@ -164,9 +232,49 @@ paths:
             Location:
               description: Location of the OperationInProgress resource.
               type: string
-              format: url
         415:
-          $ref: '#/definitions/UnsupportedMediaError'
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /dev_mgr/synchronize/{operation_id}:
+    get:
+      summary: Get the status of a synchronize Operation In Progress
+      description: '
+
+      Get the status of the underlying Operation In Progress object for the synchronize operation.
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: fixed format.
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    delete:
+      summary: Delete the Operation In Progress
+      description: '
+
+      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory. 
+
+      '
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
   /dev_mgr/reconfigure:
     post:
       summary: Reconfigure a device
@@ -181,9 +289,10 @@ paths:
         - $ref: '#/parameters/deviceidBody'
       responses:
         204:
-          $ref: '#/definitions/NoContentResponse'
+          $ref: '#/responses/NoContentResponse'
         400:
-          $ref: '#/definitions/BadRequestError'
+          $ref: '#/responses/BadRequestError'
+
   /dev_mgr/dhcpinfo:
     post:
       summary: Push DHCP request information
@@ -198,7 +307,9 @@ paths:
         - $ref: '#/parameters/deviceDHCPInfo'
       responses:
         204:
-          $ref: '#/definitions/NoContentResponse'
+          $ref: '#/responses/NoContentResponse'
+
+
   /cfg_mgr:
     get:
       summary: Get the Config Manager resource
@@ -213,7 +324,15 @@ paths:
         200:
           description: Links to the different configuration resources
           schema:
-            $ref: '#/definitions/CfgMgrResponse'
+            $ref: '#/definitions/LinksObject'
+          examples:
+            application/vnd.proformatique.provd+json:
+              links:
+                - href: "/provd/cfg_mgr/configs"
+                  rel: "cfg.configs"
+                - href: "/provd/cfg_mgr/autocreate"
+                  rel: "cfg.autocreate"
+
   /cfg_mgr/configs:
     get:
       summary: List and find configurations
@@ -232,9 +351,7 @@ paths:
         - $ref: '#/parameters/sortOrder'
       responses:
         200:
-          description: List of all the configurations.
-          schema:
-            $ref: '#/definitions/ConfigsResponse'
+          $ref: '#/responses/ConfigsResponse'
     post:
       summary: Create a configuration
       description: '
@@ -245,10 +362,250 @@ paths:
       tags:
         - configs
       parameters:
-        - $ref: '#/parameters/configCreation'
+        - $ref: '#/parameters/configParam'
       responses:
         201:
-          $ref: '#/definitions/ConfigCreationResponse'
+          $ref: '#/responses/ConfigCreationResponse'
+
+  /cfg_mgr/configs/{config_id}:
+    get:
+      summary: Get a configuration
+      description: '
+
+      Get a configuration from its ID.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/configid'
+      responses:
+        200:
+          $ref: '#/responses/ConfigUniqueResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    put:
+      summary: Update a configuration
+      description: '
+
+      Update a configuration defined by its ID with the provided information.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/configid'
+        - $ref: '#/parameters/configParam'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+        500:
+          $ref: '#/responses/InternalServerError'
+    delete:
+      summary: Delete a configuration
+      description: '
+
+      Delete a configuration defined by its id.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/configid'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /cfg_mgr/configs/{config_id}/raw:
+    get:
+      summary: Get a raw configuration
+      description: '
+
+      Get a raw configuration from the configuration ID.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/configid'
+      responses:
+        200:
+          description: A raw configuration response.
+          schema:
+            properties:
+              raw_config:
+                type: object
+            example:
+              raw_config:
+                sip_lines:
+                  1:
+                    auth_username: "100"
+                    display_name: "Foo"
+                    password: "100"
+                    username: "100"
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /cfg_mgr/autocreate:
+    post:
+      summary: Create an autocreate configuration.
+      description: '
+
+      Create a new config from the config that has the autocreate role.
+
+      '
+      tags:
+        - configs
+      parameters:
+        - $ref: '#/parameters/emptyBody'
+      responses:
+        201:
+          $ref: '#/responses/ConfigCreationResponse'
+
+
+  /pg_mgr:
+    get:
+      summary: Get the Plugin Manager resource.
+      description: '
+
+      The plugin manager resource represents the entry point to the xivo-provd plugin REST API.
+
+      '
+      tags:
+        - plugins
+      responses:
+        200:
+          description: Links to the different plugin resources
+          schema:
+            $ref: '#/definitions/LinksObject'
+          examples:
+            application/vnd.proformatique.provd+json:
+              links:
+                - href: "/provd/pg_mgr/install"
+                  rel: "srv.install"
+                - href: "/provd/pg_mgr/plugins"
+                  rel: "pg.plugins"
+                - href: "/provd/pg_mgr/reload"
+                  rel: "pg.reload"
+
+  /pg_mgr/plugins:
+    get:
+      summary: List the installed plugins
+      description: '
+
+      List all the installed plugins and their resource links.
+
+      '
+      tags:
+        - plugins
+      responses:
+        200:
+          description: List of all the installed plugins and their resources.
+          schema:
+            type: object
+            properties:
+              plugins:
+                type: object
+                additionalProperties:
+                  $ref: '#/definitions/LinksObject'
+          examples:
+            application/vnd.proformatique.provd+json:
+              plugins:
+                "xivo-aastra-3.3.1-SP4":
+                  links:
+                    - href: "/provd/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
+                      rel: "pg.plugin"
+                "xivo-cisco-sccp-9.0.3":
+                  links:
+                    - href: "/provd/pg_mgr/plugins/xivo-cisco-sccp-9.0.3"
+                      rel: "pg.plugin"
+
+  /pg_mgr/plugins/{plugin_id}:
+    get:
+      summary: Get the resources of a specific plugin.
+      description: '
+
+      The plugin resources are defined by links and relations.
+
+      '
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/pluginid'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/LinksObject'
+          examples:
+            application/vnd.proformatique.provd+json:
+              links:
+                - href: "/provd/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
+                  rel: "pg.plugin"
+
+  /pg_mgr/plugins/{plugin_id}/info:
+    get:
+      summary: Get the information of a plugin
+      description: '
+
+      Get all the information of a plugin, such as its capabilities, description, version, etc.
+
+      '
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/pluginid'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              plugin_info:
+                type: object
+                properties:
+                  capabilities:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties:
+                        type: string
+                  description:
+                    type: string
+                  version:
+                    type: string
+          examples:
+            application/vnd.proformatique.provd+json:
+              plugin_info:
+                capabilities:
+                  "Aastra, 6730i, 3.3.1.5089":
+                    sip.lines: 6
+                  "Aastra, 6731i, 3.3.1.2235":
+                    sip.lines: 6
+                    switchboard: true
+                description: "Plugin for Aastra 6730i, 6731i, ..."
+                version: "1.1"
+
+  /pg_mgr/reload:
+    post:
+      summary: Reload a plugin
+      description: '
+
+      Reload the given plugin. This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the xivo-provd application.
+
+      '
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/pluginidBody'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+
 parameters:
   searchQuery:
     name: q
@@ -280,12 +637,52 @@ parameters:
     description: The order of sort; either ASC or DESC.
     required: false
     type: string
+  paramid:
+    required: true
+    type: string
+    name: param_id
+    in: path
+    description: Configuration parameter ID.
   deviceid:
     required: true
     type: string
     name: device_id
     in: path
     description: Device ID.
+  operationid:
+    required: true
+    type: string
+    name: operation_id
+    in: path
+    description: Operation In Progress ID.
+  configid:
+    required: true
+    type: string
+    name: config_id
+    in: path
+    description: Configuration ID.
+  pluginid:
+    required: true
+    type: string
+    name: plugin_id
+    in: path
+    description: Plugin ID.
+  pluginidBody:
+    description: Plugin ID body definition.
+    name: body
+    in: body
+    schema:
+      properties:
+        id:
+          type: string
+      example:
+        id: "xivo-aastra-3.3.1-SP2"
+  emptyBody:
+    description: Empty object body
+    name: body
+    in: body
+    schema:
+      properties: {}
   deviceidBody:
     description: Device ID body definition.
     name: body
@@ -319,28 +716,85 @@ parameters:
               items:
                 type: string
                 description: The option string. The first 3 characters are the option number, the next pairs of dot-separated characters is.
-  configCreation:
-    description: Body of a configuration creation request
+  configParam:
+    description: Body of a configuration parameter
     name: body
     in: body
     schema:
       $ref: '#/definitions/ConfigSchema'
-definitions:
-  ProvdResponse:
-    allOf:
-      - $ref: '#/definitions/LinksResponse'
-    example:
-      links:
-      - href: "/provd/dev_mgr"
-        rel: "dev"
-      - href: "/provd/cfg_mgr"
-        rel: "cfg"
-      - href: "/provd/pg_mgr"
-        rel: "pg"
-      - href: "/provd/configure"
-        rel: "srv.configure"
 
-  LinksResponse:
+
+responses:
+  DevicesResponse:
+    description: A list of devices
+    schema:
+      $ref: '#/definitions/DevicesSchema'
+  DeviceUniqueResponse:
+    description: A complete device response.
+    schema:
+      $ref: '#/definitions/DeviceSchema'
+  ConfigsResponse:
+    description: List of configurations
+    schema:
+      properties:
+        configs:
+          type: array
+          items:
+            $ref: '#/definitions/Config'
+  ConfigUniqueResponse:
+    description: A complete configuration response.
+    schema:
+        $ref: '#/definitions/ConfigSchema'
+  ConfigCreationResponse:
+    description: Response for a configuration creation
+    schema:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the created configuration
+    headers:
+      Location:
+        description: Location of the newly created configuration
+        type: string
+  DeviceCreationResponse:
+    description: Device creation response
+    schema:
+      properties:
+        id:
+          description: Server generated ID if an ID was not provided.
+          type: string
+    headers:
+      Location:
+        description: Location of the newly created device
+        type: string
+  NoContentResponse:
+    description: No content
+  ErrorMessageResponse:
+    description: Error message response
+    schema:
+      type: string
+  UnsupportedMediaError:
+    description: Unsupported media type. This error occurs if you forgot to include the Content-Type header.
+    schema:
+      $ref: '#/responses/ErrorMessageResponse'
+  NoSuchResourceError:
+    description: No such resource. The provided id does not exist.
+    schema:
+      $ref: '#/responses/ErrorMessageResponse'
+  InternalServerError:
+    description: Internal Server Error. The IP or MAC address may be malformed.
+    schema:
+      $ref: '#/responses/ErrorMessageResponse'
+  BadRequestError:
+    description: Bad request. The device ID, IP or MAC may be invalid.
+    schema:
+      $ref: '#/responses/ErrorMessageResponse'
+
+
+definitions:
+  LinksObject:
+    description: Links object
     type: object
     properties:
       links:
@@ -354,58 +808,13 @@ definitions:
             rel:
               type: string
               description: Relation to the resource
-
-  DevMgrResponse:
-    allOf:
-      - $ref: '#/definitions/LinksResponse'
-    example:
-      links:
-        - href: "/provd/dev_mgr/synchronize"
-          rel: "dev.synchronize"
-        - href: "/provd/dev_mgr/reconfigure"
-          rel: "dev.reconfigure"
-        - href: "/provd/dev_mgr/dhcpinfo"
-          rel: "dev.dhcpinfo"
-        - href: "/provd/dev_mgr/devices"
-          rel: "dev.devices"
-  CfgMgrResponse:
-    allOf:
-      - $ref: '#/definitions/LinksResponse'
-    example:
-      links:
-        - href: "/provd/cfg_mgr/configs"
-          rel: "cfg.configs"
-        - href: "/provd/cfg_mgr/autocreate"
-          rel: "cfg.autocreate"
-
-  DevicesResponse:
-    description: A list of devices
-    properties:
-      devices:
-        type: array
-        description: The list of devices
-        items:
-          $ref: '#/definitions/Device'
-  DeviceUniqueResponse:
-    description: A complete device response.
-    properties:
-      device:
-        $ref: '#/definitions/Device'
-  ConfigsResponse:
-    description: List of configurations
-    properties:
-      configs:
-        type: array
-        items:
-          $ref: '#/definitions/ConfigSchema'
-  ConfigCreationResponse:
-    description: Response for a configuration creation
-    properties:
-      id:
-        type: string
-        description: The ID of the created configuration
   ConfigSchema:
-    description: A complete configuration response
+    description: A configuration object
+    properties:
+      config:
+        $ref: '#/definitions/Config'
+  Config:
+    description: A complete configuration
     properties:
       id:
         type: string
@@ -419,8 +828,32 @@ definitions:
           description: TODO 
       raw_config:
         type: object
+    example:
+      id: "abcdef123456890"
+      deletable: true
+      parent_ids:
+        - "base"
+      raw_config:
+        sip_lines:
+          1:
+            auth_username: "100"
+            display_name: "Foo"
+            password: "100"
+            username: "100"
+  DevicesSchema:
+    description: A list of devices
+    properties:
+      devices:
+        type: array
+        items:
+          $ref: '#/definitions/Device'
+  DeviceSchema:
+    description: A device object
+    properties:
+      device:
+        $ref: '#/definitions/Device'
   Device:
-    title: Device
+    description: A device schema
     properties:
       added: 
         type: string
@@ -456,25 +889,3 @@ definitions:
       version:
         type: string
         description: Firmware version
-    
-  DeviceCreationResponse:
-    description: Device creation response
-    properties:
-      id:
-        description: Server generated ID if an ID was not provided.
-        type: string
-  NoContentResponse:
-    description: No content
-  ErrorMessageResponse:
-    description: Error message response
-    type: string
-  UnsupportedMediaError:
-    allOf:
-      - $ref: '#/definitions/ErrorMessageResponse'
-      - description: Unsupported media type. This error occurs if you forgot to include the Content-Type header.
-    
-  BadRequestError:
-    allOf:
-      - $ref: '#/definitions/ErrorMessageResponse'
-      - description: Bad request. The device ID, IP or MAC may be invalid.
-      
