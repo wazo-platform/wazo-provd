@@ -75,15 +75,26 @@ paths:
         200:
           description: OK
           schema:
-            type: object
-            properties:
-              param:
-                type: object
-                properties:
-                  value:
-                    type: string
+            $ref: '#/definitions/Param'
         404:
           $ref: '#/responses/NoSuchResourceError'
+    put:
+      summary: Set the value of a parameter
+      description: '
+
+      Set the value of a provd configuration parameter.
+
+      '
+      tags:
+        - provd
+      parameters:
+        - $ref: '#/parameters/paramid'
+        - $ref: '#/parameters/paramBody'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
 
   /dev_mgr:
     get:
@@ -262,7 +273,7 @@ paths:
       summary: Delete the Operation In Progress
       description: '
 
-      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory. 
+      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
 
       '
       tags:
@@ -590,6 +601,289 @@ paths:
                 description: "Plugin for Aastra 6730i, 6731i, ..."
                 version: "1.1"
 
+  /pg_mgr/install:
+    get:
+      summary: Get the installation service resources
+      description: '
+
+      The installation service resources are defined by links and relations.
+
+      '
+      tags:
+        - plugins
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/LinksObject'
+          examples:
+            application/vnd.proformatique.provd+json:
+              links:
+                - "href": "/provd/pg_mgr/install/install"
+                  "rel": "srv.install.install"
+                - "href": "/provd/pg_mgr/install/uninstall"
+                  "rel": "srv.install.uninstall"
+                - "href": "/provd/pg_mgr/install/installed"
+                  "rel": "srv.install.installed"
+                - "href": "/provd/pg_mgr/install/installable"
+                  "rel": "srv.install.installable"
+                - "href": "/provd/pg_mgr/install/upgrade"
+                  "rel": "srv.install.upgrade"
+                - "href": "/provd/pg_mgr/install/update"
+                  "rel": "srv.install.update"
+
+  /pg_mgr/install/install:
+    post:
+      summary: Install a package
+      description: '
+
+      Install a plugin package. This is generally the plugin, the firmware or the language package.
+
+      '
+      tags:
+        - plugins
+        - plugins_install
+      parameters:
+        - $ref: '#/parameters/packageidBody'
+      responses:
+        201:
+          description: Created
+          headers:
+            Location:
+              description: Location of the OperationInProgress resource.
+              type: string
+        400:
+          description: Invalid package name or request format.
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /pg_mgr/install/install/{operation_id}:
+    get:
+      summary: Get the status of a plugin installation Operation In Progress
+      description: '
+
+      Get the status of the underlying Operation In Progress object for the plugin installation operation.
+
+      '
+      tags:
+        - plugins
+        - plugins_install
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: fixed format.
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    delete:
+      summary: Delete the Operation In Progress
+      description: '
+
+      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
+
+      '
+      tags:
+        - plugins
+        - plugins_install
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /pg_mgr/install/uninstall:
+    post:
+      summary: Uninstall a package
+      description: '
+
+      Uninstall a plugin package. This is generally the plugin, the firmware or the language package.
+
+      '
+      tags:
+        - plugins
+        - plugins_uninstall
+      parameters:
+        - $ref: '#/parameters/packageidBody'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        400:
+          description: Invalid package name or request format.
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /pg_mgr/install/upgrade:
+    post:
+      summary: Upgrade a package
+      description: '
+
+      Upgrade a plugin package.
+
+      '
+      tags:
+        - plugins
+        - plugins_upgrade
+      parameters:
+        - $ref: '#/parameters/packageidBody'
+      responses:
+        201:
+          description: Created
+          headers:
+            Location:
+              description: Location of the OperationInProgress resource.
+              type: string
+        400:
+          description: Invalid package name or request format.
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /pg_mgr/install/upgrade/{operation_id}:
+    get:
+      summary: Get the status of a plugin upgrade Operation In Progress
+      description: '
+
+      Get the status of the underlying Operation In Progress object for the plugin upgrade operation.
+
+      '
+      tags:
+        - plugins
+        - plugins_upgrade
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: fixed format.
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    delete:
+      summary: Delete the Operation In Progress
+      description: '
+
+      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
+
+      '
+      tags:
+        - plugins
+        - plugins_upgrade
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /pg_mgr/install/update:
+    post:
+      summary: Update the List of installable packages
+      description: '
+
+      Update the list of installable package from the plugins database.
+
+      '
+      tags:
+        - plugins
+        - plugins_update
+      parameters:
+        - $ref: '#/parameters/emptyBody'
+      responses:
+        201:
+          description: Created
+          headers:
+            Location:
+              description: Location of the OperationInProgress resource.
+              type: string
+        400:
+          description: Invalid request. You must send an empty JSON document.
+
+  /pg_mgr/install/update/{operation_id}:
+    get:
+      summary: Get the status of a plugin database update Operation In Progress
+      description: '
+
+      Get the status of the underlying Operation In Progress object for the plugin database update operation.
+
+      '
+      tags:
+        - plugins
+        - plugins_update
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                description: fixed format.
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    delete:
+      summary: Delete the Operation In Progress
+      description: '
+
+      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
+
+      '
+      tags:
+        - plugins
+        - plugins_update
+      parameters:
+        - $ref: '#/parameters/operationid'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /pg_mgr/install/installable:
+    get:
+      summary: Get the installable packages list
+      description: '
+
+      Get the packages that can be installed.
+
+      '
+      tags:
+        - plugins
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/PackageList'
+
+  /pg_mgr/install/installed:
+    get:
+      summary: Get the installed packages list
+      description: '
+
+      Get the packages that are installed.
+
+      '
+      tags:
+        - plugins
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/PackageList'
+
   /pg_mgr/reload:
     post:
       summary: Reload a plugin
@@ -643,6 +937,12 @@ parameters:
     name: param_id
     in: path
     description: Configuration parameter ID.
+  paramBody:
+    description: Configuration parameter body definition.
+    name: body
+    in: body
+    schema:
+      $ref: '#/definitions/Param'
   deviceid:
     required: true
     type: string
@@ -677,6 +977,16 @@ parameters:
           type: string
       example:
         id: "xivo-aastra-3.3.1-SP2"
+  packageidBody:
+    description: Package ID body definition.
+    name: body
+    in: body
+    schema:
+      properties:
+        id:
+          type: string
+      example:
+        id: "xivo-polycom-4.0.4"
   emptyBody:
     description: Empty object body
     name: body
@@ -889,3 +1199,36 @@ definitions:
       version:
         type: string
         description: Firmware version
+  PackageList:
+    type: object
+    properties:
+      pkgs:
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            capabilities:
+              type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: string
+            description:
+              type: string
+            dsize:
+              type: integer
+            sha1sum:
+              type: string
+            version:
+              type: string
+  Param:
+    description: A configuration parameter
+    properties:
+      param:
+        type: object
+        properties:
+          value:
+            type: string
+    example:
+      param:
+        value: "http://provd.wazo.community/plugins/1/stable"
