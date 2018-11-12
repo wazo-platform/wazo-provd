@@ -14,7 +14,7 @@ setup(
     license='GPLv3',
 
     packages=find_packages(exclude=['*.tests']) + ['twisted', 'twisted.plugins'],
-    package_data={'provd': ['tzinform/tzdatax'],
+    package_data={'provd': ['tzinform/tzdatax', 'rest/api/api.yml'],
                   'twisted': ['.noinit'],
                   'twisted.plugins': ['provd_plugins.py', '.noinit']}
 )

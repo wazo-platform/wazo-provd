@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2016 Avencall
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ from provd.devices.device import DeviceCollection
 from provd.devices import ident
 from provd.devices import pgasso
 from provd.servers.tftp.proto import TFTPProtocol
-from provd.servers.http_site import Site
+from provd.servers.http_site import Site, Resource
 from provd.persist.json_backend import JsonDatabaseFactory
 from provd.rest.server.server import new_server_resource, \
     new_restricted_server_resource
@@ -36,7 +36,8 @@ from twisted.application import internet
 from twisted.internet import ssl
 from twisted.plugin import IPlugin
 from twisted.python import log
-from twisted.web.resource import Resource
+from twisted.python.util import sibpath
+from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
 from zope.interface.declarations import implements
 
@@ -233,6 +234,9 @@ class RemoteConfigurationService(Service):
             server_resource = new_server_resource(app, dhcp_request_processing_service)
             logger.warning('No authentication is required for REST API')
         root_resource = Resource()
+        api_resource = Resource()
+        api_resource.putChild('api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
+        root_resource.putChild('api', api_resource)
         root_resource.putChild('provd', server_resource)
         rest_site = Site(root_resource)
 

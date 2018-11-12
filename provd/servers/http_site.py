@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,9 +23,13 @@ Only thing you need to do is to use this Site class instead of twisted.web.serve
 
 import copy
 import string
+import logging
 from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
+from twisted.web import resource
+
+logger = logging.getLogger(__name__)
 
 
 class Request(server.Request):
@@ -36,6 +40,7 @@ class Request(server.Request):
         # get site from channel
         self.site = self.channel.site
 
+        corsify_request(self)
         # set various default headers
         self.setHeader('server', server.version)
         self.setHeader('date', http.datetimeToString())
@@ -47,6 +52,11 @@ class Request(server.Request):
         d = self.site.getResourceFor(self)
         d.addCallback(self.render)
         d.addErrback(self.processingFailed)
+
+
+class Resource(resource.Resource):
+    def render_OPTIONS(self, request):
+        return b''
 
 
 class Site(server.Site):
@@ -83,3 +93,12 @@ def getChildForRequest(resource, request):
         else:
             resource = retval
     defer.returnValue(resource)
+
+
+def corsify_request(request):
+    # CORS
+    request.setHeader('Access-Control-Allow-Origin', '*')
+    request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token')
+    request.setHeader('Access-Control-Allow-Credentials', 'false')
+    logger.debug('corsify_request')
