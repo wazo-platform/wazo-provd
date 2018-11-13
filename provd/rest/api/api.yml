@@ -561,7 +561,6 @@ paths:
         This is generally the plugin, the firmware or the language package.
       tags:
         - plugins
-        - plugins_install
       parameters:
         - $ref: '#/parameters/packageidBody'
       responses:
@@ -583,7 +582,6 @@ paths:
         Get the status of the underlying Operation In Progress object for the plugin installation operation.
       tags:
         - plugins
-        - plugins_install
       parameters:
         - $ref: '#/parameters/operationid'
       responses:
@@ -604,7 +602,6 @@ paths:
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - plugins
-        - plugins_install
       parameters:
         - $ref: '#/parameters/operationid'
       responses:
@@ -620,7 +617,6 @@ paths:
         Uninstall a plugin package. This is generally the plugin, the firmware or the language package.
       tags:
         - plugins
-        - plugins_uninstall
       parameters:
         - $ref: '#/parameters/packageidBody'
       responses:
@@ -638,7 +634,6 @@ paths:
         Upgrade a plugin package.
       tags:
         - plugins
-        - plugins_upgrade
       parameters:
         - $ref: '#/parameters/packageidBody'
       responses:
@@ -660,7 +655,6 @@ paths:
         Get the status of the underlying Operation In Progress object for the plugin upgrade operation.
       tags:
         - plugins
-        - plugins_upgrade
       parameters:
         - $ref: '#/parameters/operationid'
       responses:
@@ -681,7 +675,6 @@ paths:
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - plugins
-        - plugins_upgrade
       parameters:
         - $ref: '#/parameters/operationid'
       responses:
@@ -697,7 +690,6 @@ paths:
         Update the list of installable package from the plugins database.
       tags:
         - plugins
-        - plugins_update
       parameters:
         - $ref: '#/parameters/emptyBody'
       responses:
@@ -717,7 +709,6 @@ paths:
         Get the status of the underlying Operation In Progress object for the plugin database update operation.
       tags:
         - plugins
-        - plugins_update
       parameters:
         - $ref: '#/parameters/operationid'
       responses:
@@ -738,7 +729,6 @@ paths:
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - plugins
-        - plugins_update
       parameters:
         - $ref: '#/parameters/operationid'
       responses:
