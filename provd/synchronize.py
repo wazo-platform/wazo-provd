@@ -277,21 +277,27 @@ class _AMIClient(object):
     def sip_notify_by_ip(self, ip, event, extra_vars=None):
         extra_vars = extra_vars or []
         logger.debug('Notify %s, event %s, extra_vars: %s', ip, event, extra_vars)
-        arr_vars = [('PeerIP', ip.encode('ascii')), ('Variable', 'Event=%s' % event.encode('ascii'))]
+        arr_vars = [
+            ('URI', 'sip:anonymous@{}'.format(ip).encode('ascii')),
+            ('Variable', 'Event=%s' % event.encode('ascii')),
+        ]
         arr_vars.extend(('Variable', k) for k in extra_vars)
-        aid, msg = self._new_msg_with_action_id('SIPnotifyprovd', arr_vars)
+        aid, msg = self._new_msg_with_action_id('PJSIPNotify', arr_vars)
         self._send_msg(msg)
         response = self._recv_msg(aid)
-        self._check_response(response, 'SIPnotifyprovd')
+        self._check_response(response, 'PJSIPNotify')
 
     def sip_notify_by_peer(self, peer, event, extra_vars=None):
         extra_vars = extra_vars or []
-        arr_vars = [('Channel', peer.encode('ascii')), ('Variable', 'Event=%s' % event.encode('ascii'))]
+        arr_vars = [
+            ('Endpoint', peer.encode('ascii')),
+            ('Variable', 'Event=%s' % event.encode('ascii')),
+        ]
         arr_vars.extend(('Variable', k) for k in extra_vars)
-        aid, msg = self._new_msg_with_action_id('SIPnotify', arr_vars)
+        aid, msg = self._new_msg_with_action_id('PJSIPNotify', arr_vars)
         self._send_msg(msg)
         response = self._recv_msg(aid)
-        self._check_response(response, 'SIPnotifyd')
+        self._check_response(response, 'PJSIPNotify')
 
 
 class _MaxReconnectionError(Exception):
@@ -480,7 +486,7 @@ def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
 
 def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
     peer = device.get(u'remote_state_sip_username')
-    if not peer:
+    if not peer or peer == 'anonymous':
         return None
 
     return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event, extra_vars)
