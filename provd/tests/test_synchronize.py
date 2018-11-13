@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2014 Avencall
+# Copyright 2014-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,4 +68,4 @@ class TestStandardSipSynchronize(unittest.TestCase):
 
         yield synchronize.standard_sip_synchronize(device)
 
-        self.sync_service.sip_notify_by_peer.assert_called_once_with(u'foobar', 'check-sync')
+        self.sync_service.sip_notify_by_peer.assert_called_once_with(u'foobar', 'check-sync', None)
