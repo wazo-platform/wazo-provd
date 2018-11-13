@@ -185,7 +185,7 @@ paths:
     put:
       summary: Update a device
       description: '
-      
+
       Update a device specified by its ID. Every field must be specified, otherwise they will be omitted.
 
       '
@@ -290,7 +290,7 @@ paths:
     post:
       summary: Reconfigure a device
       description: '
-      
+
       Regenerate the configuration file for the specified device.
 
       '
@@ -904,13 +904,13 @@ parameters:
   searchQuery:
     name: q
     in: query
-    description: A selector, encoded in JSON, describing which entries should be returned. All entries are returned if not specified. 
+    description: A selector, encoded in JSON, describing which entries should be returned. All entries are returned if not specified.
     required: false
     type: string
   searchFields:
     name: fields
     in: query
-    description: A list of fields, separated by comma. 
+    description: A list of fields, separated by comma.
     required: false
     type: string
   skipEntries:
@@ -922,7 +922,7 @@ parameters:
   sortEntries:
     name: sort
     in: query
-    description: The key on which to sort the results. 
+    description: The key on which to sort the results.
     required: false
     type: string
   sortOrder:
@@ -1135,7 +1135,7 @@ definitions:
         type: array
         items:
           type: string
-          description: TODO 
+          description: TODO
       raw_config:
         type: object
     example:
@@ -1165,9 +1165,9 @@ definitions:
   Device:
     description: A device schema
     properties:
-      added: 
+      added:
         type: string
-        description: Indicated how the device was added. 
+        description: Indicated how the device was added.
       config:
         type: string
         description: ID of the device configuration. Generally the same as the device ID, except when in autoprov.
