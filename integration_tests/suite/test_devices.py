@@ -3,10 +3,11 @@
 
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
-from hamcrest import assert_that, has_key, has_length, is_, equal_to, calling, raises
+from hamcrest import assert_that, has_key, has_entry, has_length, is_, equal_to, calling, raises, is_not, empty
 from .helpers.base import BaseIntegrationTest
 
 from .helpers.wait_strategy import NoWaitStrategy
+from .helpers.fixtures import DeviceContext
 
 
 class TestDevices(BaseIntegrationTest):
@@ -22,106 +23,105 @@ class TestDevices(BaseIntegrationTest):
     def tearDown(self):
         pass
 
-    def _add_device(self, ip, mac, plugin='', custom=None):
-        custom = custom or {}
+    def _add_device(self, ip, mac, plugin='', id_=None):
         device = {'ip': ip, 'mac': mac, 'plugin': plugin}
-        device.update(custom)
-        return self._client.devices.add(device)
+        if id_:
+            device.update({'id': id_})
+        return self._client.devices.create(device)
 
-    def test_find(self):
-        results = self._client.devices.find()
+    def test_list(self):
+        results = self._client.devices.list()
         assert_that(results, has_key('devices'))
 
     def test_add(self):
-        result_add = self._add_device(
-            '10.10.10.10', '00:11:22:33:44:55',
-            custom={'id': '1234abcdef1234'}
-        )
-        assert_that(result_add, has_key('id'))
-        assert_that(result_add['id'], is_(equal_to('1234abcdef1234')))
+        result_add = self._add_device('10.10.10.10', '00:11:22:33:44:55', id_='1234abcdef1234')
+        assert_that(result_add, has_entry('id', '1234abcdef1234'))
 
     def test_add_errors(self):
-        assert_that(calling(self._add_device).with_args(
-            '10.0.1.xx', '00:11:22:33:44:55'), raises(ProvdError, pattern='normalized')
+        assert_that(
+            calling(self._add_device).with_args('10.0.1.xx', '00:11:22:33:44:55'),
+            raises(ProvdError, pattern='normalized')
         )
-        assert_that(calling(self._add_device).with_args(
-            '10.0.1.1', '00:11:22:33:44:55', custom={'id': ''}), raises(ProvdError)
+        assert_that(
+            calling(self._add_device).with_args('10.0.1.1', '00:11:22:33:44:55', id_='*&!"/invalid _'),
+            raises(ProvdError)
         )
 
     def test_update(self):
-        result_add = self._add_device('1.2.3.4', 'aa:bb:cc:dd:ee:ff')
-        id_added = result_add['id']
+        with DeviceContext(self._client) as device:
+            new_info = {'id': device['id'], 'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
+            self._client.devices.update(new_info)
 
-        new_info = {'id': id_added, 'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
-        self._client.devices.update(new_info)
-
-        after_res = self._client.devices.get(id_added)
-        assert_that(after_res['device']['ip'], is_(equal_to('5.6.7.8')))
+            result = self._client.devices.get(device['id'])
+            assert_that(result['device']['ip'], is_(equal_to('5.6.7.8')))
 
     def test_update_errors(self):
-        result_add = self._add_device('1.2.3.4', 'aa:bb:cc:dd:ee:ff')
-        id_added = result_add['id']
-
-        assert_that(calling(self._client.devices.update).with_args(
-            {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}), raises(ProvdError, pattern='resource')
-        )
-        assert_that(calling(self._client.devices.update).with_args(
-            {'id': id_added, 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}),
-            raises(ProvdError, pattern='normalized')
-        )
+        with DeviceContext(self._client) as device:
+            assert_that(
+                calling(self._client.devices.update).with_args(
+                    {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
+                ),
+                raises(ProvdError, pattern='resource')
+            )
+            assert_that(
+                calling(self._client.devices.update).with_args(
+                    {'id': device['id'], 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}
+                ),
+                raises(ProvdError, pattern='normalized')
+            )
 
     def test_synchronize(self):
-        result_add = self._add_device('3.3.3.3', '12:bb:34:dd:56:ff')
-        id_added = result_add['id']
-        self._client.devices.synchronize(id_added)
+        with DeviceContext(self._client) as device:
+            self._client.devices.synchronize(device['id'])
 
     def test_get(self):
-        result_add = self._add_device('9.9.9.9', 'ab:ba:00:12:34:ff')
-        id_added = result_add['id']
-
-        after_res = self._client.devices.get(id_added)
-        assert_that(after_res['device']['ip'], is_(equal_to('9.9.9.9')))
+        with DeviceContext(self._client) as device:
+            result = self._client.devices.get(device['id'])
+            assert_that(result['device']['ip'], is_(equal_to(device['ip'])))
 
     def test_get_errors(self):
-        assert_that(calling(self._client.devices.get).with_args(
-            'unknown_id'), raises(ProvdError, pattern='resource')
+        assert_that(
+            calling(self._client.devices.get).with_args('unknown_id'),
+            raises(ProvdError, pattern='resource')
         )
 
-    def test_remove(self):
-        result_add = self._add_device('6.6.6.6', '0a:0a:00:12:34:ff')
-        id_added = result_add['id']
+    def test_delete(self):
+        with DeviceContext(self._client, delete_on_exit=False) as device:
+            self._client.devices.delete(device['id'])
+            assert_that(
+                calling(self._client.devices.get).with_args(device['id']),
+                raises(ProvdError, pattern='resource')
+            )
 
-        self._client.devices.remove(id_added)
-        assert_that(calling(self._client.devices.get).with_args(
-            id_added), raises(ProvdError, pattern='resource')
-        )
-
-    def test_remove_errors(self):
-        assert_that(calling(self._client.devices.remove).with_args(
-            'unknown_id'), raises(ProvdError, pattern='resource')
+    def test_delete_errors(self):
+        assert_that(
+            calling(self._client.devices.delete).with_args('unknown_id'),
+            raises(ProvdError, pattern='resource')
         )
 
     def test_reconfigure(self):
-        result_add = self._add_device('5.5.5.5', '0b:0b:01:12:34:ff')
-        id_added = result_add['id']
-
-        self._client.devices.reconfigure(id_added)
+        with DeviceContext(self._client) as device:
+            self._client.devices.reconfigure(device['id'])
 
     def test_reconfigure_errors(self):
-        assert_that(calling(self._client.devices.reconfigure).with_args(
-            'unknown_id'), raises(ProvdError, pattern='invalid')
+        assert_that(
+            calling(self._client.devices.reconfigure).with_args('unknown_id'),
+            raises(ProvdError, pattern='invalid')
         )
 
     def test_dhcp(self):
-        self._client.devices.insert_from_dhcp(
+        self._client.devices.create_from_dhcp(
             {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit', 'options': []}
         )
-        find_results = self._client.devices.find({'mac': 'ab:bc:cd:de:ff:01'})
+        find_results = self._client.devices.list(search={'mac': 'ab:bc:cd:de:ff:01'})
         assert_that(find_results, has_key('devices'))
-        assert_that(find_results['devices'], has_length(1))
-        assert_that(find_results['devices'][0]['ip'], is_(equal_to('10.10.0.1')))
+        assert_that(find_results['devices'], is_not(empty()))
+        assert_that(find_results['devices'][0], has_entry('ip', '10.10.0.1'))
 
     def test_dhcp_errors(self):
-        assert_that(calling(self._client.devices.insert_from_dhcp).with_args(
-            {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}), raises(ProvdError)
+        assert_that(
+            calling(self._client.devices.create_from_dhcp).with_args(
+                {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}
+            ),
+            raises(ProvdError)
         )
