@@ -16,11 +16,8 @@ paths:
   /:
     get:
       summary: Get the Provd Manager resource
-      description: '
-
+      description: |
         The provd manager resource represents the main entry point to the xivo-provd REST API.
-
-        '
       tags:
         - provd
       responses:
@@ -62,11 +59,8 @@ paths:
   /configure/{param_id}:
     get:
       summary: Get the configuration parameter value
-      description: '
-
-      Get the configuration parameter value from the provd general configuration.
-
-      '
+      description: |
+        Get the configuration parameter value from the provd general configuration.
       tags:
         - provd
       parameters:
@@ -80,11 +74,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
-      description: '
-
-      Set the value of a provd configuration parameter.
-
-      '
+      description: |
+        Set the value of a provd configuration parameter.
       tags:
         - provd
       parameters:
@@ -99,11 +90,8 @@ paths:
   /dev_mgr:
     get:
       summary: Get the Device Manager resource
-      description: '
-
+      description: |
         The device manager resource represents the entry point to the xivo-provd device REST API.
-
-        '
       tags:
       - devices
       responses:
@@ -126,11 +114,8 @@ paths:
   /dev_mgr/devices:
     get:
       summary: List and find devices
-      description: '
-
+      description: |
         List all devices present in the device manager.
-
-        '
       tags:
         - devices
       parameters:
@@ -144,11 +129,8 @@ paths:
           $ref: '#/responses/DevicesResponse'
     post:
       summary: Create a device
-      description: '
-
-      Create a device using the information provided.
-
-      '
+      description: |
+        Create a device using the information provided.
       tags:
       - devices
       parameters:
@@ -168,11 +150,8 @@ paths:
   /dev_mgr/devices/{device_id}:
     get:
       summary: Get a device by ID
-      description: '
-
-      Get a device using its ID.
-
-      '
+      description: |
+        Get a device using its ID.
       tags:
         - devices
       parameters:
@@ -184,11 +163,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a device
-      description: '
-
-      Update a device specified by its ID. Every field must be specified, otherwise they will be omitted.
-
-      '
+      description: |
+        Update a device specified by its ID. Every field must be specified, otherwise they will be omitted.
       tags:
        - devices
       parameters:
@@ -209,11 +185,8 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a device
-      description: '
-
-      Delete a device specified by its ID.
-
-      '
+      description: |
+        Delete a device specified by its ID.
       tags:
         - devices
       parameters:
@@ -227,11 +200,8 @@ paths:
   /dev_mgr/synchronize:
     post:
       summary: Synchronize a device
-      description: '
-
-      Synchronize a device using its ID.
-
-      '
+      description: |
+        Synchronize a device using its ID.
       tags:
         - devices
       parameters:
@@ -249,11 +219,8 @@ paths:
   /dev_mgr/synchronize/{operation_id}:
     get:
       summary: Get the status of a synchronize Operation In Progress
-      description: '
-
-      Get the status of the underlying Operation In Progress object for the synchronize operation.
-
-      '
+      description: |
+        Get the status of the underlying Operation In Progress object for the synchronize operation.
       tags:
         - devices
       parameters:
@@ -271,11 +238,9 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
-      description: '
-
-      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
-
-      '
+      description: |
+        This does not cancel the underlying operation; it only deletes the monitor.
+        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - devices
       parameters:
@@ -289,11 +254,8 @@ paths:
   /dev_mgr/reconfigure:
     post:
       summary: Reconfigure a device
-      description: '
-
-      Regenerate the configuration file for the specified device.
-
-      '
+      description: |
+        Regenerate the configuration file for the specified device.
       tags:
         - devices
       parameters:
@@ -307,11 +269,9 @@ paths:
   /dev_mgr/dhcpinfo:
     post:
       summary: Push DHCP request information
-      description: '
-
-      Push DHCP request information from the DHCP server. The provisioning server either creates a new device or changes the information of the device with the same MAC address.
-
-      '
+      description: |
+        Push DHCP request information from the DHCP server.
+        The provisioning server either creates a new device or changes the information of the device with the same MAC address.
       tags:
         - devices
       parameters:
@@ -324,11 +284,8 @@ paths:
   /cfg_mgr:
     get:
       summary: Get the Config Manager resource
-      description: '
-
-      The configuration manager resource represents the entry point to the xivo-provd configuration REST API.
-
-      '
+      description: |
+        The configuration manager resource represents the entry point to the xivo-provd configuration REST API.
       tags:
         - configs
       responses:
@@ -347,11 +304,8 @@ paths:
   /cfg_mgr/configs:
     get:
       summary: List and find configurations
-      description: '
-
-      List and find all available configurations.
-
-      '
+      description: |
+        List and find all available configurations.
       tags:
         - configs
       parameters:
@@ -365,11 +319,8 @@ paths:
           $ref: '#/responses/ConfigsResponse'
     post:
       summary: Create a configuration
-      description: '
-
-      Create a complete device configuration.
-
-      '
+      description: |
+        Create a complete device configuration.
       tags:
         - configs
       parameters:
@@ -381,11 +332,8 @@ paths:
   /cfg_mgr/configs/{config_id}:
     get:
       summary: Get a configuration
-      description: '
-
-      Get a configuration from its ID.
-
-      '
+      description: |
+        Get a configuration from its ID.
       tags:
         - configs
       parameters:
@@ -397,11 +345,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a configuration
-      description: '
-
-      Update a configuration defined by its ID with the provided information.
-
-      '
+      description: |
+        Update a configuration defined by its ID with the provided information.
       tags:
         - configs
       parameters:
@@ -416,11 +361,8 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a configuration
-      description: '
-
-      Delete a configuration defined by its id.
-
-      '
+      description: |
+        Delete a configuration defined by its id.
       tags:
         - configs
       parameters:
@@ -434,11 +376,8 @@ paths:
   /cfg_mgr/configs/{config_id}/raw:
     get:
       summary: Get a raw configuration
-      description: '
-
-      Get a raw configuration from the configuration ID.
-
-      '
+      description: |
+        Get a raw configuration from the configuration ID.
       tags:
         - configs
       parameters:
@@ -464,11 +403,8 @@ paths:
   /cfg_mgr/autocreate:
     post:
       summary: Create an autocreate configuration.
-      description: '
-
-      Create a new config from the config that has the autocreate role.
-
-      '
+      description: |
+        Create a new config from the config that has the autocreate role.
       tags:
         - configs
       parameters:
@@ -481,11 +417,8 @@ paths:
   /pg_mgr:
     get:
       summary: Get the Plugin Manager resource.
-      description: '
-
-      The plugin manager resource represents the entry point to the xivo-provd plugin REST API.
-
-      '
+      description: |
+        The plugin manager resource represents the entry point to the xivo-provd plugin REST API.
       tags:
         - plugins
       responses:
@@ -506,11 +439,8 @@ paths:
   /pg_mgr/plugins:
     get:
       summary: List the installed plugins
-      description: '
-
-      List all the installed plugins and their resource links.
-
-      '
+      description: |
+        List all the installed plugins and their resource links.
       tags:
         - plugins
       responses:
@@ -538,11 +468,8 @@ paths:
   /pg_mgr/plugins/{plugin_id}:
     get:
       summary: Get the resources of a specific plugin.
-      description: '
-
-      The plugin resources are defined by links and relations.
-
-      '
+      description: |
+        The plugin resources are defined by links and relations.
       tags:
         - plugins
       parameters:
@@ -561,11 +488,8 @@ paths:
   /pg_mgr/plugins/{plugin_id}/info:
     get:
       summary: Get the information of a plugin
-      description: '
-
-      Get all the information of a plugin, such as its capabilities, description, version, etc.
-
-      '
+      description: |
+        Get all the information of a plugin, such as its capabilities, description, version, etc.
       tags:
         - plugins
       parameters:
@@ -604,11 +528,8 @@ paths:
   /pg_mgr/install:
     get:
       summary: Get the installation service resources
-      description: '
-
-      The installation service resources are defined by links and relations.
-
-      '
+      description: |
+        The installation service resources are defined by links and relations.
       tags:
         - plugins
       responses:
@@ -635,11 +556,9 @@ paths:
   /pg_mgr/install/install:
     post:
       summary: Install a package
-      description: '
-
-      Install a plugin package. This is generally the plugin, the firmware or the language package.
-
-      '
+      description: |
+        Install a plugin package.
+        This is generally the plugin, the firmware or the language package.
       tags:
         - plugins
         - plugins_install
@@ -660,11 +579,8 @@ paths:
   /pg_mgr/install/install/{operation_id}:
     get:
       summary: Get the status of a plugin installation Operation In Progress
-      description: '
-
-      Get the status of the underlying Operation In Progress object for the plugin installation operation.
-
-      '
+      description: |
+        Get the status of the underlying Operation In Progress object for the plugin installation operation.
       tags:
         - plugins
         - plugins_install
@@ -683,11 +599,9 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
-      description: '
-
-      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
-
-      '
+      description: |
+        This does not cancel the underlying operation; it only deletes the monitor.
+        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - plugins
         - plugins_install
@@ -702,11 +616,8 @@ paths:
   /pg_mgr/install/uninstall:
     post:
       summary: Uninstall a package
-      description: '
-
-      Uninstall a plugin package. This is generally the plugin, the firmware or the language package.
-
-      '
+      description: |
+        Uninstall a plugin package. This is generally the plugin, the firmware or the language package.
       tags:
         - plugins
         - plugins_uninstall
@@ -723,11 +634,8 @@ paths:
   /pg_mgr/install/upgrade:
     post:
       summary: Upgrade a package
-      description: '
-
-      Upgrade a plugin package.
-
-      '
+      description: |
+        Upgrade a plugin package.
       tags:
         - plugins
         - plugins_upgrade
@@ -748,11 +656,8 @@ paths:
   /pg_mgr/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a plugin upgrade Operation In Progress
-      description: '
-
-      Get the status of the underlying Operation In Progress object for the plugin upgrade operation.
-
-      '
+      description: |
+        Get the status of the underlying Operation In Progress object for the plugin upgrade operation.
       tags:
         - plugins
         - plugins_upgrade
@@ -771,11 +676,9 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
-      description: '
-
-      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
-
-      '
+      description: |
+        This does not cancel the underlying operation; it only deletes the monitor.
+        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - plugins
         - plugins_upgrade
@@ -790,11 +693,8 @@ paths:
   /pg_mgr/install/update:
     post:
       summary: Update the List of installable packages
-      description: '
-
-      Update the list of installable package from the plugins database.
-
-      '
+      description: |
+        Update the list of installable package from the plugins database.
       tags:
         - plugins
         - plugins_update
@@ -813,11 +713,8 @@ paths:
   /pg_mgr/install/update/{operation_id}:
     get:
       summary: Get the status of a plugin database update Operation In Progress
-      description: '
-
-      Get the status of the underlying Operation In Progress object for the plugin database update operation.
-
-      '
+      description: |
+        Get the status of the underlying Operation In Progress object for the plugin database update operation.
       tags:
         - plugins
         - plugins_update
@@ -836,11 +733,9 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
-      description: '
-
-      This does not cancel the underlying operation; it only deletes the monitor. Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
-
-      '
+      description: |
+        This does not cancel the underlying operation; it only deletes the monitor.
+        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory.
       tags:
         - plugins
         - plugins_update
@@ -855,11 +750,8 @@ paths:
   /pg_mgr/install/installable:
     get:
       summary: Get the installable packages list
-      description: '
-
-      Get the packages that can be installed.
-
-      '
+      description: |
+        Get the packages that can be installed.
       tags:
         - plugins
       responses:
@@ -871,11 +763,8 @@ paths:
   /pg_mgr/install/installed:
     get:
       summary: Get the installed packages list
-      description: '
-
-      Get the packages that are installed.
-
-      '
+      description: |
+        Get the packages that are installed.
       tags:
         - plugins
       responses:
@@ -887,11 +776,9 @@ paths:
   /pg_mgr/reload:
     post:
       summary: Reload a plugin
-      description: '
-
-      Reload the given plugin. This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the xivo-provd application.
-
-      '
+      description: |
+        Reload the given plugin.
+        This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the xivo-provd application.
       tags:
         - plugins
       parameters:
