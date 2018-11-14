@@ -3,21 +3,15 @@
 
 
 class Device:
-    context_id = 0
 
     def __init__(self, client, delete_on_exit=True):
         self._client = client
+        self._device = None
         self._delete_on_exit = delete_on_exit
-        Device.context_id += 1
 
     def __enter__(self):
-        self._device = {
-            'id': 'test123test123{}'.format(Device.context_id),
-            'ip': '10.1.2.3',
-            'mac': '00:11:22:33:44:55',
-            'plugin': 'null'
-        }
-        self._client.devices.create(self._device)
+        device = self._client.devices.create({})
+        self._device = self._client.devices.get(device['id'])['device']
         return self._device
 
     def __exit__(self, type, value, traceback):

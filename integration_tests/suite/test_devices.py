@@ -76,7 +76,7 @@ class TestDevices(BaseIntegrationTest):
     def test_get(self):
         with fixtures.Device(self._client) as device:
             result = self._client.devices.get(device['id'])
-            assert_that(result['device']['ip'], is_(equal_to(device['ip'])))
+            assert_that(result['device']['id'], is_(equal_to(device['id'])))
 
     def test_get_errors(self):
         assert_that(
