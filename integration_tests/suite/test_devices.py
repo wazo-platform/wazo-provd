@@ -4,10 +4,9 @@
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 from hamcrest import assert_that, has_key, has_entry, has_length, is_, equal_to, calling, raises, is_not, empty
+from .helpers import fixtures
 from .helpers.base import BaseIntegrationTest
-
 from .helpers.wait_strategy import NoWaitStrategy
-from .helpers.fixtures import DeviceContext
 
 
 class TestDevices(BaseIntegrationTest):
@@ -48,7 +47,7 @@ class TestDevices(BaseIntegrationTest):
         )
 
     def test_update(self):
-        with DeviceContext(self._client) as device:
+        with fixtures.Device(self._client) as device:
             new_info = {'id': device['id'], 'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
             self._client.devices.update(new_info)
 
@@ -56,7 +55,7 @@ class TestDevices(BaseIntegrationTest):
             assert_that(result['device']['ip'], is_(equal_to('5.6.7.8')))
 
     def test_update_errors(self):
-        with DeviceContext(self._client) as device:
+        with fixtures.Device(self._client) as device:
             assert_that(
                 calling(self._client.devices.update).with_args(
                     {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
@@ -71,11 +70,11 @@ class TestDevices(BaseIntegrationTest):
             )
 
     def test_synchronize(self):
-        with DeviceContext(self._client) as device:
+        with fixtures.Device(self._client) as device:
             self._client.devices.synchronize(device['id'])
 
     def test_get(self):
-        with DeviceContext(self._client) as device:
+        with fixtures.Device(self._client) as device:
             result = self._client.devices.get(device['id'])
             assert_that(result['device']['ip'], is_(equal_to(device['ip'])))
 
@@ -86,7 +85,7 @@ class TestDevices(BaseIntegrationTest):
         )
 
     def test_delete(self):
-        with DeviceContext(self._client, delete_on_exit=False) as device:
+        with fixtures.Device(self._client, delete_on_exit=False) as device:
             self._client.devices.delete(device['id'])
             assert_that(
                 calling(self._client.devices.get).with_args(device['id']),
@@ -100,7 +99,7 @@ class TestDevices(BaseIntegrationTest):
         )
 
     def test_reconfigure(self):
-        with DeviceContext(self._client) as device:
+        with fixtures.Device(self._client) as device:
             self._client.devices.reconfigure(device['id'])
 
     def test_reconfigure_errors(self):
