@@ -1,4 +1,4 @@
-# Xivo-provd integration tests
+# xivo-provd integration tests
 
 This README attempts to document various bits of information pertaining to the integration tests for
 this project.
