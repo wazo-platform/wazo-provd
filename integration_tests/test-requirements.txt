@@ -1,8 +1,8 @@
-git+https://github.com/wazo-pbx/xivo-test-helpers.git
-git+https://github.com/wazo-pbx/xivo-lib-rest-client.git
 git+https://github.com/wazo-pbx/wazo-provd-client.git
-docker-compose
+git+https://github.com/wazo-pbx/xivo-lib-rest-client.git
+git+https://github.com/wazo-pbx/xivo-test-helpers.git
 docker
+docker-compose
 nose
 pyhamcrest
 requests
