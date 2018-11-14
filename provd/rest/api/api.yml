@@ -434,6 +434,141 @@ paths:
               description: "Plugin for Aastra 6730i, 6731i, ..."
               version: "1.1"
 
+  /provd/pg_mgr/plugins/{plugin_id}/install/install:
+    post:
+      summary: Install a package
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+        - $ref: '#/parameters/PackageIdBody'
+      responses:
+        201:
+          $ref: '#/responses/OperationInProgressResponse'
+        400:
+          $ref: '#/responses/InvalidJSONError'
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
+    get:
+      summary: Get the status of a package installation Operation In Progress
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+        - $ref: '#/parameters/OperationId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/OperationInProgressObject'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    delete:
+      summary: Delete the Operation In Progress
+      description: |
+        This does not cancel the underlying operation; it only deletes the monitor
+        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+        - $ref: '#/parameters/OperationId'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install/uninstall:
+    post:
+      summary: Uninstall a package
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+        - $ref: '#/parameters/PackageIdBody'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        400:
+          $ref: '#/responses/InvalidJSONError'
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install/upgrade:
+    post:
+      summary: Upgrade a package
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+        - $ref: '#/parameters/PackageIdBody'
+      responses:
+        201:
+          $ref: '#/responses/OperationInProgressResponse'
+        400:
+          $ref: '#/responses/InvalidJSONError'
+        415:
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
+    get:
+      summary: Get the status of a package upgrade Operation In Progress
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+        - $ref: '#/parameters/OperationId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/OperationInProgressObject'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+    delete:
+      summary: Delete the Operation In Progress
+      description: |
+        This does not cancel the underlying operation; it only deletes the monitor
+        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/OperationId'
+      responses:
+        204:
+          $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install/installable:
+    get:
+      summary: Get the installable packages list
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/PackageList'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install/installed:
+    get:
+      summary: Get the installed packages list
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/PackageList'
+
   /provd/pg_mgr/install:
     get:
       summary: Get the installation service resources
@@ -470,7 +605,7 @@ paths:
         201:
           $ref: '#/responses/OperationInProgressResponse'
         400:
-          description: Invalid package name or request format
+          $ref: '#/responses/InvalidJSONError'
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
@@ -505,7 +640,7 @@ paths:
 
   /provd/pg_mgr/install/uninstall:
     post:
-      summary: Uninstall a package
+      summary: Uninstall a plugin
       tags:
         - plugins
       parameters:
@@ -514,13 +649,13 @@ paths:
         204:
           $ref: '#/responses/NoContentResponse'
         400:
-          description: Invalid package name or request format
+          $ref: '#/responses/InvalidJSONError'
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
   /provd/pg_mgr/install/upgrade:
     post:
-      summary: Upgrade a package
+      summary: Upgrade a plugin
       tags:
         - plugins
       parameters:
@@ -529,7 +664,7 @@ paths:
         201:
           $ref: '#/responses/OperationInProgressResponse'
         400:
-          $ref: '#/responses/EmptyJSONError'
+          $ref: '#/responses/InvalidJSONError'
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
@@ -564,7 +699,7 @@ paths:
 
   /provd/pg_mgr/install/update:
     post:
-      summary: Update the List of installable packages
+      summary: Update the List of installable plugins
       tags:
         - plugins
       parameters:
@@ -573,7 +708,7 @@ paths:
         201:
           $ref: '#/responses/OperationInProgressResponse'
         400:
-          $ref: '#/responses/EmptyJSONError'
+          $ref: '#/responses/InvalidJSONError'
 
   /provd/pg_mgr/install/update/{operation_id}:
     get:
@@ -606,7 +741,7 @@ paths:
 
   /provd/pg_mgr/install/installable:
     get:
-      summary: Get the installable packages list
+      summary: Get the installable plugins list
       tags:
         - plugins
       responses:
@@ -617,7 +752,7 @@ paths:
 
   /provd/pg_mgr/install/installed:
     get:
-      summary: Get the installed packages list
+      summary: Get the installed plugins list
       tags:
         - plugins
       responses:
@@ -797,7 +932,7 @@ responses:
     description: Internal Server Error. The IP or MAC address may be malformed
     schema:
       $ref: '#/definitions/ErrorMessage'
-  EmptyJSONError:
+  InvalidJSONError:
     description: Invalid JSON document
     schema:
       $ref: '#/definitions/ErrorMessage'
