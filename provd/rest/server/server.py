@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ from provd.operation import format_oip, operation_in_progres_from_deferred
 from provd.persist.common import ID_KEY
 from provd.plugins import BasePluginManagerObserver
 from provd.rest.util import PROV_MIME_TYPE, uri_append_path
+from provd.servers.http_site import Resource
 from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.services import InvalidParameterError
 from provd.util import norm_mac, norm_ip
@@ -44,7 +45,7 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.portal import Portal
 from twisted.web import http
 from twisted.web.guard import DigestCredentialFactory, HTTPAuthSessionWrapper
-from twisted.web.resource import Resource, IResource
+from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
 logger = logging.getLogger(__name__)
