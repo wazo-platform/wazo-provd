@@ -11,8 +11,7 @@ pull-images:
 	docker pull trinitronx/python-simplehttpserver
 
 provd:
-	docker pull python:2.7.13-stretch
-	docker build -t wazopbx/xivo-provd $(PROVD_DIR)
+	docker build --pull -t wazopbx/xivo-provd $(PROVD_DIR)
 	$(MAKE) provd-test
 
 provd-test:
