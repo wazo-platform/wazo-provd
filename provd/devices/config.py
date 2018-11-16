@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -442,6 +442,7 @@ specific values to a template.
 
 import logging
 import time
+import uuid
 from copy import deepcopy
 from functools import wraps
 from provd.persist.common import ID_KEY
@@ -670,26 +671,20 @@ class ConfigCollection(ForwardingDocumentCollection):
 
 class DefaultConfigFactory(object):
     """A default config factory.
-    
-    Config factories are used to create new config automatically.
-    
-    """
-    def __init__(self):
-        # since _n is not persisted, we use the current time as a seed
-        # to lessen the chance of having a username collision (which was
-        # why we introduced this whole thing)
-        self._n = int(time.time())
 
-    def _new_config(self, id, sip_line_1_username):
-        new_suffix = unicode(self._n)
-        self._n += 1
+    Config factories are used to create new config automatically.
+
+    """
+
+    def _new_config(self, id_, sip_line_1_username):
+        new_suffix = unicode(uuid.uuid4())
         new_config = {
-            u'id': id + new_suffix,
-            u'parent_ids': [id],
+            u'id': id_ + new_suffix,
+            u'parent_ids': [id_],
             u'raw_config': {
                 u'sip_lines': {
                     u'1': {
-                       u'username': sip_line_1_username + new_suffix
+                       u'username': sip_line_1_username
                     }
                 }
             },
