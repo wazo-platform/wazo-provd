@@ -1,7 +1,17 @@
 # Copyright 2018 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
-from hamcrest import assert_that, has_key, has_entry, is_, equal_to, calling, raises, is_not, empty
+from hamcrest import (
+    assert_that,
+    has_key,
+    has_entry,
+    is_,
+    equal_to,
+    calling,
+    raises,
+    is_not,
+    empty,
+)
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 from .helpers.base import BaseIntegrationTest
