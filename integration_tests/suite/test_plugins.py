@@ -12,10 +12,11 @@ from hamcrest import (
     is_not,
     empty,
 )
+from xivo_test_helpers import until
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
-from .helpers.base import BaseIntegrationTest
 
+from .helpers.base import BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
 
 
@@ -33,7 +34,19 @@ class TestPlugins(BaseIntegrationTest):
         pass
 
     def test_install(self):
-        self._client.plugins.install('null')
+        self._client.plugins.update()
+
+        def installable_list_not_empty():
+            assert_that(self._client.plugins.list_installable()['pkgs'], is_not(empty()))
+
+        def installed_list_not_empty():
+            assert_that(self._client.plugins.list_installed()['pkgs'], is_not(empty()))
+
+        until._assert(installable_list_not_empty, tries=10)
+        self._client.plugins.install('null-1.0')
+        until._assert(installed_list_not_empty, tries=10)
+        result = self._client.plugins.list_installed()['pkgs']
+        assert_that(result, has_key('null'))
 
     def test_install_errors(self):
         assert_that(
