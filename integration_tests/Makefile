@@ -7,6 +7,7 @@ test-setup: egg-info pull-images provd
 
 pull-images:
 	docker pull wazopbx/wait
+	docker pull swaggerapi/swagger-validator
 
 provd:
 	docker pull python:2.7.13-stretch
