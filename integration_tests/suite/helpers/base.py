@@ -20,13 +20,3 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
             port=self.service_port(8666, 'provd'),
             path='/'.join(parts)
         )
-
-    @classmethod
-    def _docker_compose_options(cls):
-        return [
-            '--file', os.path.join(cls.assets_root, 'docker-compose.yml'),
-            '--file', os.path.join(
-                cls.assets_root, 'docker-compose.{}.override.yml'.format(cls.asset)
-            ),
-            '--project-name', cls.service,
-        ]
