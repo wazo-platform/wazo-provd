@@ -10,8 +10,14 @@ services:
     volumes:
       - "../..:/usr/src/xivo-provisioning/"
       - "./etc/xivo/provd/provd.conf:/etc/xivo/provd/provd.conf"
-      - "./provd/plugins:/var/lib/xivo-provd/plugins"
     ports:
       - "8666"
       - "8667"
       - "69/udp"
+
+  pluginserver:
+    image: trinitronx/python-simplehttpserver
+    volumes:
+      - "./provd/plugins/pkgs:/var/www"
+    ports:
+      - "8080"
