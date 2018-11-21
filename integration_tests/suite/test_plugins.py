@@ -10,14 +10,18 @@ from hamcrest import (
     calling,
     raises,
     is_not,
+    not_,
     empty,
 )
 from xivo_test_helpers import until
-from wazo_provd_client import Client
+from wazo_provd_client import Client, operation
 from wazo_provd_client.exceptions import ProvdError
 
+from .helpers import fixtures
 from .helpers.base import BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
+
+PLUGIN_TO_INSTALL = 'test-plugin'
 
 
 class TestPlugins(BaseIntegrationTest):
@@ -34,19 +38,15 @@ class TestPlugins(BaseIntegrationTest):
         pass
 
     def test_install(self):
-        self._client.plugins.update()
+        location = self._client.plugins.update()
 
-        def installable_list_not_empty():
-            assert_that(self._client.plugins.list_installable()['pkgs'], is_not(empty()))
+        until.assert_(fixtures.operation_successful, self._client.plugins, location, tries=20, interval=0.5)
 
-        def installed_list_not_empty():
-            assert_that(self._client.plugins.list_installed()['pkgs'], is_not(empty()))
+        location = self._client.plugins.install(PLUGIN_TO_INSTALL)
 
-        until._assert(installable_list_not_empty, tries=10)
-        self._client.plugins.install('null-1.0')
-        until._assert(installed_list_not_empty, tries=10)
-        result = self._client.plugins.list_installed()['pkgs']
-        assert_that(result, has_key('null'))
+        until.assert_(fixtures.operation_successful, self._client.plugins, location, tries=20, interval=0.5)
+
+        self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
 
     def test_install_errors(self):
         assert_that(
@@ -55,31 +55,48 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_uninstall(self):
-        pass
+        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL, False):
+            self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
+            assert_that(self._client.plugins.list_installed()['pkgs'], not_(has_key(PLUGIN_TO_INSTALL)))
 
     def test_list_installed(self):
-        pass
+        result = self._client.plugins.list_installed()
+        assert_that(result, has_key('pkgs'))
 
     def test_list_installable(self):
-        pass
+        result = self._client.plugins.list_installable()
+        assert_that(result, has_key('pkgs'))
 
     def test_update(self):
-        pass
+        location = self._client.plugins.update()
+
+        until.assert_(fixtures.operation_successful, self._client.plugins, location, tries=10, timeout=10)
 
     def test_get(self):
-        pass
+        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
+            result = self._client.plugins.get(PLUGIN_TO_INSTALL)
+            assert_that(result, has_key('plugin_info'))
+            assert_that(result['plugin_info'], has_key('version'))
 
     def test_get_errors(self):
-        pass
-
-    def test_install(self):
-        pass
+        assert_that(
+            calling(self._client.plugins.get).with_args('invalid_plugin'),
+            raises(ProvdError)
+        )
 
     def test_get_packages_installed(self):
-        pass
+        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
+            result = self._client.plugins.get_packages_installed(PLUGIN_TO_INSTALL)
+            assert_that(result, has_key('pkgs'))
 
     def test_get_packages_installable(self):
-        pass
+        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
+            result = self._client.plugins.get_packages_installed(PLUGIN_TO_INSTALL)
+            assert_that(result, has_key('pkgs'))
 
     def test_install_package(self):
-        pass
+        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
+            results = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)['pkgs']
+            for package in results:
+                location = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)
+                until.assert_(fixtures.operation_successful, self._client.plugins, location, tries=10)
