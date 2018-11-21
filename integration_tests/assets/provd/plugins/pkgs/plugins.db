@@ -1,0 +1,14 @@
+{
+    "test-plugin": {
+        "version": "1.0",
+        "description": "Plugin that has no other purpose than to test provd features.",
+        "capabilities": {
+            "*, *, *": {
+                "sip.lines": 0
+            }
+        },
+        "dsize": 1134,
+        "filename": "test-plugin-1.0.tar.bz2",
+        "sha1sum": "66423d8cacbb1432ce32e59455d66a14d5877d75"
+    }
+}
