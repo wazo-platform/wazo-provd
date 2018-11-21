@@ -20,6 +20,7 @@ from wazo_provd_client.exceptions import ProvdError
 from .helpers import fixtures
 from .helpers.base import BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
+from .helpers.operation import operation_successful
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 
@@ -41,13 +42,13 @@ class TestPlugins(BaseIntegrationTest):
         location = self._client.plugins.update()
 
         until.assert_(
-            fixtures.operation_successful, self._client.plugins, location, tries=20, interval=0.5
+            operation_successful, self._client.plugins, location, tries=20, interval=0.5
         )
 
         location = self._client.plugins.install(PLUGIN_TO_INSTALL)
 
         until.assert_(
-            fixtures.operation_successful, self._client.plugins, location, tries=20, interval=0.5
+            operation_successful, self._client.plugins, location, tries=20, interval=0.5
         )
 
         self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
@@ -75,9 +76,8 @@ class TestPlugins(BaseIntegrationTest):
 
     def test_update(self):
         location = self._client.plugins.update()
-
         until.assert_(
-            fixtures.operation_successful, self._client.plugins, location, tries=10, timeout=10
+            operation_successful, self._client.plugins, location, tries=10, timeout=10
         )
 
     def test_get(self):
@@ -108,5 +108,5 @@ class TestPlugins(BaseIntegrationTest):
             for package in results:
                 location = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)
                 until.assert_(
-                    fixtures.operation_successful, self._client.plugins, location, tries=10
+                    operation_successful, self._client.plugins, location, tries=10
                 )

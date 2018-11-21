@@ -5,7 +5,7 @@
 from xivo_test_helpers import until
 from hamcrest import assert_that, is_
 
-from wazo_provd_client import operation
+from .operation import operation_successful
 
 
 class Device(object):
@@ -46,8 +46,3 @@ class Plugin(object):
     def __exit__(self, type, value, traceback):
         if self._delete_on_exit:
             self._client.plugins.uninstall(self._plugin_name)
-
-
-def operation_successful(tested, location):
-    operation_progress = tested.get_operation(location)
-    assert_that(operation_progress.state, is_(operation.OIP_SUCCESS))
