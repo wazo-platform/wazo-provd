@@ -3,6 +3,7 @@
 
 
 from xivo_test_helpers import until
+from wazo_provd_client.operation import OperationInProgress
 from hamcrest import assert_that, is_
 
 from .operation import operation_successful
@@ -34,15 +35,33 @@ class Plugin(object):
 
     def __enter__(self):
         location = self._client.plugins.update()
-
-        until.assert_(operation_successful, self._client.plugins, location, tries=20, interval=0.5)
+        with OperationResource(self._client.plugins, location) as current_operation:
+            until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
         location = self._client.plugins.install(self._plugin_name)
 
-        until.assert_(operation_successful, self._client.plugins, location, tries=20, interval=0.5)
+        with OperationResource(self._client.plugins, location) as current_operation:
+            until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
+
         self._plugin = self._client.plugins.get(self._plugin_name)['plugin_info']
         return self._plugin
 
     def __exit__(self, type, value, traceback):
         if self._delete_on_exit:
             self._client.plugins.uninstall(self._plugin_name)
+
+
+class OperationResource(object):
+    def __init__(self, client, location, delete_on_exit=True):
+        self._client = client
+        self._location = location
+        self._operation = None
+        self._delete_on_exit = delete_on_exit
+
+    def __enter__(self):
+        self._operation = OperationInProgress(self._client, self._location)
+        return self._operation
+
+    def __exit__(self, type, value, traceback):
+        if self._delete_on_exit:
+            self._operation.delete()

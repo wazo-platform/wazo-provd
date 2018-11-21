@@ -5,6 +5,6 @@ from hamcrest import assert_that, is_
 from wazo_provd_client import operation
 
 
-def operation_successful(tested, location):
-    operation_progress = tested.get_operation(location)
-    assert_that(operation_progress.state, is_(operation.OIP_SUCCESS))
+def operation_successful(operation_ressource):
+    operation_ressource.update()
+    assert_that(operation_ressource.state, is_(operation.OIP_SUCCESS))

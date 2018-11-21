@@ -14,7 +14,7 @@ from hamcrest import (
     empty,
 )
 from xivo_test_helpers import until
-from wazo_provd_client import Client, operation
+from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
@@ -39,17 +39,17 @@ class TestPlugins(BaseIntegrationTest):
         pass
 
     def test_install(self):
-        location = self._client.plugins.update()
+        result = self._client.plugins.update()
+        with fixtures.OperationResource(self._client.plugins, result) as operation_progress:
+            until.assert_(
+                operation_successful, operation_progress, tries=20, interval=0.5
+            )
 
-        until.assert_(
-            operation_successful, self._client.plugins, location, tries=20, interval=0.5
-        )
-
-        location = self._client.plugins.install(PLUGIN_TO_INSTALL)
-
-        until.assert_(
-            operation_successful, self._client.plugins, location, tries=20, interval=0.5
-        )
+        result = self._client.plugins.install(PLUGIN_TO_INSTALL)
+        with fixtures.OperationResource(self._client.plugins, result) as operation_progress:
+            until.assert_(
+                operation_successful, operation_progress, tries=20, interval=0.5
+            )
 
         self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
 
@@ -76,9 +76,10 @@ class TestPlugins(BaseIntegrationTest):
 
     def test_update(self):
         location = self._client.plugins.update()
-        until.assert_(
-            operation_successful, self._client.plugins, location, tries=10, timeout=10
-        )
+        with fixtures.OperationResource(self._client.plugins, location) as operation_progress:
+            until.assert_(
+                operation_successful, operation_progress, tries=10, timeout=10
+            )
 
     def test_get(self):
         with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
@@ -107,6 +108,7 @@ class TestPlugins(BaseIntegrationTest):
             results = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)['pkgs']
             for package in results:
                 location = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)
-                until.assert_(
-                    operation_successful, self._client.plugins, location, tries=10
-                )
+                with fixtures.OperationResource(self._client.plugins, location) as operation_progress:
+                    until.assert_(
+                        operation_successful, operation_progress, tries=10
+                    )
