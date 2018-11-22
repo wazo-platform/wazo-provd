@@ -65,3 +65,20 @@ class OperationResource(object):
     def __exit__(self, type, value, traceback):
         if self._delete_on_exit:
             self._operation.delete()
+
+
+class Configuration(object):
+
+    def __init__(self, client, delete_on_exit=True):
+        self._client = client
+        self._config = None
+        self._delete_on_exit = delete_on_exit
+
+    def __enter__(self):
+        config = self._client.configs.autocreate()
+        self._config = self._client.configs.get(config['id'])['config']
+        return self._config
+
+    def __exit__(self, type, value, traceback):
+        if self._delete_on_exit:
+            self._client.configs.delete(self._config['id'])
