@@ -1,0 +1,1 @@
+{"X_type":"device","label":"Default config device","parent_ids":[],"deletable":false,"raw_config":{"ntp_ip":"127.0.0.1","user_password":"aZp7chavVbm9rvLL","admin_username":"admin","user_username":"user","ntp_enabled":true,"admin_password":"F1jWSUfT0Q6fexcS","sip_dtmf_mode":"SIP-INFO"},"id":"defaultconfigdevice"}

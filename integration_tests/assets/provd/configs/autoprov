@@ -1,0 +1,1 @@
+{"X_type":"internal","parent_ids":["base","defaultconfigdevice"],"role":"autocreate","deletable":false,"raw_config":{"sip_lines":{"1":{"username":"anonymous","display_name":"Autoprov","number":"autoprov","registrar_ip":"127.0.0.1","proxy_ip":"127.0.0.1","password":"autoprov"}},"sccp_call_managers":{"1":{"ip":"127.0.0.1"}}},"id":"autoprov"}
