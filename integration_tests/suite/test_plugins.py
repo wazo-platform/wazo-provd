@@ -38,14 +38,12 @@ class TestPlugins(BaseIntegrationTest):
         pass
 
     def test_install(self):
-        result = self._client.plugins.update()
-        with fixtures.OperationResource(result) as operation_progress:
+        with self._client.plugins.update() as operation_progress:
             until.assert_(
                 operation_successful, operation_progress, tries=20, interval=0.5
             )
 
-        result = self._client.plugins.install(PLUGIN_TO_INSTALL)
-        with fixtures.OperationResource(result) as operation_progress:
+        with self._client.plugins.install(PLUGIN_TO_INSTALL) as operation_progress:
             until.assert_(
                 operation_successful, operation_progress, tries=20, interval=0.5
             )
@@ -74,8 +72,7 @@ class TestPlugins(BaseIntegrationTest):
         assert_that(result, has_key('pkgs'))
 
     def test_update(self):
-        progress = self._client.plugins.update()
-        with fixtures.OperationResource(progress) as operation_progress:
+        with self._client.plugins.update() as operation_progress:
             until.assert_(
                 operation_successful, operation_progress, tries=10, timeout=10
             )
@@ -105,8 +102,7 @@ class TestPlugins(BaseIntegrationTest):
         with fixtures.Plugin(self._client):
             results = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)['pkgs']
             for package in results:
-                progress = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)
-                with fixtures.OperationResource(progress) as operation_progress:
+                with self._client.plugins.install_package(PLUGIN_TO_INSTALL, package) as progress:
                     until.assert_(
-                        operation_successful, operation_progress, tries=10
+                        operation_successful, progress, tries=10
                     )

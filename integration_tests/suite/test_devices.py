@@ -85,8 +85,7 @@ class TestDevices(BaseIntegrationTest):
     def test_synchronize(self):
         with fixtures.Plugin(self._client, fixtures.PLUGIN_TO_INSTALL):
             with fixtures.Device(self._client) as device:
-                progress = self._client.devices.synchronize(device['id'])
-                with fixtures.OperationResource(progress) as operation_progress:
+                with self._client.devices.synchronize(device['id']) as operation_progress:
                     until.assert_(
                         operation_successful, operation_progress, tries=20, interval=0.5
                     )

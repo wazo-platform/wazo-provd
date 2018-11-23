@@ -47,13 +47,10 @@ class Plugin(object):
         self._delete_on_exit = delete_on_exit
 
     def __enter__(self):
-        progress = self._client.plugins.update()
-        with OperationResource(progress) as current_operation:
+        with self._client.plugins.update() as current_operation:
             until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
-        progress = self._client.plugins.install(PLUGIN_TO_INSTALL)
-
-        with OperationResource(progress) as current_operation:
+        with self._client.plugins.install(PLUGIN_TO_INSTALL) as current_operation:
             until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
         self._plugin = self._client.plugins.get(PLUGIN_TO_INSTALL)
@@ -62,19 +59,6 @@ class Plugin(object):
     def __exit__(self, type, value, traceback):
         if self._delete_on_exit:
             self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
-
-
-class OperationResource(object):
-    def __init__(self, progress, delete_on_exit=True):
-        self._operation = progress
-        self._delete_on_exit = delete_on_exit
-
-    def __enter__(self):
-        return self._operation
-
-    def __exit__(self, type, value, traceback):
-        if self._delete_on_exit:
-            self._operation.delete()
 
 
 class Configuration(object):
