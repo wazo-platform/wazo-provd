@@ -10,6 +10,7 @@ from .operation import operation_successful
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 
+
 class Device(object):
 
     def __init__(self, client, delete_on_exit=True):
@@ -93,7 +94,7 @@ class Configuration(object):
             'raw_config': {
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
-                'ntp_enabled': True
+                'ntp_enabled': True,
             }
         }
         result = self._client.configs.create(config)

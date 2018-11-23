@@ -68,7 +68,7 @@ class TestConfigs(BaseIntegrationTest):
             'raw_config': {
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
-                'ntp_enabled': True
+                'ntp_enabled': True,
             }
         }
         result = self._client.configs.create(config)
@@ -83,7 +83,7 @@ class TestConfigs(BaseIntegrationTest):
             'raw_config': {
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
-                'ntp_enabled': True
+                'ntp_enabled': True,
             }
         }
         assert_that(
