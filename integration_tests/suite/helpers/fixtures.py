@@ -17,7 +17,19 @@ class Device(object):
         self._delete_on_exit = delete_on_exit
 
     def __enter__(self):
-        device = self._client.devices.create({})
+        config = {
+            'config': 'defaultconfigdevice',
+            'configured': True,
+            'description': 'Test device',
+            'id': 'testdevice1',
+            'ip': '10.0.0.2',
+            'mac': '00:11:22:33:44:55',
+            'model': 'testdevice',
+            'plugin': 'test-plugin',
+            'vendor': 'test',
+            'version': '1.0',
+        }
+        device = self._client.devices.create(config)
         self._device = self._client.devices.get(device['id'])['device']
         return self._device
 
