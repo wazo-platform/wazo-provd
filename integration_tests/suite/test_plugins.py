@@ -59,7 +59,7 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_uninstall(self):
-        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL, False):
+        with fixtures.Plugin(self._client, delete_on_exit=False):
             self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
             assert_that(
                 self._client.plugins.list_installed()['pkgs'], not_(has_key(PLUGIN_TO_INSTALL))
@@ -81,8 +81,7 @@ class TestPlugins(BaseIntegrationTest):
             )
 
     def test_get(self):
-        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
-            result = self._client.plugins.get(PLUGIN_TO_INSTALL)
+        with fixtures.Plugin(self._client) as result:
             assert_that(result, has_key('plugin_info'))
             assert_that(result['plugin_info'], has_key('version'))
 
@@ -93,17 +92,17 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_get_packages_installed(self):
-        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
+        with fixtures.Plugin(self._client):
             result = self._client.plugins.get_packages_installed(PLUGIN_TO_INSTALL)
             assert_that(result, has_key('pkgs'))
 
     def test_get_packages_installable(self):
-        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
-            result = self._client.plugins.get_packages_installed(PLUGIN_TO_INSTALL)
+        with fixtures.Plugin(self._client):
+            result = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)
             assert_that(result, has_key('pkgs'))
 
     def test_install_package(self):
-        with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
+        with fixtures.Plugin(self._client):
             results = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)['pkgs']
             for package in results:
                 progress = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)

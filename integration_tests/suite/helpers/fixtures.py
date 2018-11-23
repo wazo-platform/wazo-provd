@@ -41,9 +41,8 @@ class Device(object):
 
 
 class Plugin(object):
-    def __init__(self, client, plugin_name, delete_on_exit=True):
+    def __init__(self, client, delete_on_exit=True):
         self._client = client
-        self._plugin_name = plugin_name
         self._plugin = None
         self._delete_on_exit = delete_on_exit
 
@@ -52,17 +51,17 @@ class Plugin(object):
         with OperationResource(progress) as current_operation:
             until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
-        progress = self._client.plugins.install(self._plugin_name)
+        progress = self._client.plugins.install(PLUGIN_TO_INSTALL)
 
         with OperationResource(progress) as current_operation:
             until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
-        self._plugin = self._client.plugins.get(self._plugin_name)['plugin_info']
+        self._plugin = self._client.plugins.get(PLUGIN_TO_INSTALL)
         return self._plugin
 
     def __exit__(self, type, value, traceback):
         if self._delete_on_exit:
-            self._client.plugins.uninstall(self._plugin_name)
+            self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
 
 
 class OperationResource(object):
