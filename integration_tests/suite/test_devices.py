@@ -12,12 +12,14 @@ from hamcrest import (
     is_not,
     raises,
 )
+from xivo_test_helpers import until
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
 from .helpers.base import BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
+from .helpers.operation import operation_successful
 
 
 class TestDevices(BaseIntegrationTest):
@@ -81,8 +83,13 @@ class TestDevices(BaseIntegrationTest):
             )
 
     def test_synchronize(self):
-        with fixtures.Device(self._client) as device:
-            self._client.devices.synchronize(device['id'])
+        with fixtures.Plugin(self._client, fixtures.PLUGIN_TO_INSTALL):
+            with fixtures.Device(self._client) as device:
+                progress = self._client.devices.synchronize(device['id'])
+                with fixtures.OperationResource(progress) as operation_progress:
+                    until.assert_(
+                        operation_successful, operation_progress, tries=20, interval=0.5
+                    )
 
     def test_get(self):
         with fixtures.Device(self._client) as device:
