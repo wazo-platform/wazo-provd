@@ -34,13 +34,13 @@ class Plugin(object):
         self._delete_on_exit = delete_on_exit
 
     def __enter__(self):
-        location = self._client.plugins.update()
-        with OperationResource(self._client.plugins, location) as current_operation:
+        progress = self._client.plugins.update()
+        with OperationResource(progress) as current_operation:
             until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
-        location = self._client.plugins.install(self._plugin_name)
+        progress = self._client.plugins.install(self._plugin_name)
 
-        with OperationResource(self._client.plugins, location) as current_operation:
+        with OperationResource(progress) as current_operation:
             until.assert_(operation_successful, current_operation, tries=20, interval=0.5)
 
         self._plugin = self._client.plugins.get(self._plugin_name)['plugin_info']
@@ -52,14 +52,11 @@ class Plugin(object):
 
 
 class OperationResource(object):
-    def __init__(self, client, location, delete_on_exit=True):
-        self._client = client
-        self._location = location
-        self._operation = None
+    def __init__(self, progress, delete_on_exit=True):
+        self._operation = progress
         self._delete_on_exit = delete_on_exit
 
     def __enter__(self):
-        self._operation = OperationInProgress(self._client, self._location)
         return self._operation
 
     def __exit__(self, type, value, traceback):
@@ -75,8 +72,19 @@ class Configuration(object):
         self._delete_on_exit = delete_on_exit
 
     def __enter__(self):
-        config = self._client.configs.autocreate()
-        self._config = self._client.configs.get(config['id'])['config']
+        config = {
+            'id': 'test1',
+            'parent_ids': ['base'],
+            'deletable': True,
+            'X_type': 'internal',
+            'raw_config': {
+                'ntp_ip': '127.0.0.1',
+                'X_xivo_phonebook_ip': '127.0.0.1',
+                'ntp_enabled': True
+            }
+        }
+        result = self._client.configs.create(config)
+        self._config = self._client.configs.get(result['id'])['config']
         return self._config
 
     def __exit__(self, type, value, traceback):
