@@ -8,6 +8,7 @@ from hamcrest import assert_that, is_
 
 from .operation import operation_successful
 
+PLUGIN_TO_INSTALL = 'test-plugin'
 
 class Device(object):
 
@@ -25,7 +26,7 @@ class Device(object):
             'ip': '10.0.0.2',
             'mac': '00:11:22:33:44:55',
             'model': 'testdevice',
-            'plugin': 'test-plugin',
+            'plugin': PLUGIN_TO_INSTALL,
             'vendor': 'test',
             'version': '1.0',
         }

@@ -18,11 +18,11 @@ from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
+from .helpers.fixtures import PLUGIN_TO_INSTALL
 from .helpers.base import BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
 from .helpers.operation import operation_successful
 
-PLUGIN_TO_INSTALL = 'test-plugin'
 
 class TestPlugins(BaseIntegrationTest):
     asset = 'base'
