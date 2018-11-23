@@ -24,7 +24,6 @@ from .helpers.operation import operation_successful
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 
-
 class TestPlugins(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
@@ -40,13 +39,13 @@ class TestPlugins(BaseIntegrationTest):
 
     def test_install(self):
         result = self._client.plugins.update()
-        with fixtures.OperationResource(self._client.plugins, result) as operation_progress:
+        with fixtures.OperationResource(result) as operation_progress:
             until.assert_(
                 operation_successful, operation_progress, tries=20, interval=0.5
             )
 
         result = self._client.plugins.install(PLUGIN_TO_INSTALL)
-        with fixtures.OperationResource(self._client.plugins, result) as operation_progress:
+        with fixtures.OperationResource(result) as operation_progress:
             until.assert_(
                 operation_successful, operation_progress, tries=20, interval=0.5
             )
@@ -75,8 +74,8 @@ class TestPlugins(BaseIntegrationTest):
         assert_that(result, has_key('pkgs'))
 
     def test_update(self):
-        location = self._client.plugins.update()
-        with fixtures.OperationResource(self._client.plugins, location) as operation_progress:
+        progress = self._client.plugins.update()
+        with fixtures.OperationResource(progress) as operation_progress:
             until.assert_(
                 operation_successful, operation_progress, tries=10, timeout=10
             )
@@ -107,8 +106,8 @@ class TestPlugins(BaseIntegrationTest):
         with fixtures.Plugin(self._client, PLUGIN_TO_INSTALL):
             results = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)['pkgs']
             for package in results:
-                location = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)
-                with fixtures.OperationResource(self._client.plugins, location) as operation_progress:
+                progress = self._client.plugins.install_package(PLUGIN_TO_INSTALL, package)
+                with fixtures.OperationResource(progress) as operation_progress:
                     until.assert_(
                         operation_successful, operation_progress, tries=10
                     )
