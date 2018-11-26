@@ -61,6 +61,8 @@ paths:
       responses:
         204:
           $ref: '#/responses/NoContentResponse'
+        404:
+          $ref: '#/responses/NoSuchResourceError'
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
@@ -1125,7 +1127,7 @@ definitions:
         items:
           type: string
           description: |
-            The option string. The first 3 characters are the option number, the following pairs of dot-separated hexadecimal numbers are the option value characters. 
+            The option string. The first 3 characters are the option number, the following pairs of dot-separated hexadecimal numbers are the option value characters.
   ConfigsObject:
     properties:
       configs:
