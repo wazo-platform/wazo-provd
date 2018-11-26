@@ -65,6 +65,12 @@ class TestPlugins(BaseIntegrationTest):
                 self._client.plugins.list_installed()['pkgs'], not_(has_key(PLUGIN_TO_INSTALL))
             )
 
+    def test_uninstall_errors(self):
+        assert_that(
+            calling(self._client.plugins.uninstall).with_args('invalid_plugin'),
+            raises(ProvdError).matching(has_properties('status_code', 400))
+        )
+
     def test_list_installed(self):
         result = self._client.plugins.list_installed()
         assert_that(result, has_key('pkgs'))
