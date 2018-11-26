@@ -6,9 +6,11 @@ from hamcrest import (
     has_key,
     calling,
     raises,
+    has_properties,
 )
 
 from xivo_test_helpers import until
+from xivo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
@@ -37,7 +39,7 @@ class TestParams(BaseIntegrationTest):
     def test_get_errors(self):
         assert_that(
             calling(self._client.params.get).with_args('invalid_param'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_list(self):
@@ -50,7 +52,7 @@ class TestParams(BaseIntegrationTest):
     def test_update_errors(self):
         assert_that(
             calling(self._client.params.update).with_args('invalid_param', 'invalid_value'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_delete(self):
@@ -59,5 +61,5 @@ class TestParams(BaseIntegrationTest):
     def test_delete_errors(self):
         assert_that(
             calling(self._client.params.delete).with_args('invalid_param'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )

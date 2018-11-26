@@ -11,7 +11,9 @@ from hamcrest import (
     is_,
     is_not,
     raises,
+    has_properties,
 )
+from xivo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
@@ -45,7 +47,7 @@ class TestConfigs(BaseIntegrationTest):
     def test_get_errors(self):
         assert_that(
             calling(self._client.configs.get).with_args('invalid_id'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_get_raw(self):
@@ -56,7 +58,7 @@ class TestConfigs(BaseIntegrationTest):
     def test_get_raw_errors(self):
         assert_that(
             calling(self._client.configs.get_raw).with_args('invalid_id'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_create(self):
@@ -88,7 +90,7 @@ class TestConfigs(BaseIntegrationTest):
         }
         assert_that(
             calling(self._client.configs.create).with_args(invalid_config),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 400))
         )
 
     def test_update(self):
@@ -103,7 +105,11 @@ class TestConfigs(BaseIntegrationTest):
             invalid_config = {}
             assert_that(
                 calling(self._client.configs.update).with_args(config['id'], invalid_config),
-                raises(ProvdError)
+                raises(ProvdError).matching(has_properties('status_code', 500))
+            )
+            assert_that(
+                calling(self._client.configs.update).with_args('invalid_id', invalid_config),
+                raises(ProvdError).matching(has_properties('status_code', 404))
             )
 
     def test_delete(self):

@@ -5,6 +5,7 @@ from hamcrest import (
     assert_that,
     has_key,
     has_entry,
+    has_properties,
     is_,
     equal_to,
     calling,
@@ -14,6 +15,7 @@ from hamcrest import (
     empty,
 )
 from xivo_test_helpers import until
+from xivo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
@@ -53,7 +55,7 @@ class TestPlugins(BaseIntegrationTest):
     def test_install_errors(self):
         assert_that(
             calling(self._client.plugins.install).with_args('invalid'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 400))
         )
 
     def test_uninstall(self):
@@ -85,7 +87,7 @@ class TestPlugins(BaseIntegrationTest):
     def test_get_errors(self):
         assert_that(
             calling(self._client.plugins.get).with_args('invalid_plugin'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_get_packages_installed(self):

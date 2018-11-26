@@ -11,8 +11,10 @@ from hamcrest import (
     is_,
     is_not,
     raises,
+    has_properties,
 )
 from xivo_test_helpers import until
+from xivo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
@@ -52,11 +54,11 @@ class TestDevices(BaseIntegrationTest):
     def test_add_errors(self):
         assert_that(
             calling(self._add_device).with_args('10.0.1.xx', '00:11:22:33:44:55'),
-            raises(ProvdError, pattern='normalized')
+            raises(ProvdError).matching(has_properties('status_code', 400))
         )
         assert_that(
             calling(self._add_device).with_args('10.0.1.1', '00:11:22:33:44:55', id_='*&!"/invalid _'),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 400))
         )
 
     def test_update(self):
@@ -73,13 +75,13 @@ class TestDevices(BaseIntegrationTest):
                 calling(self._client.devices.update).with_args(
                     {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
                 ),
-                raises(ProvdError, pattern='resource')
+                raises(ProvdError).matching(has_properties('status_code', 404))
             )
             assert_that(
                 calling(self._client.devices.update).with_args(
                     {'id': device['id'], 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}
                 ),
-                raises(ProvdError, pattern='normalized')
+                raises(ProvdError).matching(has_properties('status_code', 500))
             )
 
     def test_synchronize(self):
@@ -98,7 +100,7 @@ class TestDevices(BaseIntegrationTest):
     def test_get_errors(self):
         assert_that(
             calling(self._client.devices.get).with_args('unknown_id'),
-            raises(ProvdError, pattern='resource')
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_delete(self):
@@ -106,13 +108,13 @@ class TestDevices(BaseIntegrationTest):
             self._client.devices.delete(device['id'])
             assert_that(
                 calling(self._client.devices.get).with_args(device['id']),
-                raises(ProvdError, pattern='resource')
+                raises(ProvdError).matching(has_properties('status_code', 404))
             )
 
     def test_delete_errors(self):
         assert_that(
             calling(self._client.devices.delete).with_args('unknown_id'),
-            raises(ProvdError, pattern='resource')
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_reconfigure(self):
@@ -122,7 +124,7 @@ class TestDevices(BaseIntegrationTest):
     def test_reconfigure_errors(self):
         assert_that(
             calling(self._client.devices.reconfigure).with_args('unknown_id'),
-            raises(ProvdError, pattern='invalid')
+            raises(ProvdError).matching(has_properties('status_code', 400))
         )
 
     def test_dhcp(self):
@@ -139,5 +141,5 @@ class TestDevices(BaseIntegrationTest):
             calling(self._client.devices.create_from_dhcp).with_args(
                 {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}
             ),
-            raises(ProvdError)
+            raises(ProvdError).matching(has_properties('status_code', 400))
         )
