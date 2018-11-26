@@ -3,5 +3,6 @@ services:
   sync:
     depends_on:
       - provd
+      - pluginserver
     environment:
-      TARGETS: "provd:8666"
+      TARGETS: "provd:8666 pluginserver:8080"
