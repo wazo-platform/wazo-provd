@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2018 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import functools
@@ -16,7 +16,7 @@ def numeric_id_generator(prefix='', start=0):
 def parse_accept(value):
     """Take the value of an Accept header and return a list of the acceptable
     mime type.
-    
+
     """
     # Take q params into account
     tokens = [token.strip() for token in value.split(',')]
@@ -26,7 +26,7 @@ def parse_accept(value):
 def accept_mime_type(mime_type, request):
     """Return true if mime_type is an acceptable mime-mime_type for the response
     for the request.
-    
+
     """
     if request.getHeader('Accept') is None:
         return True
@@ -43,7 +43,7 @@ def accept_mime_type(mime_type, request):
 def accept(mime_types):
     """Decorator to restrict the MIME type a Resource render method
     can accept, i.e. check the Accept header value.
-    
+
     """
     def in_accept(fun):
         @functools.wraps(fun)

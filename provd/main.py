@@ -17,7 +17,7 @@ from provd.servers.tftp.proto import TFTPProtocol
 from provd.servers.http_site import Site, Resource
 from provd.persist.json_backend import JsonDatabaseFactory
 from provd.rest.server.server import new_server_resource, \
-    new_restricted_server_resource
+    new_restricted_server_resource, new_authenticated_server_resource
 from twisted.application.service import IServiceMaker, Service, MultiService
 from twisted.application import internet
 from twisted.internet import ssl
@@ -26,7 +26,10 @@ from twisted.python import log
 from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
+from xivo_auth_client import Client
 from zope.interface.declarations import implements
+
+from provd.rest.server import auth
 
 logger = logging.getLogger(__name__)
 
@@ -213,9 +216,17 @@ class RemoteConfigurationService(Service):
         app = self._prov_service.app
         dhcp_request_processing_service = self._dhcp_process_service.dhcp_request_processing_service
         if self._config['general.rest_authentication']:
-            credentials = (self._config['general.rest_username'],
-                           self._config['general.rest_password'])
-            server_resource = new_restricted_server_resource(app, dhcp_request_processing_service, credentials)
+            auth_address = self._config['general.wazo_auth_ip']
+            auth_port = self._config['general.wazo_auth_port']
+            verify_certificate = self._config.get('wazo_auth_verify_certificate', False)
+            auth.set_auth_config({
+                'host': auth_address,
+                'port': auth_port,
+                'verify_certificate': verify_certificate,
+            })
+            server_resource = new_authenticated_server_resource(
+                app, dhcp_request_processing_service
+            )
             logger.info('Authentication is required for REST API')
         else:
             server_resource = new_server_resource(app, dhcp_request_processing_service)

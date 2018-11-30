@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2016 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 """Provisioning server configuration module.
@@ -105,9 +105,10 @@ class DefaultConfigSource(object):
         ('general.tftp_port', '69'),
         ('general.rest_ip', '127.0.0.1'),
         ('general.rest_port', '8666'),
-        ('general.rest_username', 'admin'),
-        ('general.rest_password', 'admin'),
         ('general.rest_authentication', 'False'),
+        ('general.wazo_auth_ip', '127.0.0.1'),
+        ('general.wazo_auth_port', '9497'),
+        ('general.wazo_auth_verify_certificate', 'False'),
         ('general.rest_ssl', 'False'),
         ('general.rest_ssl_certfile', '/etc/xivo/provd/keys/cert.pem'),
         ('general.rest_ssl_keyfile', '/etc/xivo/provd/keys/key.pem'),
@@ -325,9 +326,10 @@ _PARAMS_DEFINITION = [
     ('general.tftp_port', (_port_number, True)),
     ('general.rest_ip', (_ip_address_or_star, True)),
     ('general.rest_port', (_port_number, True)),
-    ('general.rest_username', (str, True)),
-    ('general.rest_password', (str, True)),
     ('general.rest_authentication', (_bool, True)),
+    ('general.wazo_auth_ip', (str, True)),
+    ('general.wazo_auth_port', (int, True)),
+    ('general.wazo_auth_verify_certificate', (_bool, False)),
     ('general.rest_ssl', (_bool, True)),
     ('general.verbose', (_bool, True)),
     ('general.sync_service_type', (str, True)),

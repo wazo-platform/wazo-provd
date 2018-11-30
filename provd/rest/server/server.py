@@ -31,9 +31,14 @@ from provd.util import norm_mac, norm_ip
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.portal import Portal
 from twisted.web import http
-from twisted.web.guard import DigestCredentialFactory, HTTPAuthSessionWrapper
+from twisted.web.guard import (
+    DigestCredentialFactory,
+    HTTPAuthSessionWrapper,
+)
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
+
+from . import auth
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +52,6 @@ REL_UPDATE = u'srv.install.update'
 REL_CONFIGURE_SRV = u'srv.configure'
 REL_CONFIGURE_PARAM = u'srv.configure.param'
 REALM_NAME = 'provd server'
-
 
 _PPRINT = False
 if _PPRINT:
@@ -122,12 +126,12 @@ def deferred_respond_no_resource(request, response_code=http.NOT_FOUND):
 def json_response_entity(fun):
     """To use on resource render's method that respond with a PROV_MIME_TYPE
     entity.
-    
+
     This check that the request is ready to accept such entity, and it will
     set the Content-Type of the response before handling the request to the
     wrapped function. That way, it's still possible for the render function
     to respond with a different content.
-    
+
     """
     @functools.wraps(fun)
     def aux(self, request):
@@ -144,10 +148,10 @@ def json_response_entity(fun):
 def json_request_entity(fun):
     """To use on resource render's method that receive a PROV_MIME_TYPE
     entity.
-    
+
     The entity will be deserialized and passed as a third argument to the
     render function.
-    
+
     """
     @functools.wraps(fun)
     def aux(self, request):
@@ -165,6 +169,22 @@ def json_request_entity(fun):
             else:
                 return fun(self, request, content)
     return aux
+
+
+def required_acl(acl):
+    def decorator(fun):
+        @functools.wraps(fun)
+        def aux(self, request):
+            if auth.enabled:
+                token = request.getHeader('X-Auth-Token')
+                if auth.client().token.is_valid(token, required_acl=acl):
+                    return fun(self, request)
+                else:
+                    return respond_error(request, 'Unauthorized', response_code=http.UNAUTHORIZED)
+            else:
+                return fun(self, request)
+        return aux
+    return decorator
 
 
 def _add_selector_parameter(args, result):
@@ -279,15 +299,15 @@ class IntermediaryResource(Resource):
     def __init__(self, links):
         """
         links -- a list of tuple (rel, path, resource)
-        
+
         For example:
         links = [(u'foo', 'foo_sub_uri', server.Data('text/plain', 'foo'),
                  (u'bar', 'bar_sub_uri', server.Data('text/plain', 'bar')]
         IntermediaryResource(links)
-         
+
         The difference between this resource and a plain Resource is that a
         GET request will yield something.
-        
+
         """
         Resource.__init__(self)
         self._links = links
@@ -304,6 +324,7 @@ class IntermediaryResource(Resource):
             links.append({u'rel': rel, u'href': href})
         return links
 
+    @required_acl('provd.resource.read')
     @json_response_entity
     def render_GET(self, request):
         content = {u'links': self._build_links(request.path)}
@@ -330,11 +351,13 @@ class OperationInProgressResource(Resource):
         self._oip = oip
         self._on_delete = on_delete
 
+    @required_acl('provd.operation.read')
     @json_response_entity
     def render_GET(self, request):
         content = {u'status': format_oip(self._oip)}
         return json_dumps(content)
 
+    @required_acl('provd.operation.delete')
     def render_DELETE(self, request):
         if self._on_delete is not None:
             self._on_delete()
@@ -369,6 +392,7 @@ class ConfigureServiceResource(Resource):
         # in last case, return the non-localized description
         return cfg_srv.description
 
+    @required_acl('provd.configureservice.read')
     @json_response_entity
     def render_GET(self, request):
         description_list = self._get_localized_description_list()
@@ -392,6 +416,7 @@ class ConfigureParameterResource(Resource):
         self._cfg_srv = cfg_srv
         self._key = key
 
+    @required_acl('provd.parameter.read')
     @json_response_entity
     def render_GET(self, request):
         try:
@@ -403,6 +428,7 @@ class ConfigureParameterResource(Resource):
             content = {u'param': {u'value': value}}
             return json_dumps(content)
 
+    @required_acl('provd.parameter.update')
     @json_request_entity
     def render_PUT(self, request, content):
         try:
@@ -458,6 +484,7 @@ class InstallResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
+    @required_acl('provd.install.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -482,6 +509,7 @@ class UninstallResource(Resource):
         Resource.__init__(self)
         self._install_srv = install_srv
 
+    @required_acl('provd.uninstall.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -502,6 +530,7 @@ class UpgradeResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
+    @required_acl('provd.upgrade.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -526,6 +555,7 @@ class UpdateResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
+    @required_acl('provd.update.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -547,6 +577,7 @@ class _ListInstallxxxxResource(Resource):
         self._install_srv = install_srv
         self._method_name = method_name
 
+    @required_acl('provd.install.read')
     @json_response_entity
     def render_GET(self, request):
         fun = getattr(self._install_srv, self._method_name)
@@ -581,6 +612,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._app = app
 
+    @required_acl('provd.dev_mgr.synchronize.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -600,6 +632,7 @@ class DeviceReconfigureResource(Resource):
         Resource.__init__(self)
         self._app = app
 
+    @required_acl('provd.dev_mgr.reconfigure.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -631,6 +664,7 @@ class DeviceDHCPInfoResource(Resource):
             options[code] = value
         return options
 
+    @required_acl('provd.dev_mgr.dhcpinfo.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -664,6 +698,7 @@ class DevicesResource(Resource):
     def getChild(self, path, request):
         return DeviceResource(self._app, path)
 
+    @required_acl('provd.dev_mgr.devices.read')
     @json_response_entity
     def render_GET(self, request):
         find_arguments = find_arguments_from_request(request)
@@ -676,6 +711,7 @@ class DevicesResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
+    @required_acl('provd.dev_mgr.devices.create')
     @json_request_entity
     def render_POST(self, request, content):
         # XXX praise KeyError
@@ -698,6 +734,7 @@ class DeviceResource(Resource):
         self._app = app
         self._id = id
 
+    @required_acl('provd.dev_mgr.devices.#.read')
     @json_response_entity
     def render_GET(self, request):
         def on_callback(device):
@@ -712,6 +749,7 @@ class DeviceResource(Resource):
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
+    @required_acl('provd.dev_mgr.devices.#.update')
     @json_request_entity
     def render_PUT(self, request, content):
         # XXX praise KeyError
@@ -729,6 +767,7 @@ class DeviceResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
+    @required_acl('provd.dev_mgr.devices.#.delete')
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
@@ -753,6 +792,7 @@ class AutocreateConfigResource(Resource):
         Resource.__init__(self)
         self._app = app
 
+    @required_acl('provd.cfg_mgr.autocreate.create')
     @json_request_entity
     def render_POST(self, request, content):
         def on_callback(id):
@@ -775,6 +815,7 @@ class ConfigsResource(Resource):
     def getChild(self, path, request):
         return ConfigResource(self._app, path)
 
+    @required_acl('provd.cfg_mgr.configs.read')
     @json_response_entity
     def render_GET(self, request):
         find_arguments = find_arguments_from_request(request)
@@ -787,6 +828,7 @@ class ConfigsResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
+    @required_acl('provd.cfg_mgr.configs.create')
     @json_request_entity
     def render_POST(self, request, content):
         # XXX praise KeyError
@@ -815,6 +857,7 @@ class ConfigResource(Resource):
         else:
             return Resource.getChild(self, path, request)
 
+    @required_acl('provd.cfg_mfr.configs.#.read')
     @json_response_entity
     def render_GET(self, request):
         def on_callback(config):
@@ -829,6 +872,7 @@ class ConfigResource(Resource):
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
+    @required_acl('provd.cfg_mgr.configs.#.update')
     @json_request_entity
     def render_PUT(self, request, content):
         # XXX praise KeyError
@@ -846,6 +890,7 @@ class ConfigResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
+    @required_acl('provd.cfg_mgr.configs.#.delete')
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
@@ -864,6 +909,7 @@ class RawConfigResource(Resource):
         self._app = app
         self._id = id
 
+    @required_acl('provd.cfg_mgr.configs.#.raw.read')
     @json_response_entity
     def render_GET(self, request):
         def on_callback(raw_config):
@@ -934,6 +980,7 @@ class PluginManagerUninstallResource(Resource):
         Resource.__init__(self)
         self._app = app
 
+    @required_acl('provd.pg_mgr.install.uninstall.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -974,6 +1021,7 @@ class PluginsResource(Resource):
         except KeyError:
             return Resource.getChild(self, path, request)
 
+    @required_acl('provd.pg_mgr.read')
     @json_response_entity
     def render_GET(self, request):
         plugins = {}
@@ -990,6 +1038,7 @@ class PluginReloadResource(Resource):
         Resource.__init__(self)
         self._app = app
 
+    @required_acl('provd.pg_mgr.reload')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -1011,6 +1060,7 @@ class PluginInfoResource(Resource):
         Resource.__init__(self)
         self._plugin = plugin
 
+    @required_acl('provd.pg_mgr.plugins.#.info')
     @json_response_entity
     def render_GET(self, request):
         return json_dumps({u'plugin_info': self._plugin.info()})
@@ -1049,9 +1099,9 @@ def new_restricted_server_resource(app, dhcp_request_processing_service,
                                    credentials, realm_name=REALM_NAME):
     """Create and return a new server resource that will be accessible only
     if the given credentials are present in the HTTP requests.
-    
+
     credentials is a (username, password) tuple.
-    
+
     """
     server_resource = ServerResource(app, dhcp_request_processing_service)
     pwd_checker = InMemoryUsernamePasswordDatabaseDontUse()
@@ -1061,3 +1111,12 @@ def new_restricted_server_resource(app, dhcp_request_processing_service,
     credentialFactory = DigestCredentialFactory('MD5', realm_name)
     wrapper = HTTPAuthSessionWrapper(portal, [credentialFactory])
     return wrapper
+
+
+def new_authenticated_server_resource(app, dhcp_request_processing_service, realm_name=REALM_NAME):
+    """Create and return a new server resource that will be accessible only
+    by authenticated users.
+    """
+    server_resource = ServerResource(app, dhcp_request_processing_service)
+    auth.enabled = True
+    return server_resource

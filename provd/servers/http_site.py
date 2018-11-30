@@ -15,6 +15,9 @@ from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
+from twisted.web.resource import ErrorPage
+
+from provd.rest.server import auth
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +46,7 @@ class Request(server.Request):
 
 class Resource(resource.Resource):
     def render_OPTIONS(self, request):
-        return b''
+        return ''
 
 
 class Site(server.Site):
@@ -58,6 +61,7 @@ class Site(server.Site):
         getChildWithDefault on each resource it finds for a path element,
         stopping when it hits an element where isLeaf is true.
         """
+        corsify_request(request)
         request.site = self
         # Sitepath is used to determine cookie names between distributed
         # servers and disconnected sites.
@@ -71,6 +75,12 @@ def getChildForRequest(resource, request):
     """
     Traverse resource tree to find who will handle the request.
     """
+    corsify_request(request)
+    if auth.enabled:
+        if not auth.client().token.is_valid(request.getHeader('X-Auth-Token')):
+            request.setResponseCode(http.UNAUTHORIZED)
+            request.setHeader('Content-Type', 'text/plain; charset=ascii')
+            resource = ErrorPage(status=401, brief='Unauthorized', detail=None)
     while request.postpath and not resource.isLeaf:
         pathElement = request.postpath.pop(0)
         request.prepath.append(pathElement)
