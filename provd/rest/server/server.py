@@ -97,6 +97,12 @@ def respond_no_resource(request, response_code=http.NOT_FOUND):
     return 'No such resource'
 
 
+def respond_unauthorized(request):
+    request.setResponseCode(401)
+    request.write('Unauthorized')
+    request.finish()
+
+
 def deferred_respond_no_content(request, response_code=http.NO_CONTENT):
     request.setResponseCode(response_code)
     request.responseHeaders.removeHeader('Content-Type')
@@ -180,7 +186,7 @@ def required_acl(acl):
                 if auth.client().token.is_valid(token, required_acl=acl):
                     return fun(self, request)
                 else:
-                    return respond_error(request, 'Unauthorized', response_code=http.UNAUTHORIZED)
+                    return respond_unauthorized(request)
             else:
                 return fun(self, request)
         return aux
