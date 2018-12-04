@@ -15,7 +15,7 @@ from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
-from twisted.web.resource import ErrorPage
+from twisted.web import util
 
 from provd.rest.server import auth
 
@@ -39,12 +39,25 @@ class Request(server.Request):
         # Resource Identification
         self.prepath = []
         self.postpath = map(server.unquote, string.split(self.path[1:], '/'))
-        d = self.site.getResourceFor(self)
-        d.addCallback(self.render)
-        d.addErrback(self.processingFailed)
+
+        # We do not really care about the content if the request is a CORS preflight
+        if self.method == 'OPTIONS':
+            self.finish()
+        else:
+            d = self.site.getResourceFor(self)
+            d.addCallback(self.render)
+            d.addErrback(self.processingFailed)
 
 
 class Resource(resource.Resource):
+    def render(self, request):
+        usual_method = resource.Resource.render(self, request)
+        if auth.enabled:
+            if not auth.client().token.is_valid(self.getHeader('X-Auth-Token')):
+                request.setResponseCode(401)
+                return 'Unauthorized'
+        return usual_method
+
     def render_OPTIONS(self, request):
         return ''
 
@@ -61,7 +74,6 @@ class Site(server.Site):
         getChildWithDefault on each resource it finds for a path element,
         stopping when it hits an element where isLeaf is true.
         """
-        corsify_request(request)
         request.site = self
         # Sitepath is used to determine cookie names between distributed
         # servers and disconnected sites.
@@ -75,12 +87,6 @@ def getChildForRequest(resource, request):
     """
     Traverse resource tree to find who will handle the request.
     """
-    corsify_request(request)
-    if auth.enabled:
-        if not auth.client().token.is_valid(request.getHeader('X-Auth-Token')):
-            request.setResponseCode(http.UNAUTHORIZED)
-            request.setHeader('Content-Type', 'text/plain; charset=ascii')
-            resource = ErrorPage(status=401, brief='Unauthorized', detail=None)
     while request.postpath and not resource.isLeaf:
         pathElement = request.postpath.pop(0)
         request.prepath.append(pathElement)
