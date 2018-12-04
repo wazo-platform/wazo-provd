@@ -7,6 +7,7 @@ from hamcrest import (
     calling,
     raises,
     has_properties,
+    has_entry,
 )
 
 from xivo_test_helpers import until
@@ -40,9 +41,23 @@ class TestParams(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
+    def test_get_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        assert_that(
+            calling(provd.params.get).with_args('locale'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
+
     def test_list(self):
         result = self._client.params.list()
         assert_that(result, has_key('params'))
+
+    def test_list_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        assert_that(
+            calling(provd.params.list),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
 
     def test_update(self):
         self._client.params.update('locale', 'fr_FR')
@@ -53,6 +68,16 @@ class TestParams(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
+    def test_update_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        self._client.params.update('locale', 'en_US')
+        assert_that(
+            calling(provd.params.update).with_args('locale', 'fr_FR'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
+        result = self._client.params.get('locale')['param']
+        assert_that(result, has_entry('value', 'en_US'))
+
     def test_delete(self):
         self._client.params.delete('locale')
 
@@ -60,4 +85,11 @@ class TestParams(BaseIntegrationTest):
         assert_that(
             calling(self._client.params.delete).with_args('invalid_param'),
             raises(ProvdError).matching(has_properties('status_code', 404))
+        )
+
+    def test_delete_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        assert_that(
+            calling(provd.params.delete).with_args('locale'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
         )
