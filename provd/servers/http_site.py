@@ -15,7 +15,6 @@ from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
-from twisted.web import util
 
 from provd.rest.server import auth
 
