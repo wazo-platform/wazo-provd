@@ -14,6 +14,8 @@ case "$1" in
 					$USER
 		fi
 
+		adduser --quiet $USER www-data
+
 		for filename in /var/log/xivo-provd.log \
 		                /var/log/xivo-provd-fail2ban.log; do
 			if [ ! -e $filename ]; then
