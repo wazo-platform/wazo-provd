@@ -21,6 +21,7 @@ from provd.rest.server.server import new_server_resource, \
 from twisted.application.service import IServiceMaker, Service, MultiService
 from twisted.application import internet
 from twisted.internet import ssl
+from twisted.web.resource import Resource as UnsecuredResource
 from twisted.plugin import IPlugin
 from twisted.python import log
 from twisted.python.util import sibpath
@@ -232,7 +233,7 @@ class RemoteConfigurationService(Service):
             server_resource = new_server_resource(app, dhcp_request_processing_service)
             logger.warning('No authentication is required for REST API')
         root_resource = Resource()
-        api_resource = Resource()
+        api_resource = UnsecuredResource()
         api_resource.putChild('api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
         root_resource.putChild('api', api_resource)
         root_resource.putChild('provd', server_resource)

@@ -484,7 +484,7 @@ class InstallResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.install.create')
+    @required_acl('provd.pg_mgr.install.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -509,7 +509,7 @@ class UninstallResource(Resource):
         Resource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.uninstall.create')
+    @required_acl('provd.pg_mgr.uninstall.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -530,7 +530,7 @@ class UpgradeResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.upgrade.create')
+    @required_acl('provd.pg_mgr.upgrade.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -555,7 +555,7 @@ class UpdateResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.update.create')
+    @required_acl('provd.pg_mgr.update.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -577,7 +577,7 @@ class _ListInstallxxxxResource(Resource):
         self._install_srv = install_srv
         self._method_name = method_name
 
-    @required_acl('provd.install.read')
+    @required_acl('provd.pg_mgr.install.read')
     @json_response_entity
     def render_GET(self, request):
         fun = getattr(self._install_srv, self._method_name)
@@ -1038,7 +1038,7 @@ class PluginReloadResource(Resource):
         Resource.__init__(self)
         self._app = app
 
-    @required_acl('provd.pg_mgr.reload')
+    @required_acl('provd.pg_mgr.reload.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -1060,7 +1060,7 @@ class PluginInfoResource(Resource):
         Resource.__init__(self)
         self._plugin = plugin
 
-    @required_acl('provd.pg_mgr.plugins.#.info')
+    @required_acl('provd.pg_mgr.plugins.#.info.read')
     @json_response_entity
     def render_GET(self, request):
         return json_dumps({u'plugin_info': self._plugin.info()})
