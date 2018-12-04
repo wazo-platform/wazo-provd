@@ -5,6 +5,11 @@ services:
     environment:
       TIMEOUT: "${INTEGRATION_TEST_TIMEOUT}"
 
+  auth:
+    image: "wazopbx/xivo-auth-mock"
+    ports:
+      - "9497"
+
   provd:
     image: wazopbx/xivo-provd
     volumes:
