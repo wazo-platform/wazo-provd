@@ -59,6 +59,15 @@ class TestDevices(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 400))
         )
 
+    def test_add_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        assert_that(
+            calling(provd.devices.create).with_args(
+                {'id': '*&!"/invalid _', 'ip': '10.0.1.xx', 'mac': '00:11:22:33:44:55'}
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
+
     def test_update(self):
         with fixtures.Device(self._client) as device:
             new_info = {'id': device['id'], 'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
@@ -82,6 +91,16 @@ class TestDevices(BaseIntegrationTest):
                 raises(ProvdError).matching(has_properties('status_code', 500))
             )
 
+    def test_update_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        with fixtures.Device(self._client):
+            assert_that(
+                calling(provd.devices.update).with_args(
+                    {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
+                ),
+                raises(ProvdError).matching(has_properties('status_code', 401))
+            )
+
     def test_synchronize(self):
         with fixtures.Plugin(self._client, fixtures.PLUGIN_TO_INSTALL):
             with fixtures.Device(self._client) as device:
@@ -89,6 +108,18 @@ class TestDevices(BaseIntegrationTest):
                     until.assert_(
                         operation_successful, operation_progress, tries=20, interval=0.5
                     )
+
+    def test_synchronize_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        with fixtures.Device(self._client) as device:
+            assert_that(
+                calling(provd.devices.synchronize).with_args(device['id']),
+                raises(ProvdError).matching(has_properties('status_code', 401))
+            )
+        assert_that(
+            calling(provd.devices.synchronize).with_args('device_id'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
 
     def test_get(self):
         with fixtures.Device(self._client) as device:
@@ -99,6 +130,18 @@ class TestDevices(BaseIntegrationTest):
         assert_that(
             calling(self._client.devices.get).with_args('unknown_id'),
             raises(ProvdError).matching(has_properties('status_code', 404))
+        )
+
+    def test_get_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        with fixtures.Device(self._client) as device:
+            assert_that(
+                calling(provd.devices.get).with_args(device['id']),
+                raises(ProvdError).matching(has_properties('status_code', 401))
+            )
+        assert_that(
+            calling(provd.devices.get).with_args('unknown_id'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
         )
 
     def test_delete(self):
@@ -115,6 +158,14 @@ class TestDevices(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
+    def test_delete_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        with fixtures.Device(self._client) as device:
+            assert_that(
+                calling(provd.devices.delete).with_args(device['id']),
+                raises(ProvdError).matching(has_properties('status_code', 401))
+            )
+
     def test_reconfigure(self):
         with fixtures.Device(self._client) as device:
             self._client.devices.reconfigure(device['id'])
@@ -123,6 +174,18 @@ class TestDevices(BaseIntegrationTest):
         assert_that(
             calling(self._client.devices.reconfigure).with_args('unknown_id'),
             raises(ProvdError).matching(has_properties('status_code', 400))
+        )
+
+    def test_reconfigure_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        with fixtures.Device(self._client) as device:
+            assert_that(
+                calling(provd.devices.reconfigure).with_args(device['id']),
+                raises(ProvdError).matching(has_properties('status_code', 401))
+            )
+        assert_that(
+            calling(provd.devices.reconfigure).with_args('unknown_id'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
         )
 
     def test_dhcp(self):
@@ -140,4 +203,13 @@ class TestDevices(BaseIntegrationTest):
                 {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}
             ),
             raises(ProvdError).matching(has_properties('status_code', 400))
+        )
+
+    def test_dhcp_error_invalid_token(self):
+        provd = self.make_provd('invalid-token')
+        assert_that(
+            calling(provd.devices.create_from_dhcp).with_args(
+                {'ip': '10.10.0.1', 'mac': 'ab:bc:cd:de:ff:01', 'op': 'commit'}
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 401))
         )
