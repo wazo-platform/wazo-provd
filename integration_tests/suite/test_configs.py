@@ -19,6 +19,7 @@ from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
 from .helpers.base import BaseIntegrationTest
+from .helpers.base import VALID_TOKEN
 from .helpers.wait_strategy import NoWaitStrategy
 
 
@@ -27,10 +28,7 @@ class TestConfigs(BaseIntegrationTest):
     wait_strategy = NoWaitStrategy()
 
     def setUp(self):
-        self._client = Client(
-            'localhost', https=False,
-            port=self.service_port(8666, 'provd'), prefix='/provd'
-        )
+        self._client = self.make_provd(VALID_TOKEN)
 
     def tearDown(self):
         pass
