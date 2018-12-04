@@ -16,8 +16,7 @@ from provd.devices import pgasso
 from provd.servers.tftp.proto import TFTPProtocol
 from provd.servers.http_site import Site, Resource
 from provd.persist.json_backend import JsonDatabaseFactory
-from provd.rest.server.server import new_server_resource, \
-    new_restricted_server_resource, new_authenticated_server_resource
+from provd.rest.server.server import new_server_resource, new_authenticated_server_resource
 from twisted.application.service import IServiceMaker, Service, MultiService
 from twisted.application import internet
 from twisted.internet import ssl

@@ -53,7 +53,7 @@ class Resource(resource.Resource):
     def render(self, request):
         usual_method = resource.Resource.render(self, request)
         if auth.enabled:
-            if not auth.client().token.is_valid(self.getHeader('X-Auth-Token')):
+            if not auth.client().token.is_valid(request.getHeader('X-Auth-Token')):
                 request.setResponseCode(401)
                 return 'Unauthorized'
         return usual_method

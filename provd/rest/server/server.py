@@ -28,14 +28,7 @@ from provd.servers.http_site import Resource
 from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.services import InvalidParameterError
 from provd.util import norm_mac, norm_ip
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.portal import Portal
 from twisted.web import http
-from twisted.web.guard import (
-    DigestCredentialFactory,
-    HTTPAuthSessionWrapper,
-)
-from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
 from . import auth
@@ -1086,37 +1079,6 @@ def PluginResource(plugin):
 def new_server_resource(app, dhcp_request_processing_service):
     """Create and return a new server resource."""
     return ServerResource(app, dhcp_request_processing_service)
-
-
-class _SimpleRealm(object):
-    # implements(IRealm)
-
-    def __init__(self, resource):
-        self._resource = resource
-
-    def requestAvatar(self, avatarID, mind, *interfaces):
-        if IResource in interfaces:
-            return IResource, self._resource, lambda: None
-        else:
-            raise NotImplementedError()
-
-
-def new_restricted_server_resource(app, dhcp_request_processing_service,
-                                   credentials, realm_name=REALM_NAME):
-    """Create and return a new server resource that will be accessible only
-    if the given credentials are present in the HTTP requests.
-
-    credentials is a (username, password) tuple.
-
-    """
-    server_resource = ServerResource(app, dhcp_request_processing_service)
-    pwd_checker = InMemoryUsernamePasswordDatabaseDontUse()
-    pwd_checker.addUser(*credentials)
-    realm = _SimpleRealm(server_resource)
-    portal = Portal(realm, [pwd_checker])
-    credentialFactory = DigestCredentialFactory('MD5', realm_name)
-    wrapper = HTTPAuthSessionWrapper(portal, [credentialFactory])
-    return wrapper
 
 
 def new_authenticated_server_resource(app, dhcp_request_processing_service, realm_name=REALM_NAME):
