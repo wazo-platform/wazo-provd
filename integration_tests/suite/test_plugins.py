@@ -135,6 +135,10 @@ class TestPlugins(BaseIntegrationTest):
                 calling(provd.plugins.get).with_args(PLUGIN_TO_INSTALL),
                 raises(ProvdError).matching(has_properties('status_code', 401))
             )
+        assert_that(
+            calling(provd.plugins.get).with_args('unkown_id'),
+            raises(ProvdError).matching(has_properties('status_code', 404))  # should be 401
+        )
 
     def test_get_packages_installed(self):
         with fixtures.Plugin(self._client):
@@ -148,6 +152,10 @@ class TestPlugins(BaseIntegrationTest):
                 calling(provd.plugins.get_packages_installed).with_args(PLUGIN_TO_INSTALL),
                 raises(ProvdError).matching(has_properties('status_code', 401))
             )
+        assert_that(
+            calling(provd.plugins.get_packages_installed).with_args('unknown_id'),
+            raises(ProvdError).matching(has_properties('status_code', 404))  # should be 401
+        )
 
     def test_get_packages_installable(self):
         with fixtures.Plugin(self._client):
