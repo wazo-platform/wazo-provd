@@ -4,13 +4,10 @@
 from hamcrest import (
     assert_that,
     calling,
-    empty,
     equal_to,
     has_entry,
     has_key,
     is_,
-    is_not,
-    raises,
     has_properties,
 )
 from xivo_test_helpers.hamcrest.raises import raises

@@ -5,12 +5,10 @@ from hamcrest import (
     assert_that,
     has_key,
     calling,
-    raises,
     has_properties,
     has_entry,
 )
 
-from xivo_test_helpers import until
 from xivo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
 

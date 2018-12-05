@@ -10,7 +10,6 @@ from hamcrest import (
     has_key,
     is_,
     is_not,
-    raises,
     has_properties,
 )
 from xivo_test_helpers import until
