@@ -14,24 +14,16 @@ from hamcrest import (
     has_properties,
 )
 from xivo_test_helpers.hamcrest.raises import raises
-from wazo_provd_client import Client
 from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
 from .helpers.base import BaseIntegrationTest
-from .helpers.base import VALID_TOKEN
 from .helpers.wait_strategy import NoWaitStrategy
 
 
 class TestConfigs(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
-
-    def setUp(self):
-        self._client = self.make_provd(VALID_TOKEN)
-
-    def tearDown(self):
-        pass
 
     def test_list(self):
         results = self._client.configs.list()

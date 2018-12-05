@@ -17,14 +17,23 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
     service = 'provd'
     wait_strategy = WaitStrategy()
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._client = cls.make_provd(VALID_TOKEN)
+
     def url(self, *parts):
         return 'http://localhost:{port}/provd/{path}'.format(
             port=self.service_port(8666, 'provd'),
             path='/'.join(parts)
         )
 
-    def make_provd(self, token):
+    @classmethod
+    def make_provd(cls, token):
         return Client(
-            'localhost', https=False, token=token,
-            port=self.service_port(8666, 'provd'), prefix='/provd'
+            'localhost',
+            https=False,
+            token=token,
+            port=cls.service_port(8666, 'provd'),
+            prefix='/provd',
         )
