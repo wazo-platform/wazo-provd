@@ -323,19 +323,25 @@ class IntermediaryResource(Resource):
             links.append({u'rel': rel, u'href': href})
         return links
 
-    @required_acl('provd.resource.read')
     @json_response_entity
     def render_GET(self, request):
         content = {u'links': self._build_links(request.path)}
         return json_dumps(content)
 
 
-def ServerResource(app, dhcp_request_processing_service):
-    links = [(u'dev', 'dev_mgr', DeviceManagerResource(app, dhcp_request_processing_service)),
-             (u'cfg', 'cfg_mgr', ConfigManagerResource(app)),
-             (u'pg', 'pg_mgr', PluginManagerResource(app)),
-             (REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(app.configure_service))]
-    return IntermediaryResource(links)
+class ServerResource(IntermediaryResource):
+    def __init__(self, app, dhcp_request_processing_service):
+        links = [
+            (u'dev', 'dev_mgr', DeviceManagerResource(app, dhcp_request_processing_service)),
+            (u'cfg', 'cfg_mgr', ConfigManagerResource(app)),
+            (u'pg', 'pg_mgr', PluginManagerResource(app)),
+            (REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(app.configure_service)),
+        ]
+        IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.serverresource.read')
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
 class OperationInProgressResource(Resource):
@@ -447,16 +453,19 @@ class ConfigureParameterResource(Resource):
                 return respond_no_content(request)
 
 
-def InstallServiceResource(install_srv):
-    links = [(REL_INSTALL, 'install', InstallResource(install_srv)),
-             (REL_UNINSTALL, 'uninstall', UninstallResource(install_srv)),
-             (REL_INSTALLED, 'installed', InstalledResource(install_srv)),
-             (REL_INSTALLABLE, 'installable', InstallableResource(install_srv))]
-    if hasattr(install_srv, 'upgrade'):
-        links.append((REL_UPGRADE, 'upgrade', UpgradeResource(install_srv)))
-    if hasattr(install_srv, 'update'):
-        links.append((REL_UPDATE, 'update', UpdateResource(install_srv)))
-    return IntermediaryResource(links)
+class InstallServiceResource(IntermediaryResource):
+    def __init__(self, install_srv):
+        links = [
+            (REL_INSTALL, 'install', InstallResource(install_srv)),
+            (REL_UNINSTALL, 'uninstall', UninstallResource(install_srv)),
+            (REL_INSTALLED, 'installed', InstalledResource(install_srv)),
+            (REL_INSTALLABLE, 'installable', InstallableResource(install_srv)),
+        ]
+        IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.pg_mgr.plugins.install.read')
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
 class _OipInstallResource(Resource):
@@ -576,7 +585,6 @@ class _ListInstallxxxxResource(Resource):
         self._install_srv = install_srv
         self._method_name = method_name
 
-    @required_acl('provd.pg_mgr.install.read')
     @json_response_entity
     def render_GET(self, request):
         fun = getattr(self._install_srv, self._method_name)
@@ -590,20 +598,37 @@ class _ListInstallxxxxResource(Resource):
             return json_dumps(content)
 
 
-def InstalledResource(install_srv):
-    return _ListInstallxxxxResource(install_srv, 'list_installed')
+class InstalledResource(_ListInstallxxxxResource):
+    def __init__(self, install_srv):
+        return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installed')
+
+    @required_acl('provd.pg_mgr.plugins.install.installed.read')  # FIXME
+    def render_GET(self, request):
+        return _ListInstallxxxxResource.render_GET(self, request)
 
 
-def InstallableResource(install_srv):
-    return _ListInstallxxxxResource(install_srv, 'list_installable')
+class InstallableResource(_ListInstallxxxxResource):
+    def __init__(self, install_srv):
+        return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installable')
+
+    @required_acl('provd.pg_mgr.plugins.install.installable.read')  # FIXME
+    def render_GET(self, request):
+        return _ListInstallxxxxResource.render_GET(self, request)
 
 
-def DeviceManagerResource(app, dhcp_request_processing_service):
-    links = [(u'dev.synchronize', 'synchronize', DeviceSynchronizeResource(app)),
-             (u'dev.reconfigure', 'reconfigure', DeviceReconfigureResource(app)),
-             (u'dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(dhcp_request_processing_service)),
-             (u'dev.devices', 'devices', DevicesResource(app))]
-    return IntermediaryResource(links)
+class DeviceManagerResource(IntermediaryResource):
+    def __init__(self, app, dhcp_request_processing_service):
+        links = [
+            (u'dev.synchronize', 'synchronize', DeviceSynchronizeResource(app)),
+            (u'dev.reconfigure', 'reconfigure', DeviceReconfigureResource(app)),
+            (u'dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(dhcp_request_processing_service)),
+            (u'dev.devices', 'devices', DevicesResource(app)),
+        ]
+        IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.dev_mgr.read')
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
 class DeviceSynchronizeResource(_OipInstallResource):
@@ -733,7 +758,7 @@ class DeviceResource(Resource):
         self._app = app
         self._id = id
 
-    @required_acl('provd.dev_mgr.devices.#.read')
+    @required_acl('provd.dev_mgr.devices.#.read')  # FIXME
     @json_response_entity
     def render_GET(self, request):
         def on_callback(device):
@@ -748,7 +773,7 @@ class DeviceResource(Resource):
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
-    @required_acl('provd.dev_mgr.devices.#.update')
+    @required_acl('provd.dev_mgr.devices.#.update')  # FIXME
     @json_request_entity
     def render_PUT(self, request, content):
         # XXX praise KeyError
@@ -766,7 +791,7 @@ class DeviceResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
-    @required_acl('provd.dev_mgr.devices.#.delete')
+    @required_acl('provd.dev_mgr.devices.#.delete')  # FIXME
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
@@ -780,10 +805,17 @@ class DeviceResource(Resource):
         return NOT_DONE_YET
 
 
-def ConfigManagerResource(app):
-    links = [(u'cfg.configs', 'configs', ConfigsResource(app)),
-             (u'cfg.autocreate', 'autocreate', AutocreateConfigResource(app))]
-    return IntermediaryResource(links)
+class ConfigManagerResource(IntermediaryResource):
+    def __init__(self, app):
+        links = [
+            (u'cfg.configs', 'configs', ConfigsResource(app)),
+            (u'cfg.autocreate', 'autocreate', AutocreateConfigResource(app)),
+        ]
+        IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.cfg_mgr.read')
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
 class AutocreateConfigResource(Resource):
@@ -856,7 +888,7 @@ class ConfigResource(Resource):
         else:
             return Resource.getChild(self, path, request)
 
-    @required_acl('provd.cfg_mfr.configs.#.read')
+    @required_acl('provd.cfg_mfr.configs.#.read')  # FIXME
     @json_response_entity
     def render_GET(self, request):
         def on_callback(config):
@@ -871,7 +903,7 @@ class ConfigResource(Resource):
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
-    @required_acl('provd.cfg_mgr.configs.#.update')
+    @required_acl('provd.cfg_mgr.configs.#.update')  # FIXME
     @json_request_entity
     def render_PUT(self, request, content):
         # XXX praise KeyError
@@ -889,7 +921,7 @@ class ConfigResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
-    @required_acl('provd.cfg_mgr.configs.#.delete')
+    @required_acl('provd.cfg_mgr.configs.#.delete')  # FIXME
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
@@ -908,7 +940,7 @@ class RawConfigResource(Resource):
         self._app = app
         self._id = id
 
-    @required_acl('provd.cfg_mgr.configs.#.raw.read')
+    @required_acl('provd.cfg_mgr.configs.#.raw.read')  # FIXME
     @json_response_entity
     def render_GET(self, request):
         def on_callback(raw_config):
@@ -925,23 +957,37 @@ class RawConfigResource(Resource):
         return NOT_DONE_YET
 
 
-def PluginManagerResource(app):
-    links = [(REL_INSTALL_SRV, 'install', PluginManagerInstallServiceResource(app)),
-             (u'pg.plugins', 'plugins', PluginsResource(app.pg_mgr)),
-             (u'pg.reload', 'reload', PluginReloadResource(app))]
-    return IntermediaryResource(links)
+class PluginManagerResource(IntermediaryResource):
+    def __init__(self, app):
+        links = [
+            (REL_INSTALL_SRV, 'install', PluginManagerInstallServiceResource(app)),
+            (u'pg.plugins', 'plugins', PluginsResource(app.pg_mgr)),
+            (u'pg.reload', 'reload', PluginReloadResource(app)),
+        ]
+        return IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.pg_mgr.read')
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
-def PluginManagerInstallServiceResource(app):
-    install_srv = _PluginManagerInstallServiceAdapter(app)
-    pg_mgr_uninstall_res = PluginManagerUninstallResource(app)
-    links = [(REL_INSTALL, 'install', InstallResource(install_srv)),
-             (REL_UNINSTALL, 'uninstall', pg_mgr_uninstall_res),
-             (REL_INSTALLED, 'installed', InstalledResource(install_srv)),
-             (REL_INSTALLABLE, 'installable', InstallableResource(install_srv)),
-             (REL_UPGRADE, 'upgrade', UpgradeResource(install_srv)),
-             (REL_UPDATE, 'update', UpdateResource(install_srv))]
-    return IntermediaryResource(links)
+class PluginManagerInstallServiceResource(IntermediaryResource):
+    def __init__(self, app):
+        install_srv = _PluginManagerInstallServiceAdapter(app)
+        pg_mgr_uninstall_res = PluginManagerUninstallResource(app)
+        links = [
+            (REL_INSTALL, 'install', InstallResource(install_srv)),
+            (REL_UNINSTALL, 'uninstall', pg_mgr_uninstall_res),
+            (REL_INSTALLED, 'installed', InstalledResource(install_srv)),
+            (REL_INSTALLABLE, 'installable', InstallableResource(install_srv)),
+            (REL_UPGRADE, 'upgrade', UpgradeResource(install_srv)),
+            (REL_UPDATE, 'update', UpdateResource(install_srv)),
+        ]
+        IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.pg_mgr.install.read')  # FIXME
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
 class _PluginManagerInstallServiceAdapter(object):
@@ -1059,21 +1105,26 @@ class PluginInfoResource(Resource):
         Resource.__init__(self)
         self._plugin = plugin
 
-    @required_acl('provd.pg_mgr.plugins.#.info.read')
+    @required_acl('provd.pg_mgr.plugins.#.info.read')  # FIXME
     @json_response_entity
     def render_GET(self, request):
         return json_dumps({u'plugin_info': self._plugin.info()})
 
 
-def PluginResource(plugin):
-    links = [(u'pg.info', 'info', PluginInfoResource(plugin))]
-    if 'install' in plugin.services:
-        install_srv = plugin.services['install']
-        links.append((REL_INSTALL_SRV, 'install', InstallServiceResource(install_srv)))
-    if 'configure' in plugin.services:
-        configure_srv = plugin.services['configure']
-        links.append((REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(configure_srv)))
-    return IntermediaryResource(links)
+class PluginResource(IntermediaryResource):
+    def __init__(self, plugin):
+        links = [(u'pg.info', 'info', PluginInfoResource(plugin))]
+        if 'install' in plugin.services:
+            install_srv = plugin.services['install']
+            links.append((REL_INSTALL_SRV, 'install', InstallServiceResource(install_srv)))
+        if 'configure' in plugin.services:
+            configure_srv = plugin.services['configure']
+            links.append((REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(configure_srv)))
+        return IntermediaryResource.__init__(self, links)
+
+    @required_acl('provd.cfg_mgr.read')  # FIXME
+    def render_GET(self, request):
+        return IntermediaryResource.render_GET(self, request)
 
 
 def new_server_resource(app, dhcp_request_processing_service):
