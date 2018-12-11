@@ -615,8 +615,9 @@ class InstalledResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
         return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installed')
 
-    @required_acl('provd.pg_mgr.plugins.install.installed.read')  # FIXME
+    @required_acl('provd.pg_mgr.plugins.install.installed.read')
     def render_GET(self, request):
+        logger.info('list installed')
         return _ListInstallxxxxResource.render_GET(self, request)
 
 
@@ -1040,7 +1041,7 @@ class PluginManagerUninstallResource(AuthResource):
 
     @json_request_entity
     def render_POST(self, request, content):
-        handle_post_request(
+        return handle_post_request(
             'provd.pg_mgr.plugins.{id_}.install.uninstall',
             request, content, self._app.pg_uninstall
         )
@@ -1089,7 +1090,7 @@ class PluginReloadResource(AuthResource):
 
     @json_request_entity
     def render_POST(self, request, content):
-        handle_post_request(
+        return handle_post_request(
             'provd.pg_mgr.plugins.{id_}.reload',
             request, content, self._app.pg_reload
         )
