@@ -15,10 +15,15 @@ from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
+from twisted.python.compat import nativeString
+from twisted.web.resource import _computeAllowedMethods
+from twisted.web.error import UnsupportedMethod
 
 from provd.rest.server import auth
 
 logger = logging.getLogger(__name__)
+
+auth_verifier = auth.get_auth_verifier()
 
 
 class Request(server.Request):
@@ -49,16 +54,30 @@ class Request(server.Request):
 
 
 class Resource(resource.Resource):
+
     def render(self, request):
-        usual_method = resource.Resource.render(self, request)
-        if auth.enabled:
-            if not auth.client().token.is_valid(request.getHeader('X-Auth-Token')):
-                request.setResponseCode(401)
-                return 'Unauthorized'
-        return usual_method
+        render_method = getattr(self, 'render_' + nativeString(request.method), None)
+        if not render_method:
+            try:
+                allowedMethods = self.allowedMethods
+            except AttributeError:
+                allowedMethods = _computeAllowedMethods(self)
+            raise UnsupportedMethod(allowedMethods)
+        try:
+            render_method = auth_verifier.verify_token(self, request, render_method)
+            return render_method(request)
+        except auth.auth_verifier.Unauthorized:
+            request.setResponseCode(http.UNAUTHORIZED)
+            return 'Unauthorized'
 
     def render_OPTIONS(self, request):
         return ''
+
+
+class AuthResource(Resource):
+
+    def __init__(self, *args, **kwargs):
+        Resource.__init__(self, *args, **kwargs)
 
 
 class Site(server.Site):
