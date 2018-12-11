@@ -32,8 +32,11 @@ from provd.util import norm_mac, norm_ip
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 from .auth import required_acl
+from .auth import get_auth_verifier
 
 logger = logging.getLogger(__name__)
+
+auth_verifier = get_auth_verifier()
 
 REL_INSTALL_SRV = u'srv.install'
 REL_INSTALL = u'srv.install.install'
@@ -55,6 +58,32 @@ else:
 
 def new_id_generator():
     return numeric_id_generator(start=1)
+
+
+def handle_post_request(acl, request, content, action, *args):
+    token_is_valid = False
+    try:
+        id_ = content[u'id']
+        try:
+            token_is_valid = auth_verifier.client().token.is_valid(
+                request.getHeader('X-Auth-Token'),
+                acl.format(id_=id_)
+            )
+        except requests.RequestException as e:
+            return auth_verifier.handle_unreachable(e)
+    except KeyError:
+        return respond_bad_json_entity(request, 'Missing "id" key')
+    else:
+        if token_is_valid:
+            def callback(_):
+                deferred_respond_no_content(request)
+            def errback(failure):
+                deferred_respond_error(request, failure.value)
+            d = action(id_, *args)
+            d.addCallbacks(callback, errback)
+            return NOT_DONE_YET
+        else:
+            return auth_verifier.handle_unauthorized()
 
 
 def respond_no_content(request, response_code=http.NO_CONTENT):
@@ -1011,18 +1040,10 @@ class PluginManagerUninstallResource(AuthResource):
 
     @json_request_entity
     def render_POST(self, request, content):
-        try:
-            pkg_id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            def callback(_):
-                deferred_respond_no_content(request)
-            def errback(failure):
-                deferred_respond_error(request, failure.value)
-            d = self._app.pg_uninstall(pkg_id)
-            d.addCallbacks(callback, errback)
-            return NOT_DONE_YET
+        handle_post_request(
+            'provd.pg_mgr.plugins.{id_}.install.uninstall',
+            request, content, self._app.pg_uninstall
+        )
 
 
 class PluginsResource(AuthResource):
@@ -1068,18 +1089,10 @@ class PluginReloadResource(AuthResource):
 
     @json_request_entity
     def render_POST(self, request, content):
-        try:
-            id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            def on_callback(ign):
-                deferred_respond_no_content(request)
-            def on_errback(failure):
-                deferred_respond_error(request, failure.value)
-            d = self._app.pg_reload(id)
-            d.addCallbacks(on_callback, on_errback)
-            return NOT_DONE_YET
+        handle_post_request(
+            'provd.pg_mgr.plugins.{id_}.reload',
+            request, content, self._app.pg_reload
+        )
 
 
 class PluginInfoResource(AuthResource):
