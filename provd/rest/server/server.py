@@ -17,6 +17,7 @@ configuration.
 import functools
 import json
 import logging
+import requests
 from binascii import a2b_base64
 from provd.app import InvalidIdError
 from provd.localization import get_locale_and_language
@@ -24,14 +25,13 @@ from provd.operation import format_oip, operation_in_progres_from_deferred
 from provd.persist.common import ID_KEY
 from provd.plugins import BasePluginManagerObserver
 from provd.rest.util import PROV_MIME_TYPE, uri_append_path
-from provd.servers.http_site import Resource
+from provd.servers.http_site import AuthResource
 from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.services import InvalidParameterError
 from provd.util import norm_mac, norm_ip
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
-
-from . import auth
+from .auth import required_acl
 
 logger = logging.getLogger(__name__)
 
@@ -170,22 +170,6 @@ def json_request_entity(fun):
     return aux
 
 
-def required_acl(acl):
-    def decorator(fun):
-        @functools.wraps(fun)
-        def aux(self, request):
-            if auth.enabled:
-                token = request.getHeader('X-Auth-Token')
-                if auth.client().token.is_valid(token, required_acl=acl):
-                    return fun(self, request)
-                else:
-                    return respond_unauthorized(request)
-            else:
-                return fun(self, request)
-        return aux
-    return decorator
-
-
 def _add_selector_parameter(args, result):
     # q={"configured": false}
     result['selector'] = {}
@@ -292,7 +276,7 @@ def _ignore_deferred_error(deferred):
     deferred.addErrback(_return_none)
 
 
-class IntermediaryResource(Resource):
+class IntermediaryResource(AuthResource):
     # TODO document better and maybe change the name
 
     def __init__(self, links):
@@ -308,7 +292,7 @@ class IntermediaryResource(Resource):
         GET request will yield something.
 
         """
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._links = links
         self._register_childs()
 
@@ -344,7 +328,7 @@ class ServerResource(IntermediaryResource):
         return IntermediaryResource.render_GET(self, request)
 
 
-class OperationInProgressResource(Resource):
+class OperationInProgressResource(AuthResource):
     # Note that render_DELETE might be implemented in classes creating these
     # objects, and not on the class itself
     def __init__(self, oip, on_delete=None):
@@ -352,7 +336,7 @@ class OperationInProgressResource(Resource):
         oip -- an operation in progress object
         on_delete -- either None or a callable taking no argument
         """
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._oip = oip
         self._on_delete = on_delete
 
@@ -369,12 +353,12 @@ class OperationInProgressResource(Resource):
         return respond_no_content(request)
 
 
-class ConfigureServiceResource(Resource):
+class ConfigureServiceResource(AuthResource):
     def __init__(self, cfg_srv):
         """
         cfg_srv -- an object providing the IConfigureService interface
         """
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._cfg_srv = cfg_srv
 
     def getChild(self, path, request):
@@ -414,9 +398,9 @@ class ConfigureServiceResource(Resource):
         return json_dumps(content)
 
 
-class ConfigureParameterResource(Resource):
+class ConfigureParameterResource(AuthResource):
     def __init__(self, cfg_srv, key):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         # key is not necessary to be valid
         self._cfg_srv = cfg_srv
         self._key = key
@@ -468,9 +452,9 @@ class InstallServiceResource(IntermediaryResource):
         return IntermediaryResource.render_GET(self, request)
 
 
-class _OipInstallResource(Resource):
+class _OipInstallResource(AuthResource):
     def __init__(self):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._id_gen = new_id_generator()
 
     def _add_new_oip(self, oip, request):
@@ -512,9 +496,9 @@ class InstallResource(_OipInstallResource):
                 return respond_created_no_content(request, location)
 
 
-class UninstallResource(Resource):
+class UninstallResource(AuthResource):
     def __init__(self, install_srv):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._install_srv = install_srv
 
     @required_acl('provd.pg_mgr.uninstall.create')
@@ -579,9 +563,9 @@ class UpdateResource(_OipInstallResource):
             return respond_created_no_content(request, location)
 
 
-class _ListInstallxxxxResource(Resource):
+class _ListInstallxxxxResource(AuthResource):
     def __init__(self, install_srv, method_name):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._install_srv = install_srv
         self._method_name = method_name
 
@@ -636,8 +620,8 @@ class DeviceSynchronizeResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._app = app
 
-    @required_acl('provd.dev_mgr.synchronize.create')
     @json_request_entity
+    @required_acl('provd.dev_mgr.synchronize.create')
     def render_POST(self, request, content):
         try:
             id = content[u'id']
@@ -651,13 +635,13 @@ class DeviceSynchronizeResource(_OipInstallResource):
             return respond_created_no_content(request, location)
 
 
-class DeviceReconfigureResource(Resource):
+class DeviceReconfigureResource(AuthResource):
     def __init__(self, app):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
 
-    @required_acl('provd.dev_mgr.reconfigure.create')
     @json_request_entity
+    @required_acl('provd.dev_mgr.reconfigure.create')
     def render_POST(self, request, content):
         try:
             id = content[u'id']
@@ -673,10 +657,10 @@ class DeviceReconfigureResource(Resource):
             return NOT_DONE_YET
 
 
-class DeviceDHCPInfoResource(Resource):
+class DeviceDHCPInfoResource(AuthResource):
     """Resource for pushing DHCP information into the provisioning server."""
     def __init__(self, dhcp_request_processing_service):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._dhcp_req_processing_srv = dhcp_request_processing_service
 
     def _transform_options(self, raw_options):
@@ -688,8 +672,8 @@ class DeviceDHCPInfoResource(Resource):
             options[code] = value
         return options
 
-    @required_acl('provd.dev_mgr.dhcpinfo.create')
     @json_request_entity
+    @required_acl('provd.dev_mgr.dhcpinfo.create')
     def render_POST(self, request, content):
         try:
             raw_dhcp_info = content[u'dhcp_info']
@@ -714,16 +698,16 @@ class DeviceDHCPInfoResource(Resource):
                 return respond_error(request, 'invalid operation value')
 
 
-class DevicesResource(Resource):
+class DevicesResource(AuthResource):
     def __init__(self, app):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
 
     def getChild(self, path, request):
         return DeviceResource(self._app, path)
 
-    @required_acl('provd.dev_mgr.devices.read')
     @json_response_entity
+    @required_acl('provd.dev_mgr.devices.read')
     def render_GET(self, request):
         find_arguments = find_arguments_from_request(request)
         def on_callback(devices):
@@ -735,8 +719,8 @@ class DevicesResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
-    @required_acl('provd.dev_mgr.devices.create')
     @json_request_entity
+    @required_acl('provd.dev_mgr.devices.create')
     def render_POST(self, request, content):
         # XXX praise KeyError
         device = content[u'device']
@@ -752,14 +736,14 @@ class DevicesResource(Resource):
         return NOT_DONE_YET
 
 
-class DeviceResource(Resource):
+class DeviceResource(AuthResource):
     def __init__(self, app, id):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
         self._id = id
 
-    @required_acl('provd.dev_mgr.devices.#.read')  # FIXME
     @json_response_entity
+    @required_acl('provd.dev_mgr.devices.{_id}.read')
     def render_GET(self, request):
         def on_callback(device):
             if device is None:
@@ -773,8 +757,8 @@ class DeviceResource(Resource):
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
-    @required_acl('provd.dev_mgr.devices.#.update')  # FIXME
     @json_request_entity
+    @required_acl('provd.dev_mgr.devices.{_id}.update')
     def render_PUT(self, request, content):
         # XXX praise KeyError
         device = content[u'device']
@@ -791,7 +775,7 @@ class DeviceResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
-    @required_acl('provd.dev_mgr.devices.#.delete')  # FIXME
+    @required_acl('provd.dev_mgr.devices.{_id}.delete')
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
@@ -818,13 +802,13 @@ class ConfigManagerResource(IntermediaryResource):
         return IntermediaryResource.render_GET(self, request)
 
 
-class AutocreateConfigResource(Resource):
+class AutocreateConfigResource(AuthResource):
     def __init__(self, app):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
 
-    @required_acl('provd.cfg_mgr.autocreate.create')
     @json_request_entity
+    @required_acl('provd.cfg_mgr.autocreate.create')
     def render_POST(self, request, content):
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
@@ -838,16 +822,16 @@ class AutocreateConfigResource(Resource):
         return NOT_DONE_YET
 
 
-class ConfigsResource(Resource):
+class ConfigsResource(AuthResource):
     def __init__(self, app):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
 
     def getChild(self, path, request):
         return ConfigResource(self._app, path)
 
-    @required_acl('provd.cfg_mgr.configs.read')
     @json_response_entity
+    @required_acl('provd.cfg_mgr.configs.read')
     def render_GET(self, request):
         find_arguments = find_arguments_from_request(request)
         def on_callback(configs):
@@ -859,8 +843,8 @@ class ConfigsResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
-    @required_acl('provd.cfg_mgr.configs.create')
     @json_request_entity
+    @required_acl('provd.cfg_mgr.configs.create')
     def render_POST(self, request, content):
         # XXX praise KeyError
         config = content[u'config']
@@ -876,9 +860,9 @@ class ConfigsResource(Resource):
         return NOT_DONE_YET
 
 
-class ConfigResource(Resource):
+class ConfigResource(AuthResource):
     def __init__(self, app, id):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
         self._id = id
 
@@ -886,10 +870,10 @@ class ConfigResource(Resource):
         if path == 'raw':
             return RawConfigResource(self._app, self._id)
         else:
-            return Resource.getChild(self, path, request)
+            return AuthResource.getChild(self, path, request)
 
-    @required_acl('provd.cfg_mfr.configs.#.read')  # FIXME
     @json_response_entity
+    @required_acl('provd.cfg_mfr.configs.{_id}.read')
     def render_GET(self, request):
         def on_callback(config):
             if config is None:
@@ -903,8 +887,8 @@ class ConfigResource(Resource):
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
-    @required_acl('provd.cfg_mgr.configs.#.update')  # FIXME
     @json_request_entity
+    @required_acl('provd.cfg_mgr.configs.{_id}.update')
     def render_PUT(self, request, content):
         # XXX praise KeyError
         config = content[u'config']
@@ -921,7 +905,7 @@ class ConfigResource(Resource):
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
-    @required_acl('provd.cfg_mgr.configs.#.delete')  # FIXME
+    @required_acl('provd.cfg_mgr.configs.{_id}.delete')
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
@@ -935,13 +919,13 @@ class ConfigResource(Resource):
         return NOT_DONE_YET
 
 
-class RawConfigResource(Resource):
+class RawConfigResource(AuthResource):
     def __init__(self, app, id):
         self._app = app
         self._id = id
 
-    @required_acl('provd.cfg_mgr.configs.#.raw.read')  # FIXME
     @json_response_entity
+    @required_acl('provd.cfg_mgr.configs.{_id}.raw.read')
     def render_GET(self, request):
         def on_callback(raw_config):
             if raw_config is None:
@@ -1020,12 +1004,11 @@ class _PluginManagerInstallServiceAdapter(object):
         return self._app.pg_mgr.update()
 
 
-class PluginManagerUninstallResource(Resource):
+class PluginManagerUninstallResource(AuthResource):
     def __init__(self, app):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
 
-    @required_acl('provd.pg_mgr.install.uninstall.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -1042,9 +1025,9 @@ class PluginManagerUninstallResource(Resource):
             return NOT_DONE_YET
 
 
-class PluginsResource(Resource):
+class PluginsResource(AuthResource):
     def __init__(self, pg_mgr):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._pg_mgr = pg_mgr
         self._childs = dict((pg_id, PluginResource(pg)) for
                             (pg_id, pg) in self._pg_mgr.iteritems())
@@ -1064,10 +1047,10 @@ class PluginsResource(Resource):
         try:
             return self._childs[path]
         except KeyError:
-            return Resource.getChild(self, path, request)
+            return AuthResource.getChild(self, path, request)
 
-    @required_acl('provd.pg_mgr.read')
     @json_response_entity
+    @required_acl('provd.pg_mgr.read')
     def render_GET(self, request):
         plugins = {}
         for pg_id in self._pg_mgr:
@@ -1078,12 +1061,11 @@ class PluginsResource(Resource):
         return json_dumps(content)
 
 
-class PluginReloadResource(Resource):
+class PluginReloadResource(AuthResource):
     def __init__(self, app):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._app = app
 
-    @required_acl('provd.pg_mgr.reload.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -1100,19 +1082,21 @@ class PluginReloadResource(Resource):
             return NOT_DONE_YET
 
 
-class PluginInfoResource(Resource):
+class PluginInfoResource(AuthResource):
     def __init__(self, plugin):
-        Resource.__init__(self)
+        AuthResource.__init__(self)
         self._plugin = plugin
+        self._id = plugin.id
 
-    @required_acl('provd.pg_mgr.plugins.#.info.read')  # FIXME
     @json_response_entity
+    @required_acl('provd.pg_mgr.plugins.{_id}.info.read')
     def render_GET(self, request):
         return json_dumps({u'plugin_info': self._plugin.info()})
 
 
 class PluginResource(IntermediaryResource):
     def __init__(self, plugin):
+        self._id = plugin.id
         links = [(u'pg.info', 'info', PluginInfoResource(plugin))]
         if 'install' in plugin.services:
             install_srv = plugin.services['install']
@@ -1122,7 +1106,7 @@ class PluginResource(IntermediaryResource):
             links.append((REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(configure_srv)))
         return IntermediaryResource.__init__(self, links)
 
-    @required_acl('provd.cfg_mgr.read')  # FIXME
+    @required_acl('provd.pg_mgr.plugins.{_id}.read')
     def render_GET(self, request):
         return IntermediaryResource.render_GET(self, request)
 
@@ -1132,10 +1116,9 @@ def new_server_resource(app, dhcp_request_processing_service):
     return ServerResource(app, dhcp_request_processing_service)
 
 
-def new_authenticated_server_resource(app, dhcp_request_processing_service, realm_name=REALM_NAME):
+def new_authenticated_server_resource(app, dhcp_request_processing_service):
     """Create and return a new server resource that will be accessible only
     by authenticated users.
     """
     server_resource = ServerResource(app, dhcp_request_processing_service)
-    auth.enabled = True
     return server_resource
