@@ -354,7 +354,7 @@ class ServerResource(IntermediaryResource):
         ]
         IntermediaryResource.__init__(self, links)
 
-    @required_acl('provd.serverresource.read')
+    @required_acl('provd.read')
     def render_GET(self, request):
         return IntermediaryResource.render_GET(self, request)
 
