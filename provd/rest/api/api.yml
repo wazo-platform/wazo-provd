@@ -37,7 +37,8 @@ paths:
   /provd/configure:
     get:
       summary: Get the general provd configuration
-      description: **Required ACL:** `provd.configure.read`
+      description: |
+        **Required ACL:** `provd.configure.read`
       tags:
         - provd
       responses:
@@ -49,7 +50,8 @@ paths:
   /provd/configure/{param_id}:
     get:
       summary: Get the configuration parameter value
-      description: **Required ACL:** `provd.configure.{param_id}.read`
+      description: |
+        **Required ACL:** `provd.configure.{param_id}.read`
       tags:
         - provd
       parameters:
@@ -63,7 +65,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
-      description: **Required ACL:** `provd.configure.{param_id}.update`
+      description: |
+        **Required ACL:** `provd.configure.{param_id}.update`
       tags:
         - provd
       parameters:
@@ -104,7 +107,8 @@ paths:
   /provd/dev_mgr/devices:
     get:
       summary: List and find devices
-      description: **Required ACL:** `provd.dev_mgr.devices.read`
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.read`
       tags:
         - devices
       parameters:
@@ -118,7 +122,8 @@ paths:
           $ref: '#/responses/DevicesResponse'
     post:
       summary: Create a device
-      description: **Required ACL:** `provd.dev_mgr.devices.create`
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.create`
       tags:
       - devices
       parameters:
@@ -175,7 +180,8 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a device
-      description: **Required ACL:** `provd.dev_mgr.devices.{device_id}.delete`
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.{device_id}.delete`
       tags:
         - devices
       parameters:
@@ -189,7 +195,8 @@ paths:
   /provd/dev_mgr/synchronize:
     post:
       summary: Synchronize a device
-      description: **Required ACL:** `provd.dev_mgr.devices.{device_id}.synchronize`
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.{device_id}.synchronize`
       tags:
         - devices
       parameters:
@@ -207,7 +214,8 @@ paths:
   /provd/dev_mgr/synchronize/{operation_id}:
     get:
       summary: Get the status of a synchronize Operation In Progress
-      description: **Required ACL:** `provd.operation.read`
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - devices
       parameters:
@@ -289,7 +297,8 @@ paths:
   /provd/cfg_mgr/configs:
     get:
       summary: List and find configurations
-      description: **Required ACL:** `provd.cfg_mgr.configs.read`
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.read`
       tags:
         - configs
       parameters:
@@ -303,7 +312,8 @@ paths:
           $ref: '#/responses/ConfigsResponse'
     post:
       summary: Create a configuration
-      description: **Required ACL:** `provd.cfg_mgr.configs.create`
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.create`
       tags:
         - configs
       parameters:
@@ -315,7 +325,8 @@ paths:
   /provd/cfg_mgr/configs/{config_id}:
     get:
       summary: Get a configuration
-      description: **Required ACL:** `provd.cfg_mgr.configs.#.read`
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.#.read`
       tags:
         - configs
       parameters:
@@ -327,7 +338,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a configuration
-      description: **Required ACL:** `provd.cfg_mgr.configs.#.update`
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.#.update`
       tags:
         - configs
       parameters:
@@ -342,7 +354,8 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a configuration
-      description: **Required ACL:** `provd.cfg_mgr.configs.#.delete`
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.#.delete`
       tags:
         - configs
       parameters:
@@ -356,7 +369,8 @@ paths:
   /provd/cfg_mgr/configs/{config_id}/raw:
     get:
       summary: Get a raw configuration
-      description: **Required ACL:** `provd.cfg_mgr.configs.#.raw.read`
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.#.raw.read`
       tags:
         - configs
       parameters:
@@ -409,7 +423,8 @@ paths:
   /provd/pg_mgr/plugins:
     get:
       summary: List the installed plugins
-      description: **Required ACL:** `provd.pg_mgr.read`
+      description: |
+        **Required ACL:** `provd.pg_mgr.read`
       tags:
         - plugins
       responses:
@@ -431,7 +446,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}:
     get:
       summary: Get the resources of a specific plugin
-      description: **Required ACL:** `provd.resource.read`
+      description: |
+        **Required ACL:** `provd.resource.read`
       tags:
         - plugins
       parameters:
@@ -451,7 +467,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/info:
     get:
       summary: Get the information of a plugin
-      description: **Required ACL:** `provd.pg_mgr.plugins.#.info.read`
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.#.info.read`
       tags:
         - plugins
       parameters:
@@ -476,7 +493,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/install:
     post:
       summary: Install a package
-      description: **Required ACL:** `provd.pg_mgr.install.create`
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.create`
       tags:
         - plugins
       parameters:
@@ -495,7 +513,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
     get:
       summary: Get the status of a package installation Operation In Progress
-      description: **Required ACL:** `provd.operation.read`
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -528,7 +547,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/uninstall:
     post:
       summary: Uninstall a package
-      description: **Required ACL:** `provd.pg_mgr.uninstall.create`
+      description: |
+        **Required ACL:** `provd.pg_mgr.uninstall.create`
       tags:
         - plugins
       parameters:
@@ -547,7 +567,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/upgrade:
     post:
       summary: Upgrade a package
-      description: **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.upgrade`
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.upgrade`
       tags:
         - plugins
       parameters:
@@ -566,7 +587,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a package upgrade Operation In Progress
-      description: **Required ACL:** `provd.operation.read`
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -599,7 +621,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/installable:
     get:
       summary: Get the installable packages list
-      description: **Required ACL:** `provd.pg_mgr.install.read`
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.read`
       tags:
         - plugins
       parameters:
@@ -615,7 +638,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/installed:
     get:
       summary: Get the installed packages list
-      description: **Required ACL:** `provd.pg_mgr.install.read`
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.read`
       tags:
         - plugins
       parameters:
@@ -631,7 +655,8 @@ paths:
   /provd/pg_mgr/install:
     get:
       summary: Get the installation service resources
-      description: **Required ACL:** `provd.resource.read`
+      description: |
+        **Required ACL:** `provd.resource.read`
       tags:
         - plugins
       responses:
@@ -657,7 +682,8 @@ paths:
   /provd/pg_mgr/install/install:
     post:
       summary: Install a plugin
-      description: **Required ACL:** `provd.pg_mgr.install.create`
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.create`
       tags:
         - plugins
       parameters:
@@ -673,7 +699,8 @@ paths:
   /provd/pg_mgr/install/install/{operation_id}:
     get:
       summary: Get the status of a plugin installation Operation In Progress
-      description: **Required ACL:** `provd.operation.read`
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -704,7 +731,8 @@ paths:
   /provd/pg_mgr/install/uninstall:
     post:
       summary: Uninstall a plugin
-      description: **Required ACL:** `provd.pg_mgr.uninstall.create`
+      description: |
+        **Required ACL:** `provd.pg_mgr.uninstall.create`
       tags:
         - plugins
       parameters:
@@ -720,7 +748,8 @@ paths:
   /provd/pg_mgr/install/upgrade:
     post:
       summary: Upgrade a plugin
-      description: **Required ACL:** `provd.pg_mgr.upgrade.create`
+      description: |
+        **Required ACL:** `provd.pg_mgr.upgrade.create`
       tags:
         - plugins
       parameters:
@@ -736,7 +765,8 @@ paths:
   /provd/pg_mgr/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a plugin upgrade Operation In Progress
-      description: **Required ACL:** `provd.operation.read`
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -767,7 +797,8 @@ paths:
   /provd/pg_mgr/install/update:
     post:
       summary: Update the List of installable plugins
-      description: **Required ACL:** `provd.pg_mgr.update.create`
+      description: |
+        **Required ACL:** `provd.pg_mgr.update.create`
       tags:
         - plugins
       parameters:
@@ -781,7 +812,8 @@ paths:
   /provd/pg_mgr/install/update/{operation_id}:
     get:
       summary: Get the status of a plugin database update Operation In Progress
-      description: **Required ACL:** `provd.operation.read`
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -812,7 +844,8 @@ paths:
   /provd/pg_mgr/install/installable:
     get:
       summary: Get the installable plugins list
-      description: **Required ACL:** `provd.pg_mgr.install.read`
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.read`
       tags:
         - plugins
       responses:
@@ -824,7 +857,8 @@ paths:
   /provd/pg_mgr/install/installed:
     get:
       summary: Get the installed plugins list
-      description: **Required ACL:** `provd.pg_mgr.install.read`
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.read`
       tags:
         - plugins
       responses:
