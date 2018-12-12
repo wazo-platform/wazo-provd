@@ -63,11 +63,12 @@ def new_id_generator():
 
 def handle_post_request(acl, request, content, action, *args):
     token_is_valid = False
+    token = request.getHeader('X-Auth-Token')
     try:
         id_ = content[u'id']
         try:
             token_is_valid = auth_verifier.client().token.is_valid(
-                request.getHeader('X-Auth-Token'),
+                token,
                 acl.format(id_=id_)
             )
         except requests.RequestException as e:
@@ -84,7 +85,7 @@ def handle_post_request(acl, request, content, action, *args):
             d.addCallbacks(callback, errback)
             return NOT_DONE_YET
         else:
-            return auth_verifier.handle_unauthorized()
+            return auth_verifier.handle_unauthorized(token)
 
 
 def respond_no_content(request, response_code=http.NO_CONTENT):
