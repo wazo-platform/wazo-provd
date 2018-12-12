@@ -31,6 +31,7 @@ from provd.services import InvalidParameterError
 from provd.util import norm_mac, norm_ip
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
+from xivo.auth_verifier import no_auth
 from .auth import required_acl
 from .auth import get_auth_verifier
 
@@ -1040,6 +1041,7 @@ class PluginManagerUninstallResource(AuthResource):
         self._app = app
 
     @json_request_entity
+    @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
             'provd.pg_mgr.plugins.{id_}.install.uninstall',
@@ -1089,6 +1091,7 @@ class PluginReloadResource(AuthResource):
         self._app = app
 
     @json_request_entity
+    @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
             'provd.pg_mgr.plugins.{id_}.reload',
