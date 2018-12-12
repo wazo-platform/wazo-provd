@@ -37,7 +37,7 @@ paths:
   /provd/configure:
     get:
       summary: Get the general provd configuration
-      description: **Required ACL:** `provd.resource.read`
+      description: **Required ACL:** `provd.configure.read`
       tags:
         - provd
       responses:
@@ -49,7 +49,7 @@ paths:
   /provd/configure/{param_id}:
     get:
       summary: Get the configuration parameter value
-      description: **Required ACL:** `provd.parameter.read`
+      description: **Required ACL:** `provd.configure.{param_id}.read`
       tags:
         - provd
       parameters:
@@ -63,7 +63,7 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
-      description: **Required ACL:** `provd.parameter.update`
+      description: **Required ACL:** `provd.configure.{param_id}.update`
       tags:
         - provd
       parameters:
