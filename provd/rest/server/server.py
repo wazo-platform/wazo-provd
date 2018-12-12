@@ -515,7 +515,7 @@ class PluginInstallServiceResource(IntermediaryResource):
         ]
         IntermediaryResource.__init__(self, links)
 
-    @required_acl('provd.pg_mgr.plugins.{id_}.install.read')
+    @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.read')
     def render_GET(self, request):
         return IntermediaryResource.render_GET(self, request)
 

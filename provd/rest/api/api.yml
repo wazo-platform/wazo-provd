@@ -24,7 +24,7 @@ paths:
     get:
       summary: Get the Provd Manager resource
       description: |
-        **Required ACL:** `provd.resource.read`
+        **Required ACL:** `provd.read`
         The provd manager resource represents the main entry point to the xivo-provd REST API
       tags:
         - provd
@@ -196,7 +196,7 @@ paths:
     post:
       summary: Synchronize a device
       description: |
-        **Required ACL:** `provd.dev_mgr.devices.{device_id}.synchronize`
+        **Required ACL:** `provd.dev_mgr.synchronize.create`
       tags:
         - devices
       parameters:
@@ -247,7 +247,7 @@ paths:
     post:
       summary: Reconfigure a device
       description: |
-        **Required ACL:** `provd.dev_mgr.devices.{device_id}.reconfigure`
+        **Required ACL:** `provd.dev_mgr.reconfigure.create`
         Regenerate the configuration file for the specified device
       tags:
         - devices
@@ -278,7 +278,7 @@ paths:
     get:
       summary: Get the Config Manager resource
       description: |
-        **Required ACL:** `provd.resource.read`
+        **Required ACL:** `provd.cfg_mgr.read`
         The configuration manager resource represents the entry point to the xivo-provd configuration REST API
       tags:
         - configs
@@ -326,7 +326,7 @@ paths:
     get:
       summary: Get a configuration
       description: |
-        **Required ACL:** `provd.cfg_mgr.configs.#.read`
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.read`
       tags:
         - configs
       parameters:
@@ -339,7 +339,7 @@ paths:
     put:
       summary: Update a configuration
       description: |
-        **Required ACL:** `provd.cfg_mgr.configs.#.update`
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.update`
       tags:
         - configs
       parameters:
@@ -355,7 +355,7 @@ paths:
     delete:
       summary: Delete a configuration
       description: |
-        **Required ACL:** `provd.cfg_mgr.configs.#.delete`
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.delete`
       tags:
         - configs
       parameters:
@@ -370,7 +370,7 @@ paths:
     get:
       summary: Get a raw configuration
       description: |
-        **Required ACL:** `provd.cfg_mgr.configs.#.raw.read`
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.raw.read`
       tags:
         - configs
       parameters:
@@ -402,7 +402,7 @@ paths:
     get:
       summary: Get the Plugin Manager resource
       description: |
-        **Required ACL:** `provd.resource.read`
+        **Required ACL:** `provd.pg_mgr.read`
         The plugin manager resource represents the entry point to the xivo-provd plugin REST API
       tags:
         - plugins
@@ -424,7 +424,7 @@ paths:
     get:
       summary: List the installed plugins
       description: |
-        **Required ACL:** `provd.pg_mgr.read`
+        **Required ACL:** `provd.pg_mgr.plugins.read`
       tags:
         - plugins
       responses:
@@ -447,7 +447,7 @@ paths:
     get:
       summary: Get the resources of a specific plugin
       description: |
-        **Required ACL:** `provd.resource.read`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.read`
       tags:
         - plugins
       parameters:
@@ -468,7 +468,7 @@ paths:
     get:
       summary: Get the information of a plugin
       description: |
-        **Required ACL:** `provd.pg_mgr.plugins.#.info.read`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.info.read`
       tags:
         - plugins
       parameters:
@@ -494,7 +494,7 @@ paths:
     post:
       summary: Install a package
       description: |
-        **Required ACL:** `provd.pg_mgr.install.create`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.install.create`
       tags:
         - plugins
       parameters:
@@ -548,7 +548,7 @@ paths:
     post:
       summary: Uninstall a package
       description: |
-        **Required ACL:** `provd.pg_mgr.uninstall.create`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create`
       tags:
         - plugins
       parameters:
@@ -568,7 +568,7 @@ paths:
     post:
       summary: Upgrade a package
       description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.upgrade`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.upgrade.create`
       tags:
         - plugins
       parameters:
@@ -622,7 +622,7 @@ paths:
     get:
       summary: Get the installable packages list
       description: |
-        **Required ACL:** `provd.pg_mgr.install.read`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installable.read`
       tags:
         - plugins
       parameters:
@@ -639,7 +639,7 @@ paths:
     get:
       summary: Get the installed packages list
       description: |
-        **Required ACL:** `provd.pg_mgr.install.read`
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installed.read`
       tags:
         - plugins
       parameters:
@@ -656,7 +656,7 @@ paths:
     get:
       summary: Get the installation service resources
       description: |
-        **Required ACL:** `provd.resource.read`
+        **Required ACL:** `provd.pg_mgr.install.read`
       tags:
         - plugins
       responses:
@@ -683,7 +683,7 @@ paths:
     post:
       summary: Install a plugin
       description: |
-        **Required ACL:** `provd.pg_mgr.install.create`
+        **Required ACL:** `provd.pg_mgr.install.install.create`
       tags:
         - plugins
       parameters:
@@ -732,7 +732,7 @@ paths:
     post:
       summary: Uninstall a plugin
       description: |
-        **Required ACL:** `provd.pg_mgr.uninstall.create`
+        **Required ACL:** `provd.pg_mgr.install.uninstall.create`
       tags:
         - plugins
       parameters:
@@ -749,7 +749,7 @@ paths:
     post:
       summary: Upgrade a plugin
       description: |
-        **Required ACL:** `provd.pg_mgr.upgrade.create`
+        **Required ACL:** `provd.pg_mgr.install.upgrade.create`
       tags:
         - plugins
       parameters:
@@ -798,7 +798,7 @@ paths:
     post:
       summary: Update the List of installable plugins
       description: |
-        **Required ACL:** `provd.pg_mgr.update.create`
+        **Required ACL:** `provd.pg_mgr.install.update.create`
       tags:
         - plugins
       parameters:
@@ -845,7 +845,7 @@ paths:
     get:
       summary: Get the installable plugins list
       description: |
-        **Required ACL:** `provd.pg_mgr.install.read`
+        **Required ACL:** `provd.pg_mgr.install.installable.read`
       tags:
         - plugins
       responses:
@@ -858,7 +858,7 @@ paths:
     get:
       summary: Get the installed plugins list
       description: |
-        **Required ACL:** `provd.pg_mgr.install.read`
+        **Required ACL:** `provd.pg_mgr.install.installed.read`
       tags:
         - plugins
       responses:
