@@ -493,17 +493,18 @@ class ConfigureParameterResource(AuthResource):
                 return respond_no_content(request)
 
 
-class InstallServiceResource(IntermediaryResource):
-    def __init__(self, install_srv):
+class PluginInstallServiceResource(IntermediaryResource):
+    def __init__(self, install_srv, plugin_id):
+        self.id_ = plugin_id
         links = [
-            (REL_INSTALL, 'install', InstallResource(install_srv)),
-            (REL_UNINSTALL, 'uninstall', UninstallResource(install_srv)),
-            (REL_INSTALLED, 'installed', InstalledResource(install_srv)),
-            (REL_INSTALLABLE, 'installable', InstallableResource(install_srv)),
+            (REL_INSTALL, 'install', PackageInstallResource(install_srv, plugin_id)),
+            (REL_UNINSTALL, 'uninstall', PackageUninstallResource(install_srv, plugin_id)),
+            (REL_INSTALLED, 'installed', PackageInstalledResource(install_srv, plugin_id)),
+            (REL_INSTALLABLE, 'installable', PackageInstallableResource(install_srv, plugin_id)),
         ]
         IntermediaryResource.__init__(self, links)
 
-    @required_acl('provd.pg_mgr.plugins.install.read')
+    @required_acl('provd.pg_mgr.plugins.{id_}.install.read')
     def render_GET(self, request):
         return IntermediaryResource.render_GET(self, request)
 
@@ -532,70 +533,72 @@ class InstallResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.pg_mgr.install.create')
+
+class PluginInstallResource(InstallResource):
     @json_request_entity
+    @no_auth
     def render_POST(self, request, content):
-        try:
-            pkg_id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            try:
-                deferred, oip = self._install_srv.install(pkg_id)
-            except Exception, e:
-                # XXX should handle the exception differently if it was
-                #     because there's already an install in progress
-                return respond_error(request, e)
-            else:
-                _ignore_deferred_error(deferred)
-                location = self._add_new_oip(oip, request)
-                return respond_created_no_content(request, location)
+        return handle_post_request(
+            'provd.pg_mgr.plugins.{id_}.install',
+            request,
+            content,
+            self._install_srv.install,
+            operation=True,
+            obj=self
+        )
 
 
-class UninstallResource(AuthResource):
-    def __init__(self, install_srv):
+class PackageInstallResource(InstallResource):
+    def __init__(self, install_srv, plugin_id):
+        InstallResource.__init__(self, install_srv)
+        self.plugin_id = plugin_id
+
+    @json_request_entity
+    @no_auth
+    def render_POST(self, request, content):
+        return handle_post_request(
+            'provd.pg_mgr.plugins.{plugin_id}.install.{id_}.install',
+            request,
+            content,
+            self._install_srv.install,
+            operation=True,
+            obj=self
+        )
+
+
+class PackageUninstallResource(AuthResource):
+    def __init__(self, install_srv, plugin_id):
         AuthResource.__init__(self)
         self._install_srv = install_srv
+        self.plugin_id = plugin_id
 
-    @required_acl('provd.pg_mgr.uninstall.create')
     @json_request_entity
+    @no_auth
     def render_POST(self, request, content):
-        try:
-            pkg_id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            try:
-                self._install_srv.uninstall(pkg_id)
-            except Exception, e:
-                return respond_error(request, e)
-            else:
-                return respond_no_content(request)
+        return handle_post_request(
+            'provd.pg_mgr.plugins.{plugin_id}.install.{id_}.uninstall',
+            request,
+            content,
+            self._install_srv.uninstall,
+            obj=self
+        )
 
 
-class UpgradeResource(_OipInstallResource):
+class PluginUpgradeResource(_OipInstallResource):
     def __init__(self, install_srv):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.pg_mgr.upgrade.create')
     @json_request_entity
+    @no_auth
     def render_POST(self, request, content):
-        try:
-            pkg_id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            try:
-                deferred, oip = self._install_srv.upgrade(pkg_id)
-            except Exception, e:
-                # XXX should handle the exception differently if it was
-                #     because there's already an upgrade in progress
-                return respond_error(request, e)
-            else:
-                _ignore_deferred_error(deferred)
-                location = self._add_new_oip(oip, request)
-                return respond_created_no_content(request, location)
+        return handle_post_request(
+            'provd.pg_mgr.{id_}.upgrade.create',
+            request,
+            content,
+            self._install_srv.uprade,
+            operation=True
+        )
 
 
 class UpdateResource(_OipInstallResource):
@@ -642,19 +645,49 @@ class InstalledResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
         return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installed')
 
-    @required_acl('provd.pg_mgr.plugins.install.installed.read')
     def render_GET(self, request):
         logger.info('list installed')
         return _ListInstallxxxxResource.render_GET(self, request)
+
+
+class PluginInstalledResource(InstalledResource):
+    @required_acl('provd.pg_mgr.plugins.install.installed.read')
+    def render_GET(self, request):
+        return InstalledResource.render_GET(self, request)
+
+
+class PackageInstalledResource(InstalledResource):
+    def __init__(self, install_srv, plugin_id):
+        self.plugin_id = plugin_id
+        return InstalledResource.__init__(self, install_srv)
+
+    @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.installed.read')
+    def render_GET(self, request):
+        return InstalledResource.render_GET(self, request)
 
 
 class InstallableResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
         return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installable')
 
-    @required_acl('provd.pg_mgr.plugins.install.installable.read')
     def render_GET(self, request):
         return _ListInstallxxxxResource.render_GET(self, request)
+
+
+class PluginInstallableResource(InstallableResource):
+    @required_acl('provd.pg_mgr.plugins.install.installable.read')
+    def render_GET(self, request):
+        return InstallableResource.render_GET(self, request)
+
+
+class PackageInstallableResource(InstallableResource):
+    def __init__(self, install_srv, plugin_id):
+        self.plugin_id = plugin_id
+        InstallableResource.__init__(self, install_srv)
+
+    @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.installable.read')
+    def render_GET(self, request):
+        return InstallableResource.render_GET(self, request)
 
 
 class DeviceManagerResource(IntermediaryResource):
@@ -1015,11 +1048,11 @@ class PluginManagerInstallServiceResource(IntermediaryResource):
         install_srv = _PluginManagerInstallServiceAdapter(app)
         pg_mgr_uninstall_res = PluginManagerUninstallResource(app)
         links = [
-            (REL_INSTALL, 'install', InstallResource(install_srv)),
+            (REL_INSTALL, 'install', PluginInstallResource(install_srv)),
             (REL_UNINSTALL, 'uninstall', pg_mgr_uninstall_res),
-            (REL_INSTALLED, 'installed', InstalledResource(install_srv)),
-            (REL_INSTALLABLE, 'installable', InstallableResource(install_srv)),
-            (REL_UPGRADE, 'upgrade', UpgradeResource(install_srv)),
+            (REL_INSTALLED, 'installed', PluginInstalledResource(install_srv)),
+            (REL_INSTALLABLE, 'installable', PluginInstallableResource(install_srv)),
+            (REL_UPGRADE, 'upgrade', PluginUpgradeResource(install_srv)),
             (REL_UPDATE, 'update', UpdateResource(install_srv)),
         ]
         IntermediaryResource.__init__(self, links)
