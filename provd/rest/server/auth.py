@@ -54,12 +54,11 @@ class AuthVerifier(auth_verifier.AuthVerifier):
                 return func(*args, **kwargs)
 
             logger.debug('AuthVerifier.verify_token')
-            logger.info('args: %s; kwargs: %s', args, kwargs)
             acl_check = getattr(func, 'acl', self._fallback_acl_check)
             token_id = request.getHeader('X-Auth-Token')
             kwargs_for_required_acl = dict(kwargs)
             kwargs_for_required_acl.update(obj.__dict__)
-            logger.info('kwargs_For_required_acl: %s', kwargs_for_required_acl)
+            logger.debug('kwargs_For_required_acl: %s', kwargs_for_required_acl)
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
             try:
                 token_is_valid = self.client().token.is_valid(token_id, required_acl)
@@ -73,7 +72,6 @@ class AuthVerifier(auth_verifier.AuthVerifier):
         return wrapper
 
     def _required_acl(self, acl_check, args, kwargs):
-        logger.info('acl_check: %s; args: %s; kwargs: %s', acl_check, args, kwargs)
         result = auth_verifier.AuthVerifier._required_acl(self, acl_check, args, kwargs)
-        logger.info('_required_acl: %s', result)
+        logger.debug('_required_acl: %s', result)
         return result
