@@ -564,26 +564,6 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/upgrade:
-    post:
-      summary: Upgrade a package
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.upgrade.create`
-      tags:
-        - plugins
-      parameters:
-        - $ref: '#/parameters/PluginId'
-        - $ref: '#/parameters/PackageIdBody'
-      responses:
-        201:
-          $ref: '#/responses/OperationInProgressResponse'
-        400:
-          $ref: '#/responses/InvalidJSONError'
-        404:
-          $ref: '#/responses/NoSuchResourceError'
-        415:
-          $ref: '#/responses/UnsupportedMediaError'
-
   /provd/pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a package upgrade Operation In Progress
