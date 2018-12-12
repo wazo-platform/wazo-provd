@@ -627,7 +627,7 @@ class InstallableResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
         return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installable')
 
-    @required_acl('provd.pg_mgr.plugins.install.installable.read')  # FIXME
+    @required_acl('provd.pg_mgr.plugins.install.installable.read')
     def render_GET(self, request):
         return _ListInstallxxxxResource.render_GET(self, request)
 
@@ -1001,7 +1001,7 @@ class PluginManagerInstallServiceResource(IntermediaryResource):
         ]
         IntermediaryResource.__init__(self, links)
 
-    @required_acl('provd.pg_mgr.install.read')  # FIXME
+    @required_acl('provd.pg_mgr.plugins.install.read')
     def render_GET(self, request):
         return IntermediaryResource.render_GET(self, request)
 
