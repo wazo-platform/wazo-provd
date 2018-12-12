@@ -61,7 +61,7 @@ def new_id_generator():
     return numeric_id_generator(start=1)
 
 
-def handle_post_request(acl, request, content, action, *args):
+def handle_post_request(acl, request, content, action, operation=False, obj=None, *args):
     token_is_valid = False
     token = request.getHeader('X-Auth-Token')
     try:
@@ -79,11 +79,19 @@ def handle_post_request(acl, request, content, action, *args):
         if token_is_valid:
             def callback(_):
                 deferred_respond_no_content(request)
+
             def errback(failure):
                 deferred_respond_error(request, failure.value)
+
             d = action(id_, *args)
-            d.addCallbacks(callback, errback)
-            return NOT_DONE_YET
+            if operation:
+                oip = operation_in_progres_from_deferred(d)
+                _ignore_deferred_error(d)
+                location = obj._add_new_oip(oip, request)
+                return respond_created_no_content(request, location)
+            else:
+                d.addCallbacks(callback, errback)
+                return NOT_DONE_YET
         else:
             return auth_verifier.handle_unauthorized(token)
 
@@ -655,16 +663,14 @@ class DeviceSynchronizeResource(_OipInstallResource):
     @json_request_entity
     @required_acl('provd.dev_mgr.synchronize.create')
     def render_POST(self, request, content):
-        try:
-            id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            deferred = self._app.dev_synchronize(id)
-            oip = operation_in_progres_from_deferred(deferred)
-            _ignore_deferred_error(deferred)
-            location = self._add_new_oip(oip, request)
-            return respond_created_no_content(request, location)
+        handle_post_request(
+            'provd.dev_mgr.{id_}.synchronize',
+            request,
+            content,
+            self._app.dev_synchronize,
+            operation=True,
+            obj=self
+        )
 
 
 class DeviceReconfigureResource(AuthResource):
