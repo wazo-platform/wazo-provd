@@ -49,11 +49,11 @@ class AuthVerifier(auth_verifier.AuthVerifier):
         def wrapper(*args, **kwargs):
             # backward compatibility: when func.acl is not defined, it should
             # probably just raise an AttributeError
-            logger.debug('AuthVerifier.verify_token')
             no_auth = getattr(func, 'no_auth', False)
             if no_auth:
                 return func(*args, **kwargs)
 
+            logger.debug('AuthVerifier.verify_token')
             logger.info('args: %s; kwargs: %s', args, kwargs)
             acl_check = getattr(func, 'acl', self._fallback_acl_check)
             token_id = request.getHeader('X-Auth-Token')
