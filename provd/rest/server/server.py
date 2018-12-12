@@ -412,7 +412,7 @@ class ConfigureServiceResource(AuthResource):
         # in last case, return the non-localized description
         return cfg_srv.description
 
-    @required_acl('provd.configureservice.read')
+    @required_acl('provd.configure.read')
     @json_response_entity
     def render_GET(self, request):
         description_list = self._get_localized_description_list()
@@ -436,7 +436,7 @@ class ConfigureParameterResource(AuthResource):
         self._cfg_srv = cfg_srv
         self._key = key
 
-    @required_acl('provd.parameter.read')
+    @required_acl('provd.configure.{_key}.read')
     @json_response_entity
     def render_GET(self, request):
         try:
@@ -448,7 +448,7 @@ class ConfigureParameterResource(AuthResource):
             content = {u'param': {u'value': value}}
             return json_dumps(content)
 
-    @required_acl('provd.parameter.update')
+    @required_acl('provd.configure.{_key}.update')
     @json_request_entity
     def render_PUT(self, request, content):
         try:
