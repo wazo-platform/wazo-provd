@@ -1135,7 +1135,7 @@ class PluginsResource(AuthResource):
             return AuthResource.getChild(self, path, request)
 
     @json_response_entity
-    @required_acl('provd.pg_mgr.read')
+    @required_acl('provd.pg_mgr.plugins.read')
     def render_GET(self, request):
         plugins = {}
         for pg_id in self._pg_mgr:
