@@ -454,6 +454,17 @@ class ConfigureServiceResource(AuthResource):
         return json_dumps(content)
 
 
+class PluginConfigureServiceResource(ConfigureServiceResource):
+    def __init__(self, cfg_srv, plugin_id):
+        ConfigureServiceResource.__init__(self, cfg_srv)
+        self.id_ = plugin_id
+
+    @required_acl('provd.pg_mgr.plugins.{id_}.configure.read')
+    @json_response_entity
+    def render_GET(self, request):
+        return ConfigureServiceResource.render_GET(self, request)
+
+
 class ConfigureParameterResource(AuthResource):
     def __init__(self, cfg_srv, key):
         AuthResource.__init__(self)
@@ -711,14 +722,15 @@ class DeviceSynchronizeResource(_OipInstallResource):
         self._app = app
 
     @json_request_entity
-    @required_acl('provd.dev_mgr.synchronize.create')
+    @no_auth
     def render_POST(self, request, content):
-        handle_post_request(
-            'provd.dev_mgr.{id_}.synchronize',
+        return handle_post_request(
+            'provd.dev_mgr.devices.{id_}.synchronize',
             request,
             content,
             self._app.dev_synchronize,
             operation=True,
+            operation_from_deferred=True,
             obj=self
         )
 
@@ -729,20 +741,14 @@ class DeviceReconfigureResource(AuthResource):
         self._app = app
 
     @json_request_entity
-    @required_acl('provd.dev_mgr.reconfigure.create')
+    @no_auth
     def render_POST(self, request, content):
-        try:
-            id = content[u'id']
-        except KeyError:
-            return respond_bad_json_entity(request, 'Missing "id" key')
-        else:
-            def on_callback(ign):
-                deferred_respond_no_content(request)
-            def on_errback(failure):
-                deferred_respond_error(request, failure.value)
-            d = self._app.dev_reconfigure(id)
-            d.addCallbacks(on_callback, on_errback)
-            return NOT_DONE_YET
+        return handle_post_request(
+            'provd.dev_mgr.devices.{id_}.reconfigure',
+            request,
+            content,
+            self._app.dev_reconfigure
+        )
 
 
 class DeviceDHCPInfoResource(AuthResource):
@@ -1174,10 +1180,10 @@ class PluginResource(IntermediaryResource):
         links = [(u'pg.info', 'info', PluginInfoResource(plugin))]
         if 'install' in plugin.services:
             install_srv = plugin.services['install']
-            links.append((REL_INSTALL_SRV, 'install', InstallServiceResource(install_srv)))
+            links.append((REL_INSTALL_SRV, 'install', PluginInstallServiceResource(install_srv, plugin.id)))
         if 'configure' in plugin.services:
             configure_srv = plugin.services['configure']
-            links.append((REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(configure_srv)))
+            links.append((REL_CONFIGURE_SRV, 'configure', PluginConfigureServiceResource(configure_srv, plugin.id)))
         return IntermediaryResource.__init__(self, links)
 
     @required_acl('provd.pg_mgr.plugins.{_id}.read')
