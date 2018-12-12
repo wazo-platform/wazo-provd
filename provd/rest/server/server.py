@@ -554,7 +554,8 @@ class PluginInstallResource(InstallResource):
             request,
             content,
             self._install_srv.install,
-            operation=True
+            operation=True,
+            obj=self
         )
 
 
@@ -607,7 +608,8 @@ class PluginUpgradeResource(_OipInstallResource):
             request,
             content,
             self._install_srv.uprade,
-            operation=True
+            operation=True,
+            obj=self
         )
 
 
@@ -729,7 +731,8 @@ class DeviceSynchronizeResource(_OipInstallResource):
             content,
             self._app.dev_synchronize,
             operation=True,
-            operation_from_deferred=True
+            operation_from_deferred=True,
+            obj=self
         )
 
 
