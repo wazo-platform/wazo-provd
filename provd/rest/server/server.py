@@ -61,15 +61,22 @@ def new_id_generator():
     return numeric_id_generator(start=1)
 
 
-def handle_post_request(acl, request, content, action, operation=False, obj=None, *args):
+def handle_post_request(
+    acl, request, content, action, operation=False, operation_from_deferred=False,
+    key='id_', obj=None
+):
     token_is_valid = False
     token = request.getHeader('X-Auth-Token')
     try:
+        logger.debug('content: %s', content)
         id_ = content[u'id']
         try:
+            action_id = {key: id_}
+            if obj:
+                action_id.update(obj.__dict__)
             token_is_valid = auth_verifier.client().token.is_valid(
                 token,
-                acl.format(id_=id_)
+                acl.format(**action_id)
             )
         except requests.RequestException as e:
             return auth_verifier.handle_unreachable(e)
@@ -83,15 +90,25 @@ def handle_post_request(acl, request, content, action, operation=False, obj=None
             def errback(failure):
                 deferred_respond_error(request, failure.value)
 
-            d = action(id_, *args)
+            try:
+                d = action(id_)
+            except Exception, e:
+                return respond_error(request, e)
             if operation:
-                oip = operation_in_progres_from_deferred(d)
-                _ignore_deferred_error(d)
+                oip = None
+                if operation_from_deferred:
+                    oip = operation_in_progres_from_deferred(d)
+                    _ignore_deferred_error(d)
+                else:
+                    d, oip = d
                 location = obj._add_new_oip(oip, request)
                 return respond_created_no_content(request, location)
             else:
-                d.addCallbacks(callback, errback)
-                return NOT_DONE_YET
+                if d:
+                    d.addCallbacks(callback, errback)
+                    return NOT_DONE_YET
+                else:
+                    return respond_no_content(request)
         else:
             return auth_verifier.handle_unauthorized(token)
 
