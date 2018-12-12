@@ -547,7 +547,7 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/upgrade:
     post:
       summary: Upgrade a package
-      description: **Required ACL:** `provd.pg_mgr.upgrade.create`
+      description: **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.upgrade`
       tags:
         - plugins
       parameters:
