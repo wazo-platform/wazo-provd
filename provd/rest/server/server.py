@@ -670,8 +670,8 @@ class PluginInstalledResource(InstalledResource):
 
 class PackageInstalledResource(InstalledResource):
     def __init__(self, install_srv, plugin_id):
+        InstalledResource.__init__(self, install_srv)
         self.plugin_id = plugin_id
-        return InstalledResource.__init__(self, install_srv)
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.installed.read')
     def render_GET(self, request):
@@ -680,7 +680,7 @@ class PackageInstalledResource(InstalledResource):
 
 class InstallableResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
-        return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installable')
+        _ListInstallxxxxResource.__init__(self, install_srv, 'list_installable')
 
     def render_GET(self, request):
         return _ListInstallxxxxResource.render_GET(self, request)
@@ -1043,7 +1043,7 @@ class PluginManagerResource(IntermediaryResource):
             (u'pg.plugins', 'plugins', PluginsResource(app.pg_mgr)),
             (u'pg.reload', 'reload', PluginReloadResource(app)),
         ]
-        return IntermediaryResource.__init__(self, links)
+        IntermediaryResource.__init__(self, links)
 
     @required_acl('provd.pg_mgr.read')
     def render_GET(self, request):
@@ -1185,7 +1185,7 @@ class PluginResource(IntermediaryResource):
         if 'configure' in plugin.services:
             configure_srv = plugin.services['configure']
             links.append((REL_CONFIGURE_SRV, 'configure', PluginConfigureServiceResource(configure_srv, plugin.id)))
-        return IntermediaryResource.__init__(self, links)
+        IntermediaryResource.__init__(self, links)
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.read')
     def render_GET(self, request):
