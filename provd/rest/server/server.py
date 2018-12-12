@@ -91,21 +91,21 @@ def handle_post_request(
                 deferred_respond_error(request, failure.value)
 
             try:
-                d = action(id_)
+                deferred = action(id_)
             except Exception, e:
                 return respond_error(request, e)
             if operation:
                 oip = None
                 if operation_from_deferred:
-                    oip = operation_in_progres_from_deferred(d)
-                    _ignore_deferred_error(d)
+                    oip = operation_in_progres_from_deferred(deferred)
+                    _ignore_deferred_error(deferred)
                 else:
-                    d, oip = d
+                    deferred, oip = deferred
                 location = obj._add_new_oip(oip, request)
                 return respond_created_no_content(request, location)
             else:
-                if d:
-                    d.addCallbacks(callback, errback)
+                if deferred:
+                    deferred.addCallbacks(callback, errback)
                     return NOT_DONE_YET
                 else:
                     return respond_no_content(request)
@@ -506,7 +506,7 @@ class ConfigureParameterResource(AuthResource):
 
 class PluginInstallServiceResource(IntermediaryResource):
     def __init__(self, install_srv, plugin_id):
-        self.id_ = plugin_id
+        self.plugin_id = plugin_id
         links = [
             (REL_INSTALL, 'install', PackageInstallResource(install_srv, plugin_id)),
             (REL_UNINSTALL, 'uninstall', PackageUninstallResource(install_srv, plugin_id)),
