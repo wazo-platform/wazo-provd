@@ -490,6 +490,34 @@ paths:
               version: "1.1"
         404:
           $ref: '#/responses/NoSuchResourceError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install:
+    get:
+      summary: Get the package installation service resources
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.read`
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/LinksObject'
+          examples:
+              links:
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/install"
+                  "rel": "srv.install.install"
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/uninstall"
+                  "rel": "srv.install.uninstall"
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/installed"
+                  "rel": "srv.install.installed"
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/installable"
+                  "rel": "srv.install.installable"
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
   /provd/pg_mgr/plugins/{plugin_id}/install/install:
     post:
       summary: Install a package
