@@ -1129,11 +1129,6 @@ class PluginResource(IntermediaryResource):
         return IntermediaryResource.render_GET(self, request)
 
 
-def new_server_resource(app, dhcp_request_processing_service):
-    """Create and return a new server resource."""
-    return ServerResource(app, dhcp_request_processing_service)
-
-
 def new_authenticated_server_resource(app, dhcp_request_processing_service):
     """Create and return a new server resource that will be accessible only
     by authenticated users.
