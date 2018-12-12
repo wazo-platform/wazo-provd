@@ -30,10 +30,12 @@ configuration file are documented in provd.conf):
     general.rest_ip
     general.rest_username
     general.rest_password
-    general.rest_authentication
     general.rest_ssl
     general.rest_ssl_certfile
     general.rest_ssl_keyfile
+    general.wazo_auth_ip
+    general.wazo_auth_port
+    general.wazo_auth_verify_certificate
     general.verbose
     general.sync_service_type
     general.asterisk_ami_servers
@@ -266,6 +268,7 @@ def _ip_address_or_star(raw_value):
 _BOOL_TRUE = ['True', 'true', '1']
 _BOOL_FALSE = ['False', 'false', '0']
 
+
 def _bool(raw_value):
     if raw_value in _BOOL_TRUE:
         return True
@@ -326,10 +329,9 @@ _PARAMS_DEFINITION = [
     ('general.tftp_port', (_port_number, True)),
     ('general.rest_ip', (_ip_address_or_star, True)),
     ('general.rest_port', (_port_number, True)),
-    ('general.rest_authentication', (_bool, True)),
     ('general.wazo_auth_ip', (str, True)),
     ('general.wazo_auth_port', (int, True)),
-    ('general.wazo_auth_verify_certificate', (_bool, False)),
+    ('general.wazo_auth_verify_certificate', (str, True)),
     ('general.rest_ssl', (_bool, True)),
     ('general.verbose', (_bool, True)),
     ('general.sync_service_type', (str, True)),
