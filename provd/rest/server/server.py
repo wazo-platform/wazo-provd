@@ -554,8 +554,7 @@ class PluginInstallResource(InstallResource):
             request,
             content,
             self._install_srv.install,
-            operation=True,
-            obj=self
+            operation=True
         )
 
 
@@ -568,7 +567,7 @@ class PackageInstallResource(InstallResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.pg_mgr.plugins.{plugin_id}.install.{id_}.install',
+            'provd.pg_mgr.plugins.{plugin_id}.install.install.create',
             request,
             content,
             self._install_srv.install,
@@ -587,7 +586,7 @@ class PackageUninstallResource(AuthResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.pg_mgr.plugins.{plugin_id}.install.{id_}.uninstall',
+            'provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create',
             request,
             content,
             self._install_srv.uninstall,
@@ -604,7 +603,7 @@ class PluginUpgradeResource(_OipInstallResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.pg_mgr.{id_}.upgrade.create',
+            'provd.pg_mgr.install.upgrade.create',
             request,
             content,
             self._install_srv.uprade,
@@ -617,7 +616,7 @@ class UpdateResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.pg_mgr.update.create')
+    @required_acl('provd.pg_mgr.install.update.create')
     @json_request_entity
     def render_POST(self, request, content):
         try:
@@ -725,13 +724,12 @@ class DeviceSynchronizeResource(_OipInstallResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.dev_mgr.devices.{id_}.synchronize',
+            'provd.dev_mgr.synchronize.create',
             request,
             content,
             self._app.dev_synchronize,
             operation=True,
-            operation_from_deferred=True,
-            obj=self
+            operation_from_deferred=True
         )
 
 
@@ -744,7 +742,7 @@ class DeviceReconfigureResource(AuthResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.dev_mgr.devices.{id_}.reconfigure',
+            'provd.dev_mgr.reconfigure.create',
             request,
             content,
             self._app.dev_reconfigure
@@ -1107,7 +1105,7 @@ class PluginManagerUninstallResource(AuthResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.pg_mgr.plugins.{id_}.install.uninstall',
+            'provd.pg_mgr.plugins.install.uninstall.create',
             request, content, self._app.pg_uninstall
         )
 
@@ -1157,7 +1155,7 @@ class PluginReloadResource(AuthResource):
     @no_auth
     def render_POST(self, request, content):
         return handle_post_request(
-            'provd.pg_mgr.plugins.{id_}.reload',
+            'provd.pg_mgr.reload.create',
             request, content, self._app.pg_reload
         )
 
