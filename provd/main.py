@@ -85,7 +85,7 @@ class ProvisioningService(Service):
                     dev_collection.ensure_index(u'mac')
                     dev_collection.ensure_index(u'ip')
                     dev_collection.ensure_index(u'sn')
-                except AttributeError, e:
+                except AttributeError as e:
                     logger.warning('This type of database doesn\'t seem to support index: %s', e)
             self.app = ProvisioningApplication(cfg_collection, dev_collection, self._config)
         except Exception:
@@ -127,7 +127,7 @@ class ProcessService(Service):
         conffile_globals = self._get_conffile_globals()
         try:
             execfile(pathname, conffile_globals)
-        except Exception, e:
+        except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
         if name not in conffile_globals:

@@ -92,7 +92,7 @@ def handle_post_request(
 
             try:
                 deferred = action(id_)
-            except Exception, e:
+            except Exception as e:
                 return respond_error(request, e)
             if operation:
                 oip = None
@@ -218,7 +218,7 @@ def json_request_entity(fun):
         else:
             try:
                 content = json.loads(request.content.getvalue())
-            except ValueError, e:
+            except ValueError as e:
                 logger.info('Received invalid JSON document: %s', e)
                 return respond_error(request, 'Invalid JSON document: %s' % e)
             else:
@@ -232,12 +232,12 @@ def _add_selector_parameter(args, result):
     if 'q64' in args:
         try:
             raw_selector = a2b_base64(args['q64'][0])
-        except Exception, e:
+        except Exception as e:
             logger.warning('Invalid q64 value: %s', e)
         else:
             try:
                 selector = json.loads(raw_selector)
-            except ValueError, e:
+            except ValueError as e:
                 logger.warning('Invalid q64 value: %s', e)
             else:
                 result['selector'] = selector
@@ -245,7 +245,7 @@ def _add_selector_parameter(args, result):
         raw_selector = args['q'][0]
         try:
             selector = json.loads(raw_selector)
-        except ValueError, e:
+        except ValueError as e:
             logger.warning('Invalid q value: %s', e)
         else:
             result['selector'] = selector
@@ -265,7 +265,7 @@ def _add_skip_parameter(args, result):
         raw_skip = args['skip'][0]
         try:
             skip = int(raw_skip)
-        except ValueError, e:
+        except ValueError as e:
             logger.warning('Invalid skip value: %s', e)
         else:
             result['skip'] = skip
@@ -277,7 +277,7 @@ def _add_limit_parameters(args, result):
         raw_limit = args['limit'][0]
         try:
             limit = int(raw_limit)
-        except ValueError, e:
+        except ValueError as e:
             logger.warning('Invalid limit value: %s', e)
         else:
             result['limit'] = limit
@@ -323,6 +323,7 @@ def _return_value(value):
 
 
 _return_none = _return_value(None)
+
 
 def _ignore_deferred_error(deferred):
     # Ignore any error raise by the deferred by placing an errback that
@@ -494,7 +495,7 @@ class ConfigureParameterResource(AuthResource):
         else:
             try:
                 self._cfg_srv.set(self.param_id, value)
-            except InvalidParameterError, e:
+            except InvalidParameterError as e:
                 logger.info('Invalid value for key %s: %r', self.param_id, value)
                 return respond_error(request, e)
             except KeyError:
@@ -529,6 +530,7 @@ class _OipInstallResource(AuthResource):
         # add a new child to this resource, and return the location
         # of the child
         path = self._id_gen.next()
+
         def on_delete():
             try:
                 del self.children[path]
@@ -623,7 +625,7 @@ class UpdateResource(_OipInstallResource):
     def render_POST(self, request, content):
         try:
             deferred, oip = self._install_srv.update()
-        except Exception, e:
+        except Exception as e:
             # XXX should handle the exception differently if it was
             #     because there's already an update in progress
             logger.error('Error while updating packages', exc_info=True)
@@ -645,7 +647,7 @@ class _ListInstallxxxxResource(AuthResource):
         fun = getattr(self._install_srv, self._method_name)
         try:
             pkgs = fun()
-        except Exception, e:
+        except Exception as e:
             logger.error('Error while listing install packages', exc_info=True)
             return respond_error(request, e, http.INTERNAL_SERVER_ERROR)
         else:
@@ -777,7 +779,7 @@ class DeviceDHCPInfoResource(AuthResource):
             if op == u'commit':
                 mac = norm_mac(raw_dhcp_info[u'mac'])
                 options = self._transform_options(raw_dhcp_info[u'options'])
-        except (KeyError, TypeError, ValueError), e:
+        except (KeyError, TypeError, ValueError) as e:
             logger.warning('Invalid DHCP info content: %s', e)
             return respond_error(request, e)
         else:
@@ -805,9 +807,11 @@ class DevicesResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.read')
     def render_GET(self, request):
         find_arguments = find_arguments_from_request(request)
+
         def on_callback(devices):
             data = json_dumps({u'devices': list(devices)})
             deferred_respond_ok(request, data)
+
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
         d = self._app.dev_find(**find_arguments)
@@ -819,11 +823,13 @@ class DevicesResource(AuthResource):
     def render_POST(self, request, content):
         # XXX praise KeyError
         device = content[u'device']
+
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
             request.setHeader('Location', location)
             data = json_dumps({u'id': id})
             deferred_respond_ok(request, data, http.CREATED)
+
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
         d = self._app.dev_insert(device)
@@ -846,6 +852,7 @@ class DeviceResource(AuthResource):
             else:
                 data = json_dumps({u'device': device})
                 deferred_respond_ok(request, data)
+
         def on_error(failure):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
         d = self._app.dev_retrieve(self.device_id)
@@ -859,8 +866,10 @@ class DeviceResource(AuthResource):
         device = content[u'device']
         # XXX praise TypeError if device not dict
         device[ID_KEY] = self.device_id
+
         def on_callback(_):
             deferred_respond_no_content(request)
+
         def on_errback(failure):
             if failure.check(InvalidIdError):
                 deferred_respond_no_resource(request)
@@ -874,6 +883,7 @@ class DeviceResource(AuthResource):
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
+
         def on_errback(failure):
             if failure.check(InvalidIdError):
                 deferred_respond_no_resource(request)
@@ -910,6 +920,7 @@ class AutocreateConfigResource(AuthResource):
             request.setHeader('Location', location)
             data = json_dumps({u'id': id})
             deferred_respond_ok(request, data, http.CREATED)
+
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
         d = self._app.cfg_create_new()
@@ -929,9 +940,11 @@ class ConfigsResource(AuthResource):
     @required_acl('provd.cfg_mgr.configs.read')
     def render_GET(self, request):
         find_arguments = find_arguments_from_request(request)
+
         def on_callback(configs):
             data = json_dumps({u'configs': list(configs)})
             deferred_respond_ok(request, data)
+
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
         d = self._app.cfg_find(**find_arguments)
@@ -943,11 +956,13 @@ class ConfigsResource(AuthResource):
     def render_POST(self, request, content):
         # XXX praise KeyError
         config = content[u'config']
+
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
             request.setHeader('Location', location)
             data = json_dumps({u'id': id})
             deferred_respond_ok(request, data, http.CREATED)
+
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
         d = self._app.cfg_insert(config)
@@ -976,8 +991,10 @@ class ConfigResource(AuthResource):
             else:
                 data = json_dumps({u'config': config})
                 deferred_respond_ok(request, data)
+
         def on_error(failure):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+
         d = self._app.cfg_retrieve(self.config_id)
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
@@ -989,8 +1006,10 @@ class ConfigResource(AuthResource):
         config = content[u'config']
         # XXX praise TypeError if config not dict
         config[ID_KEY] = self.config_id
+
         def on_callback(_):
             deferred_respond_no_content(request)
+
         def on_errback(failure):
             if failure.check(InvalidIdError):
                 deferred_respond_no_resource(request)
@@ -1004,6 +1023,7 @@ class ConfigResource(AuthResource):
     def render_DELETE(self, request):
         def on_callback(_):
             deferred_respond_no_content(request)
+
         def on_errback(failure):
             if failure.check(InvalidIdError):
                 deferred_respond_no_resource(request)
@@ -1028,9 +1048,11 @@ class RawConfigResource(AuthResource):
             else:
                 data = json_dumps({u'raw_config': raw_config})
                 deferred_respond_ok(request, data)
+
         def on_errback(failure):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
             return failure
+
         d = self._app.cfg_retrieve_raw_config(self.config_id)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET

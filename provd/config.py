@@ -235,7 +235,7 @@ class ConfigFileConfigSource(object):
     def pull(self):
         try:
             return self._do_pull()
-        except Exception, e:
+        except Exception as e:
             raise ConfigSourceError(e)
 
 
@@ -290,7 +290,7 @@ def _bool_or_str(raw_value):
 def _ast_ami_server(raw_value):
     try:
         value = eval(raw_value)
-    except Exception, e:
+    except Exception as e:
         raise ValueError(e)
     else:
         if isinstance(value, list):
@@ -350,6 +350,7 @@ _PARAMS_DEFINITION = [
     ('database.ensure_common_indexes', (_bool, True))
 ]
 
+
 def _check_and_convert_parameters(raw_config):
     for param_name, (fun, mandatory) in _PARAMS_DEFINITION:
         # check if mandatory parameter is present
@@ -361,7 +362,7 @@ def _check_and_convert_parameters(raw_config):
         if param_name in raw_config:
             try:
                 raw_config[param_name] = fun(raw_config[param_name])
-            except Exception, e:
+            except Exception as e:
                 raise ConfigError('parameter "%s" is invalid: %s' % (param_name, e))
     if raw_config['general.rest_ssl']:
         if 'general.rest_ssl_certfile' not in raw_config:
@@ -379,6 +380,7 @@ _BASE_RAW_CONFIG_UPDATE_LIST = [
     (u'http_port', 'general.http_port'),
     (u'tftp_port', 'general.tftp_port'),
 ]
+
 
 def _get_ip_fallback():
     # This function might return an IP address of a loopback interface, but we

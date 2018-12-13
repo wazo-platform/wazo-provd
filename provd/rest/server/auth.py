@@ -5,7 +5,6 @@
 import logging
 import requests
 from functools import wraps
-from xivo_auth_client import Client
 from xivo import auth_verifier
 
 logger = logging.getLogger(__name__)
