@@ -57,13 +57,12 @@ class Resource(resource.Resource):
 
     def render(self, request):
         render_method = self._extract_render_method(request)
+        decorated_render_method = auth_verifier.verify_token(self, request, render_method)
         try:
-            render_method = auth_verifier.verify_token(self, request, render_method)
+            return decorated_render_method(request)
         except auth.auth_verifier.Unauthorized:
             request.setResponseCode(http.UNAUTHORIZED)
             return 'Unauthorized'
-
-        return render_method(request)
 
     def _extract_render_method(self, request):
         # from twisted.web.resource.Resource
