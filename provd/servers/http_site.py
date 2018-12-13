@@ -53,7 +53,7 @@ class Request(server.Request):
             d.addErrback(self.processingFailed)
 
 
-class Resource(resource.Resource):
+class AuthResource(resource.Resource):
 
     def render(self, request):
         render_method = self._extract_render_method(request)
@@ -77,12 +77,6 @@ class Resource(resource.Resource):
 
     def render_OPTIONS(self, request):
         return ''
-
-
-class AuthResource(Resource):
-
-    def __init__(self, *args, **kwargs):
-        Resource.__init__(self, *args, **kwargs)
 
 
 class Site(server.Site):
