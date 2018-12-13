@@ -212,7 +212,7 @@ class RemoteConfigurationService(Service):
 
         auth_address = self._config['general.wazo_auth_ip']
         auth_port = self._config['general.wazo_auth_port']
-        verify_certificate = self._config.get('wazo_auth_verify_certificate', False)
+        verify_certificate = self._config.get('general.wazo_auth_verify_certificate', False)
         auth_config = {
             'host': auth_address,
             'port': auth_port,

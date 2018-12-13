@@ -278,6 +278,15 @@ def _bool(raw_value):
         raise ValueError('invalid boolean raw value "%s"' % raw_value)
 
 
+def _bool_or_str(raw_value):
+    if raw_value in _BOOL_TRUE:
+        return True
+    elif raw_value in _BOOL_FALSE:
+        return False
+    else:
+        return raw_value
+
+
 def _ast_ami_server(raw_value):
     try:
         value = eval(raw_value)
@@ -331,7 +340,7 @@ _PARAMS_DEFINITION = [
     ('general.rest_port', (_port_number, True)),
     ('general.wazo_auth_ip', (str, True)),
     ('general.wazo_auth_port', (int, True)),
-    ('general.wazo_auth_verify_certificate', (str, True)),
+    ('general.wazo_auth_verify_certificate', (_bool_or_str, True)),
     ('general.rest_ssl', (_bool, True)),
     ('general.verbose', (_bool, True)),
     ('general.sync_service_type', (str, True)),
