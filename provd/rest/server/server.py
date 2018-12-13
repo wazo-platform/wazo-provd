@@ -1130,7 +1130,9 @@ class PluginManagerUninstallResource(AuthResource):
     def render_POST(self, request, content):
         return handle_post_request(
             'provd.pg_mgr.install.uninstall.create',
-            request, content, self._app.pg_uninstall
+            request,
+            content,
+            self._app.pg_uninstall,
         )
 
 
@@ -1180,7 +1182,9 @@ class PluginReloadResource(AuthResource):
     def render_POST(self, request, content):
         return handle_post_request(
             'provd.pg_mgr.reload.create',
-            request, content, self._app.pg_reload
+            request,
+            content,
+            self._app.pg_reload,
         )
 
 
