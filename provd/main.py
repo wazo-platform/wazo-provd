@@ -210,7 +210,7 @@ class RemoteConfigurationService(Service):
         self._dhcp_process_service = dhcp_process_service
         self._config = config
 
-        auth_address = self._config['general.wazo_auth_ip']
+        auth_address = self._config['general.wazo_auth_host']
         auth_port = self._config['general.wazo_auth_port']
         verify_certificate = self._config.get('general.wazo_auth_verify_certificate', False)
         auth_config = {

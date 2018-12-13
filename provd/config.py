@@ -33,7 +33,7 @@ configuration file are documented in provd.conf):
     general.rest_ssl
     general.rest_ssl_certfile
     general.rest_ssl_keyfile
-    general.wazo_auth_ip
+    general.wazo_auth_host
     general.wazo_auth_port
     general.wazo_auth_verify_certificate
     general.verbose
@@ -108,7 +108,7 @@ class DefaultConfigSource(object):
         ('general.rest_ip', '127.0.0.1'),
         ('general.rest_port', '8666'),
         ('general.rest_authentication', 'False'),
-        ('general.wazo_auth_ip', '127.0.0.1'),
+        ('general.wazo_auth_host', '127.0.0.1'),
         ('general.wazo_auth_port', '9497'),
         ('general.wazo_auth_verify_certificate', 'False'),
         ('general.rest_ssl', 'False'),
@@ -338,7 +338,7 @@ _PARAMS_DEFINITION = [
     ('general.tftp_port', (_port_number, True)),
     ('general.rest_ip', (_ip_address_or_star, True)),
     ('general.rest_port', (_port_number, True)),
-    ('general.wazo_auth_ip', (str, True)),
+    ('general.wazo_auth_host', (str, True)),
     ('general.wazo_auth_port', (int, True)),
     ('general.wazo_auth_verify_certificate', (_bool_or_str, True)),
     ('general.rest_ssl', (_bool, True)),
