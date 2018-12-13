@@ -56,6 +56,17 @@ class Request(server.Request):
 class Resource(resource.Resource):
 
     def render(self, request):
+        render_method = self._extract_render_method(request)
+        try:
+            render_method = auth_verifier.verify_token(self, request, render_method)
+        except auth.auth_verifier.Unauthorized:
+            request.setResponseCode(http.UNAUTHORIZED)
+            return 'Unauthorized'
+
+        return render_method(request)
+
+    def _extract_render_method(self, request):
+        # from twisted.web.resource.Resource
         render_method = getattr(self, 'render_' + nativeString(request.method), None)
         if not render_method:
             try:
@@ -63,12 +74,7 @@ class Resource(resource.Resource):
             except AttributeError:
                 allowedMethods = _computeAllowedMethods(self)
             raise UnsupportedMethod(allowedMethods)
-        try:
-            render_method = auth_verifier.verify_token(self, request, render_method)
-            return render_method(request)
-        except auth.auth_verifier.Unauthorized:
-            request.setResponseCode(http.UNAUTHORIZED)
-            return 'Unauthorized'
+        return render_method
 
     def render_OPTIONS(self, request):
         return ''
