@@ -47,7 +47,3 @@ class AuthVerifier(auth_verifier.AuthVerifier):
 
             return self.handle_unauthorized(token_id)
         return wrapper
-
-    def _required_acl(self, acl_check, args, kwargs):
-        result = auth_verifier.AuthVerifier._required_acl(self, acl_check, args, kwargs)
-        return result
