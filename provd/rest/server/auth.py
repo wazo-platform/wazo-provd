@@ -10,28 +10,8 @@ from xivo import auth_verifier
 
 logger = logging.getLogger(__name__)
 
-auth_config = None
-auth_client = None
-enabled = False
 required_acl = auth_verifier.required_acl
 _auth_verifier = None
-
-
-def set_auth_enabled(status):
-    global enabled
-    enabled = status
-
-
-def set_auth_config(config):
-    global auth_config
-    auth_config = config
-
-
-def client():
-    global auth_client
-    if not auth_client:
-        auth_client = Client(**auth_config)
-    return auth_client
 
 
 def get_auth_verifier():
