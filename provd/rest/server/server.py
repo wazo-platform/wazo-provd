@@ -61,57 +61,6 @@ def new_id_generator():
     return numeric_id_generator(start=1)
 
 
-def handle_post_request(
-    acl, request, content, action, operation=False, operation_from_deferred=False,
-    key='id_', obj=None
-):
-    token_is_valid = False
-    token = request.getHeader('X-Auth-Token')
-    try:
-        id_ = content[u'id']
-        try:
-            action_id = {key: id_}
-            if obj:
-                action_id.update(obj.__dict__)
-            token_is_valid = auth_verifier.client().token.is_valid(
-                token,
-                acl.format(**action_id)
-            )
-        except requests.RequestException as e:
-            return auth_verifier.handle_unreachable(e)
-    except KeyError:
-        return respond_bad_json_entity(request, 'Missing "id" key')
-    else:
-        if token_is_valid:
-            def callback(_):
-                deferred_respond_no_content(request)
-
-            def errback(failure):
-                deferred_respond_error(request, failure.value)
-
-            try:
-                deferred = action(id_)
-            except Exception as e:
-                return respond_error(request, e)
-            if operation:
-                oip = None
-                if operation_from_deferred:
-                    oip = operation_in_progres_from_deferred(deferred)
-                    _ignore_deferred_error(deferred)
-                else:
-                    deferred, oip = deferred
-                location = obj._add_new_oip(oip, request)
-                return respond_created_no_content(request, location)
-            else:
-                if deferred:
-                    deferred.addCallbacks(callback, errback)
-                    return NOT_DONE_YET
-                else:
-                    return respond_no_content(request)
-        else:
-            return auth_verifier.handle_unauthorized(token)
-
-
 def respond_no_content(request, response_code=http.NO_CONTENT):
     request.setResponseCode(response_code)
     # next lines are tricks for twisted to omit the 'Content-Type' and 'Content-Length'
@@ -545,19 +494,29 @@ class InstallResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
+    def render_POST(self, request, content):
+        try:
+            pkg_id = content['id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            try:
+                deferred, oip = self._install_srv.install(pkg_id)
+            except Exception, e:
+                # XXX should handle the exception differently if it was
+                #     because there's already an install in progress
+                return respond_error(request, e)
+            else:
+                _ignore_deferred_error(deferred)
+                location = self._add_new_oip(oip, request)
+                return respond_created_no_content(request, location)
+
 
 class PluginInstallResource(InstallResource):
     @json_request_entity
-    @no_auth
+    @required_acl('provd.pg_mgr.install.install.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.pg_mgr.install.install.create',
-            request,
-            content,
-            self._install_srv.install,
-            operation=True,
-            obj=self
-        )
+        return InstallResource.render_POST(self, request, content)
 
 
 class PackageInstallResource(InstallResource):
@@ -566,16 +525,9 @@ class PackageInstallResource(InstallResource):
         self.plugin_id = plugin_id
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.install.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.pg_mgr.plugins.{plugin_id}.install.install.create',
-            request,
-            content,
-            self._install_srv.install,
-            operation=True,
-            obj=self
-        )
+        return InstallResource.render_POST(self, request, content)
 
 
 class PackageUninstallResource(AuthResource):
@@ -585,15 +537,19 @@ class PackageUninstallResource(AuthResource):
         self.plugin_id = plugin_id
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create',
-            request,
-            content,
-            self._install_srv.uninstall,
-            obj=self
-        )
+        try:
+            pkg_id = content['id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            try:
+                self._install_srv.uninstall(pkg_id)
+            except Exception, e:
+                return respond_error(request, e)
+            else:
+                return respond_no_content(request)
 
 
 class PluginUpgradeResource(_OipInstallResource):
@@ -602,16 +558,23 @@ class PluginUpgradeResource(_OipInstallResource):
         self._install_srv = install_srv
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.pg_mgr.install.upgrade.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.pg_mgr.install.upgrade.create',
-            request,
-            content,
-            self._install_srv.uprade,
-            operation=True,
-            obj=self
-        )
+        try:
+            pkg_id = content['id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            try:
+                deferred, oip = self._install_srv.upgrade(pkg_id)
+            except Exception, e:
+                # XXX should handle the exception differently if it was
+                #     because there's already an upgrade in progress
+                return respond_error(request, e)
+            else:
+                _ignore_deferred_error(deferred)
+                location = self._add_new_oip(oip, request)
+                return respond_created_no_content(request, location)
 
 
 class UpdateResource(_OipInstallResource):
@@ -619,8 +582,8 @@ class UpdateResource(_OipInstallResource):
         _OipInstallResource.__init__(self)
         self._install_srv = install_srv
 
-    @required_acl('provd.pg_mgr.install.update.create')
     @json_request_entity
+    @required_acl('provd.pg_mgr.install.update.create')
     def render_POST(self, request, content):
         try:
             deferred, oip = self._install_srv.update()
@@ -656,7 +619,7 @@ class _ListInstallxxxxResource(AuthResource):
 
 class InstalledResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
-        return _ListInstallxxxxResource.__init__(self, install_srv, 'list_installed')
+        _ListInstallxxxxResource.__init__(self, install_srv, 'list_installed')
 
     def render_GET(self, request):
         logger.info('list installed')
@@ -724,17 +687,18 @@ class DeviceSynchronizeResource(_OipInstallResource):
         self._app = app
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.dev_mgr.synchronize.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.dev_mgr.synchronize.create',
-            request,
-            content,
-            self._app.dev_synchronize,
-            operation=True,
-            operation_from_deferred=True,
-            obj=self
-        )
+        try:
+            id = content['id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            deferred = self._app.dev_synchronize(id)
+            oip = operation_in_progres_from_deferred(deferred)
+            _ignore_deferred_error(deferred)
+            location = self._add_new_oip(oip, request)
+            return respond_created_no_content(request, location)
 
 
 class DeviceReconfigureResource(AuthResource):
@@ -743,14 +707,20 @@ class DeviceReconfigureResource(AuthResource):
         self._app = app
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.dev_mgr.reconfigure.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.dev_mgr.reconfigure.create',
-            request,
-            content,
-            self._app.dev_reconfigure
-        )
+        try:
+            id = content[u'id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            def on_callback(ign):
+                deferred_respond_no_content(request)
+            def on_errback(failure):
+                deferred_respond_error(request, failure.value)
+            d = self._app.dev_reconfigure(id)
+            d.addCallbacks(on_callback, on_errback)
+            return NOT_DONE_YET
 
 
 class DeviceDHCPInfoResource(AuthResource):
@@ -1126,14 +1096,22 @@ class PluginManagerUninstallResource(AuthResource):
         self._app = app
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.pg_mgr.install.uninstall.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.pg_mgr.install.uninstall.create',
-            request,
-            content,
-            self._app.pg_uninstall,
-        )
+        try:
+            pkg_id = content['id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            def callback(_):
+                deferred_respond_no_content(request)
+
+            def errback(failure):
+                deferred_respond_error(request, failure.value)
+
+            d = self._app.pg_uninstall(pkg_id)
+            d.addCallbacks(callback, errback)
+            return NOT_DONE_YET
 
 
 class PluginsResource(AuthResource):
@@ -1178,14 +1156,22 @@ class PluginReloadResource(AuthResource):
         self._app = app
 
     @json_request_entity
-    @no_auth
+    @required_acl('provd.pg_mgr.reload.create')
     def render_POST(self, request, content):
-        return handle_post_request(
-            'provd.pg_mgr.reload.create',
-            request,
-            content,
-            self._app.pg_reload,
-        )
+        try:
+            id = content['id']
+        except KeyError:
+            return respond_bad_json_entity(request, 'Missing "id" key')
+        else:
+            def on_callback(ign):
+                deferred_respond_no_content(request)
+
+            def on_errback(failure):
+                deferred_respond_error(request, failure.value)
+
+            d = self._app.pg_reload(id)
+            d.addCallbacks(on_callback, on_errback)
+            return NOT_DONE_YET
 
 
 class PluginInfoResource(AuthResource):
