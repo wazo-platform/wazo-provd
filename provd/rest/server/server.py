@@ -68,7 +68,6 @@ def handle_post_request(
     token_is_valid = False
     token = request.getHeader('X-Auth-Token')
     try:
-        logger.debug('content: %s', content)
         id_ = content[u'id']
         try:
             action_id = {key: id_}
