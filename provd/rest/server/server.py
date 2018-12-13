@@ -17,7 +17,6 @@ configuration.
 import functools
 import json
 import logging
-import requests
 from binascii import a2b_base64
 from provd.app import InvalidIdError
 from provd.localization import get_locale_and_language
@@ -31,7 +30,6 @@ from provd.services import InvalidParameterError
 from provd.util import norm_mac, norm_ip
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
-from xivo.auth_verifier import no_auth
 from .auth import required_acl
 from .auth import get_auth_verifier
 
@@ -48,7 +46,6 @@ REL_UPGRADE = u'srv.install.upgrade'
 REL_UPDATE = u'srv.install.update'
 REL_CONFIGURE_SRV = u'srv.configure'
 REL_CONFIGURE_PARAM = u'srv.configure.param'
-REALM_NAME = 'provd server'
 
 _PPRINT = False
 if _PPRINT:
