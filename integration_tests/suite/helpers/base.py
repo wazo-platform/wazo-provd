@@ -32,7 +32,8 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
     def make_provd(cls, token):
         return Client(
             'localhost',
-            https=False,
+            https=True,
+            verify_certificate=False,
             token=token,
             port=cls.service_port(8666, 'provd'),
             prefix='/provd',
