@@ -1,4 +1,4 @@
-# Copyright 2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 from hamcrest import (
@@ -67,7 +67,7 @@ class TestDevices(BaseIntegrationTest):
             self._client.devices.update(new_info)
 
             result = self._client.devices.get(device['id'])
-            assert_that(result['device']['ip'], is_(equal_to('5.6.7.8')))
+            assert_that(result['ip'], is_(equal_to('5.6.7.8')))
 
     def test_update_errors(self):
         with fixtures.Device(self._client) as device:
@@ -95,7 +95,7 @@ class TestDevices(BaseIntegrationTest):
     def test_get(self):
         with fixtures.Device(self._client) as device:
             result = self._client.devices.get(device['id'])
-            assert_that(result['device']['id'], is_(equal_to(device['id'])))
+            assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_errors(self):
         assert_that(

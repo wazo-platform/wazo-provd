@@ -1,4 +1,4 @@
-# Copyright 2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 from hamcrest import (
@@ -42,7 +42,7 @@ class TestConfigs(BaseIntegrationTest):
     def test_get(self):
         with fixtures.Configuration(self._client) as config:
             result = self._client.configs.get(config['id'])
-            assert_that(result, has_key('config'))
+            assert_that(result, has_key('id'))
 
     def test_get_errors(self):
         assert_that(
@@ -53,7 +53,7 @@ class TestConfigs(BaseIntegrationTest):
     def test_get_raw(self):
         with fixtures.Configuration(self._client) as config:
             result = self._client.configs.get_raw(config['id'])
-            assert_that(result, has_key('raw_config'))
+            assert_that(result, has_key('ip'))
 
     def test_get_raw_errors(self):
         assert_that(
@@ -96,19 +96,15 @@ class TestConfigs(BaseIntegrationTest):
     def test_update(self):
         with fixtures.Configuration(self._client) as config:
             config['raw_config']['ntp_ip'] = '127.0.0.1'
-            self._client.configs.update(config['id'], config)
+            self._client.configs.update(config)
             result = self._client.configs.get(config['id'])
-            assert_that(result['config']['raw_config'], has_entry('ntp_ip', '127.0.0.1'))
+            assert_that(result['raw_config'], has_entry('ntp_ip', '127.0.0.1'))
 
     def test_update_errors(self):
-        with fixtures.Configuration(self._client) as config:
-            invalid_config = {}
+        with fixtures.Configuration(self._client):
+            invalid_config = {'id': None}
             assert_that(
-                calling(self._client.configs.update).with_args(config['id'], invalid_config),
-                raises(ProvdError).matching(has_properties('status_code', 500))
-            )
-            assert_that(
-                calling(self._client.configs.update).with_args('invalid_id', invalid_config),
+                calling(self._client.configs.update).with_args(invalid_config),
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
 

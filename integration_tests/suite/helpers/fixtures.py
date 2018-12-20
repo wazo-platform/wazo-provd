@@ -1,4 +1,4 @@
-# Copyright 2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 
@@ -32,7 +32,7 @@ class Device(object):
             'version': '1.0',
         }
         device = self._client.devices.create(config)
-        self._device = self._client.devices.get(device['id'])['device']
+        self._device = self._client.devices.get(device['id'])
         return self._device
 
     def __exit__(self, type, value, traceback):
@@ -81,7 +81,7 @@ class Configuration(object):
             }
         }
         result = self._client.configs.create(config)
-        self._config = self._client.configs.get(result['id'])['config']
+        self._config = self._client.configs.get(result['id'])
         return self._config
 
     def __exit__(self, type, value, traceback):

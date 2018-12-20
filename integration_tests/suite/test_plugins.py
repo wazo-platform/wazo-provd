@@ -1,4 +1,4 @@
-# Copyright 2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 from hamcrest import (
@@ -87,8 +87,7 @@ class TestPlugins(BaseIntegrationTest):
 
     def test_get(self):
         with fixtures.Plugin(self._client) as result:
-            assert_that(result, has_key('plugin_info'))
-            assert_that(result['plugin_info'], has_key('version'))
+            assert_that(result, has_key('capabilities'))
 
     def test_get_errors(self):
         assert_that(
