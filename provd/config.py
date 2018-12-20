@@ -110,7 +110,7 @@ class DefaultConfigSource(object):
         ('general.wazo_auth_host', 'localhost'),
         ('general.wazo_auth_port', '9497'),
         ('general.wazo_auth_verify_certificate', '/usr/share/xivo-certs/server.crt'),
-        ('general.rest_ssl', 'False'),
+        ('general.rest_ssl', 'True'),
         ('general.rest_ssl_certfile', '/usr/share/xivo-certs/server.crt'),
         ('general.rest_ssl_keyfile', '/usr/share/xivo-certs/server.key'),
         ('general.verbose', 'False'),
