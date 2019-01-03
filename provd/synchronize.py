@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 """Synchronization services for devices."""
@@ -473,7 +473,12 @@ def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
 
 def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
     peer = device.get(u'remote_state_sip_username')
-    if not peer or peer == 'anonymous':
+    if not peer:
+        return
+
+    is_autoprov = peer.startswith('ap') and len(peer) == 10
+    # all devices in autoprov have the same peer starting with "ap" use the ip to avoid restarting all phones
+    if is_autoprov:
         return None
 
     return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event, extra_vars)
