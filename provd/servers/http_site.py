@@ -88,4 +88,3 @@ def corsify_request(request):
     request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token')
     request.setHeader('Access-Control-Allow-Credentials', 'false')
-    logger.debug('corsify_request')

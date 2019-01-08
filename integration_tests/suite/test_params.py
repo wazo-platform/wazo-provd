@@ -1,4 +1,4 @@
-# Copyright 2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 from hamcrest import (
@@ -34,7 +34,7 @@ class TestParams(BaseIntegrationTest):
 
     def test_get(self):
         result = self._client.params.get('locale')
-        assert_that(result, has_key('param'))
+        assert_that(result, has_key('value'))
 
     def test_get_errors(self):
         assert_that(
