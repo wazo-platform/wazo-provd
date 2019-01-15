@@ -51,15 +51,14 @@ class ProvisioningService(Service):
 
     def _extract_database_specific_config(self):
         db_config = {}
-        for k, v in self._config.iteritems():
-            pre, sep, post = k.partition('.')
-            if pre == 'database' and sep and post not in ['type', 'generator']:
-                db_config[post] = v
+        for k, v in self._config['database'].iteritems():
+            if k not in ['type', 'generator']:
+                db_config[k] = v
         return db_config
 
     def _create_database(self):
-        db_type = self._config['database.type']
-        db_generator = self._config['database.generator']
+        db_type = self._config['database']['type']
+        db_generator = self._config['database']['generator']
         db_specific_config = self._extract_database_specific_config()
         logger.info('Using %s database with %s generator and config %s',
                     db_type, db_generator, db_specific_config)
@@ -79,7 +78,7 @@ class ProvisioningService(Service):
         try:
             cfg_collection = ConfigCollection(self._database.collection('configs'))
             dev_collection = DeviceCollection(self._database.collection('devices'))
-            if self._config['database.ensure_common_indexes']:
+            if self._config['database']['ensure_common_indexes']:
                 logger.debug('Ensuring index existence on collections')
                 try:
                     dev_collection.ensure_index(u'mac')
@@ -120,8 +119,8 @@ class ProcessService(Service):
 
     def _create_processor(self, name):
         # name is the name of the processor, for example 'info_extractor'
-        dirname = self._config['general.request_config_dir']
-        config_name = self._config['general.' + name]
+        dirname = self._config['general']['request_config_dir']
+        config_name = self._config['general'][name]
         filename = '%s.py.conf.%s' % (name, config_name)
         pathname = os.path.join(dirname, filename)
         conffile_globals = self._get_conffile_globals()
@@ -156,7 +155,7 @@ class HTTPProcessService(Service):
         process_service = self._process_service.request_processing
         http_process_service = ident.HTTPRequestProcessingService(process_service, app.pg_mgr)
         site = Site(http_process_service)
-        port = self._config['general.http_port']
+        port = self._config['general']['http_port']
         logger.info('Binding HTTP provisioning service to port %s', port)
         self._tcp_server = internet.TCPServer(port, site, backlog=128)
         self._tcp_server.startService()
@@ -175,7 +174,7 @@ class TFTPProcessService(Service):
         self._tftp_protocol = TFTPProtocol()
 
     def privilegedStartService(self):
-        port = self._config['general.tftp_port']
+        port = self._config['general']['tftp_port']
         logger.info('Binding TFTP provisioning service to port %s', port)
         self._udp_server = internet.UDPServer(port, self._tftp_protocol)
         self._udp_server.privilegedStartService()
@@ -234,15 +233,15 @@ class RemoteConfigurationService(Service):
         root_resource.putChild('provd', server_resource)
         rest_site = Site(root_resource)
 
-        port = self._config['general.rest_port']
-        interface = self._config['general.rest_ip']
+        port = self._config['rest_api']['port']
+        interface = self._config['rest_api']['ip']
         if interface == '*':
             interface = ''
         logger.info('Binding HTTP REST API service to "%s:%s"', interface, port)
-        if self._config['general.rest_ssl']:
+        if self._config['rest_api']['ssl']:
             logger.info('SSL enabled for REST API')
-            context_factory = ssl.DefaultOpenSSLContextFactory(self._config['general.rest_ssl_keyfile'],
-                                                               self._config['general.rest_ssl_certfile'])
+            context_factory = ssl.DefaultOpenSSLContextFactory(self._config['rest_api']['ssl_keyfile'],
+                                                               self._config['rest_api']['ssl_certfile'])
             self._tcp_server = internet.SSLServer(port, rest_site, context_factory, interface=interface)
         else:
             self._tcp_server = internet.TCPServer(port, rest_site, interface=interface)
@@ -259,7 +258,7 @@ class SynchronizeService(Service):
         self._config = config
 
     def _new_sync_service_asterisk_ami(self):
-        server_list = self._config['general.asterisk_ami_servers']
+        server_list = self._config['general']['asterisk_ami_servers']
         servers = []
         for server in server_list:
             host, port, tls, user, pwd = server
@@ -281,7 +280,7 @@ class SynchronizeService(Service):
             return fun()
 
     def startService(self):
-        sync_service = self._new_sync_service(self._config['general.sync_service_type'])
+        sync_service = self._new_sync_service(self._config['general']['sync_service_type'])
         if sync_service is not None:
             provd.synchronize.register_sync_service(sync_service)
         Service.startService(self)
@@ -327,7 +326,7 @@ class ProvisioningServiceMaker(object):
         top_service = MultiService()
 
         # check config for verbosity
-        if config['general.verbose']:
+        if config['general']['verbose']:
             logging.getLogger().setLevel(logging.DEBUG)
 
         sync_service = SynchronizeService(config)
