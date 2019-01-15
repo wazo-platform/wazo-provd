@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
 import os.path
@@ -305,25 +305,6 @@ class LocalizationService(Service):
         provd.localization.unregister_localization_service()
 
 
-class _CompositeConfigSource(object):
-    def __init__(self, options):
-        self._options = options
-
-    def pull(self):
-        raw_config = {}
-
-        default = provd.config.DefaultConfigSource()
-        raw_config.update(default.pull())
-
-        command_line = provd.config.CommandLineConfigSource(self._options)
-        raw_config.update(command_line.pull())
-
-        config_file = provd.config.ConfigFileConfigSource(raw_config['general.config_file'])
-        raw_config.update(config_file.pull())
-
-        return raw_config
-
-
 class ProvisioningServiceMaker(object):
     implements(IServiceMaker, IPlugin)
 
@@ -337,8 +318,7 @@ class ProvisioningServiceMaker(object):
 
     def _read_config(self, options):
         logger.info('Reading application configuration')
-        config_sources = [_CompositeConfigSource(options)]
-        return provd.config.get_config(config_sources)
+        return provd.config.get_config(options)
 
     def makeService(self, options):
         self._configure_logging(options)

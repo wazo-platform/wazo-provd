@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 """Provisioning server configuration module.
 
@@ -9,48 +9,52 @@ with well defined values.
 
 The following parameters are defined (parameters that can be set in the
 configuration file are documented in provd.conf):
-    general.config_file
-    general.base_raw_config_file
-    general.base_raw_config
-        The dictionary holding the base raw config.
-    general.request_config_dir
-    general.cache_dir
-    general.cache_plugin
-    general.check_compat_min
-    general.check_compat_max
-    general.base_storage_dir
-    general.plugin_server
-    general.info_extractor
-    general.retriever
-    general.updater
-    general.external_ip
-    general.http_port
-    general.tftp_port
-    general.rest_port
-    general.rest_ip
-    general.rest_username
-    general.rest_password
-    general.rest_ssl
-    general.rest_ssl_certfile
-    general.rest_ssl_keyfile
-    general.wazo_auth_host
-    general.wazo_auth_port
-    general.wazo_auth_verify_certificate
-    general.verbose
-    general.sync_service_type
-    general.asterisk_ami_servers
-    database.type
-    database.generator
-    database.ensure_common_indexes
-    database.json_db_dir
-    plugin_config.*.*
-        where the first * is a plugin ID and the second * is a parameter
-        name for the plugin with the given ID
-    proxy.http
-    proxy.ftp
-    proxy.https
-    proxy.*
-        The proxy for * protocol requests.
+    config_file
+    extra_config_files
+    general:
+        _raw_config_file
+        _raw_config
+            The dictionary holding the base raw config.
+        request_config_dir
+        cache_dir
+        cache_plugin
+        check_compat_min
+        check_compat_max
+        base_storage_dir
+        plugin_server
+        info_extractor
+        retriever
+        updater
+        external_ip
+        http_port
+        tftp_port
+        rest_port
+        rest_ip
+        rest_username
+        rest_password
+        rest_authentication
+        rest_ssl
+        rest_ssl_certfile
+        rest_ssl_keyfile
+        verbose
+        sync_service_type
+        asterisk_ami_servers
+    database:
+        type
+        generator
+        ensure_common_indexes
+        json_db_dir
+    plugin_config:
+        *
+            *
+        where the first * subsection is a plugin ID and each sub-subsection * is a parameter
+        for the plugin with the given ID
+    proxy:
+        http
+        ftp
+        https
+        *
+            The proxy for * protocol requests.
 
 """
 
@@ -59,13 +63,13 @@ configuration file are documented in provd.conf):
 #     and device configuration, since both used the word 'config' and
 #     raw config yet it means different thing
 
-import ConfigParser
 import logging
 import json
 import os.path
 import socket
-from provd.util import norm_ip
 from twisted.python import usage
+from xivo.chain_map import ChainMap
+from xivo.config_helper import read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
@@ -73,57 +77,6 @@ logger = logging.getLogger(__name__)
 class ConfigError(Exception):
     """Raise when an error occur while getting configuration."""
     pass
-
-
-class ConfigSourceError(ConfigError):
-    """Raise when an error occur while pulling raw parameter values from
-    a config source.
-
-    """
-    pass
-
-
-class DefaultConfigSource(object):
-    """A source of raw parameter values that always return the same default
-    values.
-
-    """
-
-    _DEFAULT_RAW_PARAMETERS = [
-        # (parameter name, parameter value)
-        ('general.config_file', '/etc/xivo/provd/provd.conf'),
-        ('general.base_raw_config_file', '/etc/xivo/provd/base_raw_config.json'),
-        ('general.request_config_dir', '/etc/xivo/provd'),
-        ('general.cache_dir', '/var/cache/xivo-provd'),
-        ('general.cache_plugin', 'True'),
-        ('general.check_compat_min', 'True'),
-        ('general.check_compat_max', 'True'),
-        ('general.base_storage_dir', '/var/lib/xivo-provd'),
-        ('general.plugin_server', 'http://provd.wazo.community/plugins/1/stable/'),
-        ('general.info_extractor', 'default'),
-        ('general.retriever', 'default'),
-        ('general.updater', 'default'),
-        ('general.http_port', '8667'),
-        ('general.tftp_port', '69'),
-        ('general.rest_ip', '127.0.0.1'),
-        ('general.rest_port', '8666'),
-        ('general.wazo_auth_host', 'localhost'),
-        ('general.wazo_auth_port', '9497'),
-        ('general.wazo_auth_verify_certificate', '/usr/share/xivo-certs/server.crt'),
-        ('general.rest_ssl', 'True'),
-        ('general.rest_ssl_certfile', '/usr/share/xivo-certs/server.crt'),
-        ('general.rest_ssl_keyfile', '/usr/share/xivo-certs/server.key'),
-        ('general.verbose', 'False'),
-        ('general.sync_service_type', 'none'),
-        ('general.asterisk_ami_servers', '[("127.0.0.1", 5038, False, "provd", "provd")]'),
-        ('database.type', 'json'),
-        ('database.generator', 'default'),
-        ('database.ensure_common_indexes', 'True'),
-        ('database.json_db_dir', 'jsondb'),
-    ]
-
-    def pull(self):
-        return dict(self._DEFAULT_RAW_PARAMETERS)
 
 
 class Options(usage.Options):
@@ -149,100 +102,13 @@ class Options(usage.Options):
     ]
 
 
-class CommandLineConfigSource(object):
-    """A source of raw parameter values coming from the an instance of the
-    Options class defined above.
-
-    """
-
-    _OPTION_TO_PARAM_LIST = [
-        # (<option name, param name>)
-        ('config-file', 'general.config_file'),
-        ('config-dir', 'general.request_config_dir'),
-        ('http-port', 'general.http_port'),
-        ('tftp-port', 'general.tftp_port'),
-        ('rest-port', 'general.rest_port'),
-    ]
-
-    def __init__(self, options):
-        self.options = options
-
-    def pull(self):
-        raw_config = {}
-        for option_name, param_name in self._OPTION_TO_PARAM_LIST:
-            if self.options[option_name] is not None:
-                raw_config[param_name] = self.options[option_name]
-        if self.options['verbose']:
-            raw_config['general.verbose'] = 'True'
-        return raw_config
-
-
-class ConfigFileConfigSource(object):
-    """A source of raw parameter values coming from a configuration file.
-    See the example file to see what is the syntax of the configuration file.
-
-    """
-
-    _BASE_SECTIONS = ['general', 'database', 'proxy']
-    _PLUGIN_SECTION_PREFIX = 'pluginconfig_'
-
-    def __init__(self, filename):
-        self.filename = filename
-
-    def _get_config_from_section(self, config, section):
-        # Note: config is a [Raw]ConfigParser object
-        raw_config = {}
-        if config.has_section(section):
-            for name, value in config.items(section):
-                raw_config_name = section + '.' + name
-                raw_config[raw_config_name] = value
-        return raw_config
-
-    def _get_pluginconfig_from_section(self, config, section):
-        # Pre: config.has_section(section)
-        # Pre: section.startswith(self._PLUGIN_SECTION_PREFIX)
-        # Note: config is a [Raw]ConfigParser object
-        raw_config = {}
-        base_name = 'plugin_config.' + section[len(self._PLUGIN_SECTION_PREFIX):]
-        for name, value in config.items(section):
-            raw_config_name = base_name + '.' + name
-            raw_config[raw_config_name] = value
-        return raw_config
-
-    def _get_pluginconfig(self, config):
-        # Note: config is a [Raw]ConfigParser object
-        raw_config = {}
-        for section in config.sections():
-            if section.startswith(self._PLUGIN_SECTION_PREFIX):
-                raw_config.update(self._get_pluginconfig_from_section(config, section))
-        return raw_config
-
-    def _do_pull(self):
-        config = ConfigParser.RawConfigParser()
-        fobj = open(self.filename)
-        try:
-            config.readfp(fobj)
-        finally:
-            fobj.close()
-
-        raw_config = {}
-        for section in self._BASE_SECTIONS:
-            raw_config.update(self._get_config_from_section(config, section))
-        raw_config.update(self._get_pluginconfig(config))
-        return raw_config
-
-    def pull(self):
-        try:
-            return self._do_pull()
-        except Exception as e:
-            raise ConfigSourceError(e)
-
-
-def _pull_config_from_sources(config_sources):
-    raw_config = {}
-    for config_source in config_sources:
-        current_raw_config = config_source.pull()
-        raw_config.update(current_raw_config)
+def _convert_cli_to_config(options):
+    raw_config = {'general': {}}
+    for option_name, (section, param_name) in _OPTION_TO_PARAM_LIST:
+        if options[option_name] is not None:
+            raw_config[section][param_name] = options[option_name]
+    if options['verbose']:
+        raw_config['general']['verbose'] = True
     return raw_config
 
 
@@ -415,15 +281,13 @@ def _post_update_raw_config(raw_config):
                                                           raw_config['database.json_db_dir'])
 
 
-def get_config(config_sources):
+def get_config(argv):
     """Pull the raw parameters values from the configuration sources and
     return a config dictionary.
-
-    config_source is a sequence/iterable of objects with a pull method taking
-    no arguments and returning a dictionary of raw parameter values.
-
     """
-    raw_config = _pull_config_from_sources(config_sources)
+    cli_config = _convert_cli_to_config(argv)
+    file_config = read_config_file_hierarchy(ChainMap(cli_config, _DEFAULT_CONFIG))
+    raw_config = ChainMap(cli_config, file_config, _DEFAULT_CONFIG)
     _process_aliases(raw_config)
     _check_and_convert_parameters(raw_config)
     _post_update_raw_config(raw_config)
