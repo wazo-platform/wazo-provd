@@ -73,6 +73,53 @@ from xivo.config_helper import read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_CONFIG = {
+    'config_file': '/etc/xivo-provd/config.yml',
+    'extra_config_files': '/etc/xivo-provd/conf.d',
+    'general': {
+        'external_ip': '127.0.0.1',
+        'base_raw_config_file': '/etc/xivo-provd/base_raw_config.json',
+        'request_config_dir': '/etc/xivo-provd',
+        'cache_dir': '/var/cache/xivo-provd',
+        'cache_plugin': True,
+        'check_compat_min': True,
+        'check_compat_max': True,
+        'base_storage_dir': '/var/lib/xivo-provd',
+        'plugin_server': 'http://provd.wazo.community/plugins/1/stable/',
+        'info_extractor': 'default',
+        'retriever': 'default',
+        'updater': 'default',
+        'http_port': 8667,
+        'tftp_port': 69,
+        'verbose': False,
+        'sync_service_type': 'none',
+        'asterisk_ami_servers': '[("127.0.0.1", 5038, False, "provd", "provd")]',
+    },
+    'rest_api': {
+        'authentication': False,
+        'ip': '127.0.0.1',
+        'port': 8666,
+        'ssl': False,
+        'ssl_certfile': '/etc/xivo/provd/keys/cert.pem',
+        'ssl_keyfile': '/etc/xivo/provd/keys/key.pem',
+    },
+    'database': {
+        'type': 'json',
+        'generator': 'default',
+        'ensure_common_indexes': True,
+        'json_db_dir': 'jsondb',
+    }
+}
+
+_OPTION_TO_PARAM_LIST = [
+    # (<option name, (<section, param name>)>)
+    ('config-file', ('general', 'config_file')),
+    ('config-dir', ('general', 'request_config_dir')),
+    ('http-port', ('general', 'http_port')),
+    ('tftp-port', ('general', 'tftp_port')),
+    ('rest-port', ('general', 'rest_port')),
+]
+
 
 class ConfigError(Exception):
     """Raise when an error occur while getting configuration."""
@@ -112,46 +159,6 @@ def _convert_cli_to_config(options):
     return raw_config
 
 
-def _port_number(raw_value):
-    port = int(raw_value)
-    if not 1 <= port <= 65535:
-        raise ValueError('invalid port number "%s"' % str)
-    return port
-
-
-def _ip_address(raw_value):
-    return norm_ip(raw_value)
-
-
-def _ip_address_or_star(raw_value):
-    if raw_value == '*':
-        return raw_value
-    else:
-        return _ip_address(raw_value)
-
-
-_BOOL_TRUE = ['True', 'true', '1']
-_BOOL_FALSE = ['False', 'false', '0']
-
-
-def _bool(raw_value):
-    if raw_value in _BOOL_TRUE:
-        return True
-    elif raw_value in _BOOL_FALSE:
-        return False
-    else:
-        raise ValueError('invalid boolean raw value "%s"' % raw_value)
-
-
-def _bool_or_str(raw_value):
-    if raw_value in _BOOL_TRUE:
-        return True
-    elif raw_value in _BOOL_FALSE:
-        return False
-    else:
-        return raw_value
-
-
 def _ast_ami_server(raw_value):
     try:
         value = eval(raw_value)
@@ -180,71 +187,21 @@ def _load_json_file(raw_value):
 
 
 def _process_aliases(raw_config):
-    if 'general.ip' in raw_config and 'general.external_ip' not in raw_config:
-        raw_config['general.external_ip'] = raw_config['general.ip']
+    if 'ip' in raw_config['general'] and 'external_ip' not in raw_config['general']:
+        raw_config['general']['external_ip'] = raw_config['general']['ip']
 
-
-_PARAMS_DEFINITION = [
-    # list only the mandatory parameters or the parameters that need
-    # transformation
-    # (<param name>: (<transform/check function>, <is mandatory?>))
-    ('general.base_raw_config_file', (str, True)),
-    ('general.request_config_dir', (str, True)),
-    ('general.cache_dir', (str, True)),
-    ('general.cache_plugin', (_bool, True)),
-    ('general.check_compat_min', (_bool, True)),
-    ('general.check_compat_max', (_bool, True)),
-    ('general.base_storage_dir', (str, True)),
-    ('general.info_extractor', (str, True)),
-    ('general.retriever', (str, True)),
-    ('general.updater', (str, True)),
-    ('general.external_ip', (_ip_address, False)),
-    ('general.http_port', (_port_number, True)),
-    ('general.tftp_port', (_port_number, True)),
-    ('general.rest_ip', (_ip_address_or_star, True)),
-    ('general.rest_port', (_port_number, True)),
-    ('general.wazo_auth_host', (str, True)),
-    ('general.wazo_auth_port', (int, True)),
-    ('general.wazo_auth_verify_certificate', (_bool_or_str, True)),
-    ('general.rest_ssl', (_bool, True)),
-    ('general.verbose', (_bool, True)),
-    ('general.sync_service_type', (str, True)),
-    ('general.asterisk_ami_servers', (_ast_ami_server, False)),
-    ('database.type', (str, True)),
-    ('database.generator', (str, True)),
-    ('database.ensure_common_indexes', (_bool, True))
-]
 
 
 def _check_and_convert_parameters(raw_config):
-    for param_name, (fun, mandatory) in _PARAMS_DEFINITION:
-        # check if mandatory parameter is present
-        if mandatory:
-            if param_name not in raw_config:
-                logger.warning('Mandatory parameter "%s" is missing', param_name)
-                raise ConfigError('parameter "%s" is missing' % param_name)
-        # convert parameter if present
-        if param_name in raw_config:
-            try:
-                raw_config[param_name] = fun(raw_config[param_name])
-            except Exception as e:
-                raise ConfigError('parameter "%s" is invalid: %s' % (param_name, e))
-    if raw_config['general.rest_ssl']:
-        if 'general.rest_ssl_certfile' not in raw_config:
-            raise ConfigError('Missing parameter "rest_ssl_certfile"')
-        if 'general.rest_ssl_keyfile' not in raw_config:
-            raise ConfigError('Missing parameter "rest_ssl_keyfile"')
+    if raw_config['rest_api']['ssl']:
+        if 'ssl_certfile' not in raw_config['rest_api']:
+            raise ConfigError('Missing parameter "ssl_certfile"')
+        if 'ssl_keyfile' not in raw_config['rest_api']:
+            raise ConfigError('Missing parameter "ssl_keyfile"')
     # load base_raw_config_file JSON document
     # XXX maybe we should put this in a separate method since it's more or less
     #     a check and not really a convert...
-    raw_config['general.base_raw_config'] = _load_json_file(raw_config['general.base_raw_config_file'])
-
-
-_BASE_RAW_CONFIG_UPDATE_LIST = [
-    # (<dev raw config param name, app raw config param name>
-    (u'http_port', 'general.http_port'),
-    (u'tftp_port', 'general.tftp_port'),
-]
+    raw_config['general']['base_raw_config'] = _load_json_file(raw_config['general']['base_raw_config_file'])
 
 
 def _get_ip_fallback():
@@ -257,28 +214,29 @@ def _get_ip_fallback():
 def _update_general_base_raw_config(app_raw_config):
     # warning: raw_config in the function name means device raw config and
     # the app_raw_config argument means application configuration.
-    base_raw_config = app_raw_config['general.base_raw_config']
-    for key, source_param_name in _BASE_RAW_CONFIG_UPDATE_LIST:
-        if key not in base_raw_config:
-            # currently, we only refer to always specified config parameters,
-            # so next line will never raise a KeyError
-            base_raw_config[key] = app_raw_config[source_param_name]
-    if u'ip' not in base_raw_config:
-        if 'general.external_ip' in app_raw_config:
-            external_ip = app_raw_config['general.external_ip']
+    base_raw_config = app_raw_config['general']['base_raw_config']
+    update_list = {
+        'http_port': app_raw_config['general']['http_port'],
+        'tftp_port': app_raw_config['general']['tftp_port'],
+    }
+    base_raw_config.update(update_list)
+
+    if 'ip' not in base_raw_config:
+        if 'external_ip' in app_raw_config['general']:
+            external_ip = app_raw_config['general']['external_ip']
         else:
             external_ip = _get_ip_fallback()
             logger.warning('Using "%s" for base raw config ip parameter', external_ip)
-        base_raw_config[u'ip'] = external_ip
+        base_raw_config['ip'] = external_ip
 
 
 def _post_update_raw_config(raw_config):
     # Update raw config after transformation/check
     _update_general_base_raw_config(raw_config)
     # update json_db_dir to absolute dir
-    if 'database.json_db_dir' in raw_config:
-        raw_config['database.json_db_dir'] = os.path.join(raw_config['general.base_storage_dir'],
-                                                          raw_config['database.json_db_dir'])
+    if 'json_db_dir' in raw_config['database']:
+        raw_config['database']['json_db_dir'] = os.path.join(raw_config['general']['base_storage_dir'],
+                                                             raw_config['database']['json_db_dir'])
 
 
 def get_config(argv):
