@@ -1,0 +1,8 @@
+# Default configuration for the device info extractor
+
+def xtor_factory(xtors):
+    return CollaboratingDeviceInfoExtractor(VotingUpdater, xtors)
+
+std_xtor = StandardDeviceInfoExtractor()
+all_pg_xtor = AllPluginsDeviceInfoExtractor(xtor_factory, app.pg_mgr)
+info_extractor = CollaboratingDeviceInfoExtractor(LastSeenUpdater, [all_pg_xtor, std_xtor])
