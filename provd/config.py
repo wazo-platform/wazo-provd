@@ -28,17 +28,15 @@ configuration file are documented in provd.conf):
         external_ip
         http_port
         tftp_port
-        rest_port
-        rest_ip
-        rest_username
-        rest_password
-        rest_authentication
-        rest_ssl
-        rest_ssl_certfile
-        rest_ssl_keyfile
         verbose
         sync_service_type
         asterisk_ami_servers
+    rest_api:
+        ip
+        port
+        ssl
+        ssl_certfile
+        ssl_keyfile
     database:
         type
         generator
@@ -96,7 +94,6 @@ _DEFAULT_CONFIG = {
         'asterisk_ami_servers': '[("127.0.0.1", 5038, False, "provd", "provd")]',
     },
     'rest_api': {
-        'authentication': False,
         'ip': '127.0.0.1',
         'port': 8666,
         'ssl': False,
