@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2016 Avencall
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import copy
@@ -136,20 +136,9 @@ def _set_defaults_raw_config(raw_config):
     raw_config.setdefault(u'funckeys', {})
 
 
-def _split_config(config):
-    splitted_config = {}
-    for k, v in config.iteritems():
-        current_dict = splitted_config
-        key_tokens = k.split('.')
-        for key_token in key_tokens[:-1]:
-            current_dict = current_dict.setdefault(key_token, {})
-        current_dict[key_tokens[-1]] = v
-    return splitted_config
-
-
 class ProvisioningApplication(object):
     """Main logic used to provision devices.
-    
+
     Here's the restrictions on the devices/configs/plugins stored by instances
     of this class:
     - device can make references to unknown configs or plugins
@@ -167,9 +156,9 @@ class ProvisioningApplication(object):
     def __init__(self, cfg_collection, dev_collection, config):
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
-        self._splitted_config = _split_config(config)
+        self._splitted_config = config
 
-        base_storage_dir = config['general.base_storage_dir']
+        base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
 
         self.proxies = self._splitted_config.get('proxy', {})
@@ -177,12 +166,12 @@ class ProvisioningApplication(object):
 
         self.pg_mgr = PluginManager(self,
                                     plugins_dir,
-                                    config['general.cache_dir'],
-                                    config['general.cache_plugin'],
-                                    config['general.check_compat_min'],
-                                    config['general.check_compat_max'])
-        if 'general.plugin_server' in config:
-            self.pg_mgr.server = config['general.plugin_server']
+                                    config['general']['cache_dir'],
+                                    config['general']['cache_plugin'],
+                                    config['general']['check_compat_min'],
+                                    config['general']['check_compat_max'])
+        if 'plugin_server' in config['general']:
+            self.pg_mgr.server = config['general']['plugin_server']
 
         # Do not move this line up unless you know what you are doing...
         cfg_service = ApplicationConfigureService(self.pg_mgr, self.proxies, self)
@@ -190,7 +179,7 @@ class ProvisioningApplication(object):
                                                      'app.json'))
         self.configure_service = PersistentConfigureServiceDecorator(cfg_service, persister)
 
-        self._base_raw_config = config['general.base_raw_config']
+        self._base_raw_config = config['general']['base_raw_config']
         logger.info('Using base raw config %s', self._base_raw_config)
         _check_common_raw_config_validity(self._base_raw_config)
         self._rw_lock = DeferredRWLock()
