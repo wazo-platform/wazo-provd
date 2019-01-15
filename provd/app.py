@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 import copy
 import logging
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class InvalidIdError(Exception):
     """Raised when a passed ID is invalid, not necessary because of its type,
     but because of its semantic.
-    
+
     """
     pass
 
@@ -146,9 +146,9 @@ class ProvisioningApplication(object):
     - a plugin can be uninstalled even if some devices make references to it
     - a config can be removed even if some devices or other configs make
       reference to it
-    
+
     This class enforce the plugin contract.
-    
+
     """
     # Note that, seen from the outside, all method acquiring a lock return a
     # deferred.
@@ -305,28 +305,28 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def dev_insert(self, device):
         """Insert a new device into the provisioning application.
-        
+
         Return a deferred that will fire with the ID of the device.
-        
+
         The deferred will fire it's errback with a ValueError if device
         is not a valid device object, i.e. invalid key value, invalid
         type, etc.
-        
+
         The deferred will fire it's errback with an Exception if an 'id'
         key is specified but there's already one device with the same ID.
-        
+
         If device has no 'id' key, one will be added after the device is
         successfully inserted.
-        
+
         Device will be automatically configured if there's enough information
         to do so.
-        
+
         Note that:
         - the value of 'configured' is ignored if given.
         - the passed in device object might be modified so that if the device
           has been inserted successfully, the device object has the same value
           as the one which has been inserted.
-        
+
         """
         logger.info('Inserting new device')
         try:
@@ -350,22 +350,22 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def dev_update(self, device, pre_update_hook=None):
         """Update the device.
-        
+
         The pre_update_hook function is called with the device and
         its config just before the device is persisted.
 
         Return a deferred that fire with None once the update is completed.
-        
+
         The deferred will fire its errback with an exception if device has
         no 'id' key.
-        
+
         The deferred will fire its errback with an InvalidIdError if device
         has unknown id.
-        
+
         The device is automatically deconfigured/configured if needed.
-        
+
         Note that the value of 'configured' is ignored if given.
-        
+
         """
         try:
             try:
@@ -410,15 +410,15 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def dev_delete(self, id):
         """Delete the device with the given ID.
-        
+
         Return a deferred that will fire with None once the device is
         deleted.
-        
+
         The deferred will fire its errback with an InvalidIdError if device
         has unknown id.
-        
+
         The device is automatically deconfigured if needed.
-        
+
         """
         logger.info('Deleting device %s', id)
         try:
@@ -444,7 +444,7 @@ class ProvisioningApplication(object):
     def dev_retrieve(self, id):
         """Return a deferred that fire with the device with the given ID, or
         fire with None if there's no such document.
-        
+
         """
         return self._dev_collection.retrieve(id)
 
@@ -459,14 +459,14 @@ class ProvisioningApplication(object):
     def dev_reconfigure(self, id):
         """Force the reconfiguration of the device. This is usually not
         necessary since configuration is usually done automatically.
-        
+
         Return a deferred that will fire once the device reconfiguration is
         completed, with either True if the device has been successfully
         reconfigured or else False.
-        
+
         The deferred will fire its errback with an exception if id is not a
         valid device ID.
-        
+
         """
         logger.info('Reconfiguring device %s', id)
         try:
@@ -486,18 +486,18 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def dev_synchronize(self, id):
         """Synchronize the physical device with its config.
-        
+
         Return a deferred that will fire with None once the device is
         synchronized.
-        
+
         The deferred will fire its errback with an exception if id is not a
         valid device ID.
-        
+
         The deferred will fire its errback with an exception if the device
         can't be synchronized, either because it has not been configured yet,
         does not support synchronization or if the operation just seem to
         have failed.
-        
+
         """
         logger.info('Synchronizing device %s', id)
         try:
@@ -524,19 +524,19 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def cfg_insert(self, config):
         """Insert a new config into the provisioning application.
-        
+
         Return a deferred that will fire with the ID of the config.
-        
+
         The deferred will fire it's errback with a ValueError if config
         is not a valid config object, i.e. invalid key value, invalid
         type, etc.
-        
+
         The deferred will fire it's errback with an Exception if an 'id'
         key is specified but there's already one config with the same ID.
-        
+
         If config has no 'id' key, one will be added after the config is
         successfully inserted.
-        
+
         """
         logger.info('Inserting config %s', config.get(ID_KEY))
         try:
@@ -580,17 +580,17 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def cfg_update(self, config):
         """Update the config.
-        
+
         Return a deferred that fire with None once the update is completed.
-        
+
         The deferred will fire its errback with an exception if config has
         no 'id' key.
-        
+
         The deferred will fire its errback with an InvalidIdError if config
         has unknown id.
-        
+
         Note that device might be reconfigured.
-        
+
         """
         try:
             try:
@@ -637,16 +637,16 @@ class ProvisioningApplication(object):
     def cfg_delete(self, id):
         """Delete the config with the given ID. Does not delete any reference
         to it from other configs.
-        
+
         Return a deferred that will fire with None once the config is
         deleted.
-        
+
         The deferred will fire its errback with an InvalidIdError if config
         has unknown id.
-        
+
         The devices depending directly or indirectly over this config are
         automatically reconfigured if needed.
-        
+
         """
         logger.info('Deleting config %s', id)
         try:
@@ -692,7 +692,7 @@ class ProvisioningApplication(object):
     def cfg_retrieve(self, id):
         """Return a deferred that fire with the config with the given ID, or
         fire with None if there's no such document.
-        
+
         """
         return self._cfg_collection.retrieve(id)
 
@@ -709,11 +709,11 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def cfg_create_new(self):
         """Create a new config from the config with the autocreate role.
-        
+
         Return a deferred that will fire with the ID of the newly created
         config, or fire with None if there's no config with the autocreate
         role or if the config factory returned None.
-        
+
         """
         logger.info('Creating new config')
         try:
@@ -801,9 +801,9 @@ class ProvisioningApplication(object):
 
     def pg_install(self, id):
         """Install the plugin with the given id.
-        
+
         Return a tuple (deferred, operation in progress).
-        
+
         This method raise the following exception:
           - an Exception if the plugin is already installed.
           - an Exception if there's no installable plugin with the specified
@@ -812,9 +812,9 @@ class ProvisioningApplication(object):
             in progress for the plugin.
           - an InvalidParameterError if the plugin package is not in cache
             and no 'server' param has been set.
-        
+
         Affected devices are automatically configured if needed.
-        
+
         """
         logger.info('Installing and loading plugin %s', id)
         if self.pg_mgr.is_installed(id):
@@ -844,12 +844,12 @@ class ProvisioningApplication(object):
 
     def pg_upgrade(self, id):
         """Upgrade the plugin with the given id.
-        
+
         Same contract as pg_install, except that the plugin must already be
         installed.
-        
+
         Affected devices are automatically reconfigured if needed.
-        
+
         """
         logger.info('Upgrading and reloading plugin %s', id)
         if not self.pg_mgr.is_installed(id):
@@ -884,15 +884,15 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def pg_uninstall(self, id):
         """Uninstall the plugin with the given id.
-        
+
         Return a deferred that will fire with None once the operation is
         completed.
-        
+
         The deferred will fire its errback with an Exception if the plugin
         is not already installed.
-        
+
         Affected devices are automatically deconfigured if needed.
-        
+
         """
         logger.info('Uninstalling and unloading plugin %s', id)
         self.pg_mgr.uninstall(id)
@@ -910,15 +910,15 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def pg_reload(self, id):
         """Reload the plugin with the given id.
-        
+
         If the plugin is not loaded yet, load it.
-        
+
         Return a deferred that will fire with None once the operation is
         completed.
-        
+
         The deferred will fire its errback with an exception if the plugin
         is not already installed or if there's an error at loading.
-        
+
         """
         logger.info('Reloading plugin %s', id)
         if not self.pg_mgr.is_installed(id):
