@@ -202,6 +202,10 @@ def _check_and_convert_parameters(raw_config):
             raise ConfigError('Missing parameter "ssl_certfile"')
         if 'ssl_keyfile' not in raw_config['rest_api']:
             raise ConfigError('Missing parameter "ssl_keyfile"')
+
+    ami_servers = raw_config['general']['asterisk_ami_servers']
+    if ami_servers:
+        raw_config['general']['asterisk_ami_servers'] = _ast_ami_server(ami_servers)
     # load base_raw_config_file JSON document
     # XXX maybe we should put this in a separate method since it's more or less
     #     a check and not really a convert...
