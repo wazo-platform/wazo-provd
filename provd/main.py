@@ -208,16 +208,7 @@ class RemoteConfigurationService(Service):
         self._prov_service = prov_service
         self._dhcp_process_service = dhcp_process_service
         self._config = config
-
-        auth_address = self._config['general.wazo_auth_host']
-        auth_port = self._config['general.wazo_auth_port']
-        verify_certificate = self._config.get('general.wazo_auth_verify_certificate', False)
-        auth_config = {
-            'host': auth_address,
-            'port': auth_port,
-            'verify_certificate': verify_certificate,
-        }
-        auth.get_auth_verifier().set_config(auth_config)
+        auth.get_auth_verifier().set_config(self._config['auth'])
 
     def startService(self):
         app = self._prov_service.app
