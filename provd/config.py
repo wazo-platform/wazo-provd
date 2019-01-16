@@ -71,6 +71,8 @@ from xivo.config_helper import read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
+CERT_FILE = '/usr/share/xivo-certs/server.crt'
+
 _DEFAULT_CONFIG = {
     'config_file': '/etc/xivo-provd/config.yml',
     'extra_config_files': '/etc/xivo-provd/conf.d',
@@ -96,9 +98,14 @@ _DEFAULT_CONFIG = {
     'rest_api': {
         'ip': '127.0.0.1',
         'port': 8666,
-        'ssl': False,
+        'ssl': True,
         'ssl_certfile': '/etc/xivo/provd/keys/cert.pem',
         'ssl_keyfile': '/etc/xivo/provd/keys/key.pem',
+    },
+    'auth': {
+        'host': 'localhost',
+        'port': 9497,
+        'verify_certificate': CERT_FILE,
     },
     'database': {
         'type': 'json',

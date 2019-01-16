@@ -2,3 +2,7 @@ general:
   external_ip: 127.0.0.1
 rest_api:
   ip: 127.0.0.1
+auth:
+  host: localhost
+  port: 9497
+  verify_certificate: /usr/share/xivo-certs/server.crt
