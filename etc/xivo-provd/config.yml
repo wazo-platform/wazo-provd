@@ -1,5 +1,7 @@
 general:
   external_ip: 127.0.0.1
+  sync_service_type: 'asterisk_ami'
+  asterisk_ami_servers: "[('127.0.0.1', 5038, False, 'xivo_provd', 'dio72GHdnSm')]"
 rest_api:
   ip: 127.0.0.1
 auth:
