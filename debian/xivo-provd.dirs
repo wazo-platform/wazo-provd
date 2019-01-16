@@ -1,4 +1,4 @@
-etc/xivo/provd
+etc/xivo-provd
 var/lib/xivo-provd
 var/cache/xivo-provd
 etc/nginx/locations/https-enabled
