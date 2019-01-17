@@ -148,7 +148,7 @@ class TestConfigs(BaseIntegrationTest):
         provd = self.make_provd('invalid-token')
         with fixtures.Configuration(self._client) as config:
             assert_that(
-                calling(provd.configs.update).with_args(config['id'], {}),
+                calling(provd.configs.update).with_args({'id': config['id']}),
                 raises(ProvdError).matching(has_properties('status_code', 401))
             )
 

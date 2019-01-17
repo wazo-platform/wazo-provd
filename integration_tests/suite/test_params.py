@@ -65,7 +65,7 @@ class TestParams(BaseIntegrationTest):
             calling(provd.params.update).with_args('locale', 'fr_FR'),
             raises(ProvdError).matching(has_properties('status_code', 401))
         )
-        result = self._client.params.get('locale')['param']
+        result = self._client.params.get('locale')
         assert_that(result, has_entry('value', 'en_US'))
 
     def test_delete(self):
