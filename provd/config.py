@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2016 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 """Provisioning server configuration module.
@@ -30,10 +30,12 @@ configuration file are documented in provd.conf):
     general.rest_ip
     general.rest_username
     general.rest_password
-    general.rest_authentication
     general.rest_ssl
     general.rest_ssl_certfile
     general.rest_ssl_keyfile
+    general.wazo_auth_host
+    general.wazo_auth_port
+    general.wazo_auth_verify_certificate
     general.verbose
     general.sync_service_type
     general.asterisk_ami_servers
@@ -105,12 +107,12 @@ class DefaultConfigSource(object):
         ('general.tftp_port', '69'),
         ('general.rest_ip', '127.0.0.1'),
         ('general.rest_port', '8666'),
-        ('general.rest_username', 'admin'),
-        ('general.rest_password', 'admin'),
-        ('general.rest_authentication', 'False'),
-        ('general.rest_ssl', 'False'),
-        ('general.rest_ssl_certfile', '/etc/xivo/provd/keys/cert.pem'),
-        ('general.rest_ssl_keyfile', '/etc/xivo/provd/keys/key.pem'),
+        ('general.wazo_auth_host', 'localhost'),
+        ('general.wazo_auth_port', '9497'),
+        ('general.wazo_auth_verify_certificate', '/usr/share/xivo-certs/server.crt'),
+        ('general.rest_ssl', 'True'),
+        ('general.rest_ssl_certfile', '/usr/share/xivo-certs/server.crt'),
+        ('general.rest_ssl_keyfile', '/usr/share/xivo-certs/server.key'),
         ('general.verbose', 'False'),
         ('general.sync_service_type', 'none'),
         ('general.asterisk_ami_servers', '[("127.0.0.1", 5038, False, "provd", "provd")]'),
@@ -232,7 +234,7 @@ class ConfigFileConfigSource(object):
     def pull(self):
         try:
             return self._do_pull()
-        except Exception, e:
+        except Exception as e:
             raise ConfigSourceError(e)
 
 
@@ -265,6 +267,7 @@ def _ip_address_or_star(raw_value):
 _BOOL_TRUE = ['True', 'true', '1']
 _BOOL_FALSE = ['False', 'false', '0']
 
+
 def _bool(raw_value):
     if raw_value in _BOOL_TRUE:
         return True
@@ -274,10 +277,19 @@ def _bool(raw_value):
         raise ValueError('invalid boolean raw value "%s"' % raw_value)
 
 
+def _bool_or_str(raw_value):
+    if raw_value in _BOOL_TRUE:
+        return True
+    elif raw_value in _BOOL_FALSE:
+        return False
+    else:
+        return raw_value
+
+
 def _ast_ami_server(raw_value):
     try:
         value = eval(raw_value)
-    except Exception, e:
+    except Exception as e:
         raise ValueError(e)
     else:
         if isinstance(value, list):
@@ -325,9 +337,9 @@ _PARAMS_DEFINITION = [
     ('general.tftp_port', (_port_number, True)),
     ('general.rest_ip', (_ip_address_or_star, True)),
     ('general.rest_port', (_port_number, True)),
-    ('general.rest_username', (str, True)),
-    ('general.rest_password', (str, True)),
-    ('general.rest_authentication', (_bool, True)),
+    ('general.wazo_auth_host', (str, True)),
+    ('general.wazo_auth_port', (int, True)),
+    ('general.wazo_auth_verify_certificate', (_bool_or_str, True)),
     ('general.rest_ssl', (_bool, True)),
     ('general.verbose', (_bool, True)),
     ('general.sync_service_type', (str, True)),
@@ -336,6 +348,7 @@ _PARAMS_DEFINITION = [
     ('database.generator', (str, True)),
     ('database.ensure_common_indexes', (_bool, True))
 ]
+
 
 def _check_and_convert_parameters(raw_config):
     for param_name, (fun, mandatory) in _PARAMS_DEFINITION:
@@ -348,7 +361,7 @@ def _check_and_convert_parameters(raw_config):
         if param_name in raw_config:
             try:
                 raw_config[param_name] = fun(raw_config[param_name])
-            except Exception, e:
+            except Exception as e:
                 raise ConfigError('parameter "%s" is invalid: %s' % (param_name, e))
     if raw_config['general.rest_ssl']:
         if 'general.rest_ssl_certfile' not in raw_config:
@@ -366,6 +379,7 @@ _BASE_RAW_CONFIG_UPDATE_LIST = [
     (u'http_port', 'general.http_port'),
     (u'tftp_port', 'general.tftp_port'),
 ]
+
 
 def _get_ip_fallback():
     # This function might return an IP address of a loopback interface, but we

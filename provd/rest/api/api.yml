@@ -12,11 +12,19 @@ produces:
   - "application/vnd.proformatique.provd+json"
 x-xivo-name: provd
 x-xivo-port: 8666
+securityDefinitions:
+  wazo_auth_token:
+    type: apiKey
+    name: X-Auth-Token
+    in: header
+security:
+- wazo_auth_token: []
 paths:
   /provd:
     get:
       summary: Get the Provd Manager resource
       description: |
+        **Required ACL:** `provd.read`
         The provd manager resource represents the main entry point to the xivo-provd REST API
       tags:
         - provd
@@ -29,6 +37,8 @@ paths:
   /provd/configure:
     get:
       summary: Get the general provd configuration
+      description: |
+        **Required ACL:** `provd.configure.read`
       tags:
         - provd
       responses:
@@ -40,6 +50,8 @@ paths:
   /provd/configure/{param_id}:
     get:
       summary: Get the configuration parameter value
+      description: |
+        **Required ACL:** `provd.configure.{param_id}.read`
       tags:
         - provd
       parameters:
@@ -53,6 +65,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
+      description: |
+        **Required ACL:** `provd.configure.{param_id}.update`
       tags:
         - provd
       parameters:
@@ -70,6 +84,7 @@ paths:
     get:
       summary: Get the Device Manager resource
       description: |
+        **Required ACL:** `provd.dev_mgr.read`
         The device manager resource represents the entry point to the xivo-provd device REST API
       tags:
       - devices
@@ -92,6 +107,8 @@ paths:
   /provd/dev_mgr/devices:
     get:
       summary: List and find devices
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.read`
       tags:
         - devices
       parameters:
@@ -105,6 +122,8 @@ paths:
           $ref: '#/responses/DevicesResponse'
     post:
       summary: Create a device
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.create`
       tags:
       - devices
       parameters:
@@ -125,6 +144,7 @@ paths:
     get:
       summary: Get a device by ID
       description: |
+        **Required ACL:** `provd.dev_mgr.devices.{device_id}.read`
         Get a device using its ID
       tags:
         - devices
@@ -138,6 +158,7 @@ paths:
     put:
       summary: Update a device
       description: |
+        **Required ACL:** `provd.dev_mgr.devices.{device_id}.update`
         Every field must be specified, otherwise they will be omitted
       tags:
        - devices
@@ -159,6 +180,8 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a device
+      description: |
+        **Required ACL:** `provd.dev_mgr.devices.{device_id}.delete`
       tags:
         - devices
       parameters:
@@ -172,6 +195,8 @@ paths:
   /provd/dev_mgr/synchronize:
     post:
       summary: Synchronize a device
+      description: |
+        **Required ACL:** `provd.dev_mgr.synchronize.create`
       tags:
         - devices
       parameters:
@@ -189,6 +214,8 @@ paths:
   /provd/dev_mgr/synchronize/{operation_id}:
     get:
       summary: Get the status of a synchronize Operation In Progress
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - devices
       parameters:
@@ -203,6 +230,7 @@ paths:
     delete:
       summary: Delete the Operation In Progress
       description: |
+        **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
       tags:
@@ -219,6 +247,7 @@ paths:
     post:
       summary: Reconfigure a device
       description: |
+        **Required ACL:** `provd.dev_mgr.reconfigure.create`
         Regenerate the configuration file for the specified device
       tags:
         - devices
@@ -234,6 +263,7 @@ paths:
     post:
       summary: Push DHCP request information
       description: |
+        **Required ACL:** `provd.dev_mgr.dhcpinfo.create`
         The provisioning server either creates a new device or changes the information of the device with the same MAC address
       tags:
         - devices
@@ -248,6 +278,7 @@ paths:
     get:
       summary: Get the Config Manager resource
       description: |
+        **Required ACL:** `provd.cfg_mgr.read`
         The configuration manager resource represents the entry point to the xivo-provd configuration REST API
       tags:
         - configs
@@ -266,6 +297,8 @@ paths:
   /provd/cfg_mgr/configs:
     get:
       summary: List and find configurations
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.read`
       tags:
         - configs
       parameters:
@@ -279,6 +312,8 @@ paths:
           $ref: '#/responses/ConfigsResponse'
     post:
       summary: Create a configuration
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.create`
       tags:
         - configs
       parameters:
@@ -290,6 +325,8 @@ paths:
   /provd/cfg_mgr/configs/{config_id}:
     get:
       summary: Get a configuration
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.read`
       tags:
         - configs
       parameters:
@@ -301,6 +338,8 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a configuration
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.update`
       tags:
         - configs
       parameters:
@@ -315,6 +354,8 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a configuration
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.delete`
       tags:
         - configs
       parameters:
@@ -328,6 +369,8 @@ paths:
   /provd/cfg_mgr/configs/{config_id}/raw:
     get:
       summary: Get a raw configuration
+      description: |
+        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.raw.read`
       tags:
         - configs
       parameters:
@@ -344,6 +387,7 @@ paths:
     post:
       summary: Create an autocreate configuration
       description: |
+        **Required ACL:** `provd.cfg_mgr.autocreate.create`
         Create a new config based on the config that has the autocreate role
       tags:
         - configs
@@ -358,6 +402,7 @@ paths:
     get:
       summary: Get the Plugin Manager resource
       description: |
+        **Required ACL:** `provd.pg_mgr.read`
         The plugin manager resource represents the entry point to the xivo-provd plugin REST API
       tags:
         - plugins
@@ -378,6 +423,8 @@ paths:
   /provd/pg_mgr/plugins:
     get:
       summary: List the installed plugins
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.read`
       tags:
         - plugins
       responses:
@@ -399,6 +446,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}:
     get:
       summary: Get the resources of a specific plugin
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.read`
       tags:
         - plugins
       parameters:
@@ -418,6 +467,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/info:
     get:
       summary: Get the information of a plugin
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.info.read`
       tags:
         - plugins
       parameters:
@@ -439,9 +490,39 @@ paths:
               version: "1.1"
         404:
           $ref: '#/responses/NoSuchResourceError'
+
+  /provd/pg_mgr/plugins/{plugin_id}/install:
+    get:
+      summary: Get the package installation service resources
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.read`
+      tags:
+        - plugins
+      parameters:
+        - $ref: '#/parameters/PluginId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/LinksObject'
+          examples:
+              links:
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/install"
+                  "rel": "srv.install.install"
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/uninstall"
+                  "rel": "srv.install.uninstall"
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/installed"
+                  "rel": "srv.install.installed"
+                - "href": "/provd/pg_mgr/plugins/test-plugin/install/installable"
+                  "rel": "srv.install.installable"
+        404:
+          $ref: '#/responses/NoSuchResourceError'
+
   /provd/pg_mgr/plugins/{plugin_id}/install/install:
     post:
       summary: Install a package
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.install.create`
       tags:
         - plugins
       parameters:
@@ -460,6 +541,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
     get:
       summary: Get the status of a package installation Operation In Progress
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -475,6 +558,7 @@ paths:
     delete:
       summary: Delete the Operation In Progress
       description: |
+        **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
       tags:
@@ -491,6 +575,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/uninstall:
     post:
       summary: Uninstall a package
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create`
       tags:
         - plugins
       parameters:
@@ -506,27 +592,11 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/upgrade:
-    post:
-      summary: Upgrade a package
-      tags:
-        - plugins
-      parameters:
-        - $ref: '#/parameters/PluginId'
-        - $ref: '#/parameters/PackageIdBody'
-      responses:
-        201:
-          $ref: '#/responses/OperationInProgressResponse'
-        400:
-          $ref: '#/responses/InvalidJSONError'
-        404:
-          $ref: '#/responses/NoSuchResourceError'
-        415:
-          $ref: '#/responses/UnsupportedMediaError'
-
   /provd/pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a package upgrade Operation In Progress
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -542,11 +612,13 @@ paths:
     delete:
       summary: Delete the Operation In Progress
       description: |
+        **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
       parameters:
+        - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/OperationId'
       responses:
         204:
@@ -557,6 +629,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/installable:
     get:
       summary: Get the installable packages list
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installable.read`
       tags:
         - plugins
       parameters:
@@ -572,6 +646,8 @@ paths:
   /provd/pg_mgr/plugins/{plugin_id}/install/installed:
     get:
       summary: Get the installed packages list
+      description: |
+        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installed.read`
       tags:
         - plugins
       parameters:
@@ -587,6 +663,8 @@ paths:
   /provd/pg_mgr/install:
     get:
       summary: Get the installation service resources
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.read`
       tags:
         - plugins
       responses:
@@ -612,6 +690,8 @@ paths:
   /provd/pg_mgr/install/install:
     post:
       summary: Install a plugin
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.install.create`
       tags:
         - plugins
       parameters:
@@ -627,6 +707,8 @@ paths:
   /provd/pg_mgr/install/install/{operation_id}:
     get:
       summary: Get the status of a plugin installation Operation In Progress
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -641,6 +723,7 @@ paths:
     delete:
       summary: Delete the Operation In Progress
       description: |
+        **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
       tags:
@@ -656,6 +739,8 @@ paths:
   /provd/pg_mgr/install/uninstall:
     post:
       summary: Uninstall a plugin
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.uninstall.create`
       tags:
         - plugins
       parameters:
@@ -671,6 +756,8 @@ paths:
   /provd/pg_mgr/install/upgrade:
     post:
       summary: Upgrade a plugin
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.upgrade.create`
       tags:
         - plugins
       parameters:
@@ -686,6 +773,8 @@ paths:
   /provd/pg_mgr/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a plugin upgrade Operation In Progress
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -700,6 +789,7 @@ paths:
     delete:
       summary: Delete the Operation In Progress
       description: |
+        **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
       tags:
@@ -715,6 +805,8 @@ paths:
   /provd/pg_mgr/install/update:
     post:
       summary: Update the List of installable plugins
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.update.create`
       tags:
         - plugins
       parameters:
@@ -728,6 +820,8 @@ paths:
   /provd/pg_mgr/install/update/{operation_id}:
     get:
       summary: Get the status of a plugin database update Operation In Progress
+      description: |
+        **Required ACL:** `provd.operation.read`
       tags:
         - plugins
       parameters:
@@ -742,6 +836,7 @@ paths:
     delete:
       summary: Delete the Operation In Progress
       description: |
+        **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
         Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
       tags:
@@ -757,6 +852,8 @@ paths:
   /provd/pg_mgr/install/installable:
     get:
       summary: Get the installable plugins list
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.installable.read`
       tags:
         - plugins
       responses:
@@ -768,6 +865,8 @@ paths:
   /provd/pg_mgr/install/installed:
     get:
       summary: Get the installed plugins list
+      description: |
+        **Required ACL:** `provd.pg_mgr.install.installed.read`
       tags:
         - plugins
       responses:
@@ -780,6 +879,7 @@ paths:
     post:
       summary: Reload a plugin
       description: |
+        **Required ACL:** `provd.pg_mgr.reload.create`
         This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the xivo-provd application
       tags:
         - plugins

@@ -9,6 +9,7 @@ pull-images:
 	docker pull wazopbx/wait
 	docker pull swaggerapi/swagger-validator
 	docker pull trinitronx/python-simplehttpserver
+	docker pull wazopbx/wazo-auth-mock
 
 provd:
 	docker build --pull -t wazopbx/xivo-provd $(PROVD_DIR)

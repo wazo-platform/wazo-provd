@@ -13,14 +13,15 @@ from provd.devices.config import ConfigCollection
 from provd.devices.device import DeviceCollection
 from provd.devices import ident
 from provd.devices import pgasso
+from provd.rest.server import auth
 from provd.servers.tftp.proto import TFTPProtocol
-from provd.servers.http_site import Site, Resource
+from provd.servers.http_site import Site, AuthResource
 from provd.persist.json_backend import JsonDatabaseFactory
-from provd.rest.server.server import new_server_resource, \
-    new_restricted_server_resource
+from provd.rest.server.server import new_authenticated_server_resource
 from twisted.application.service import IServiceMaker, Service, MultiService
 from twisted.application import internet
 from twisted.internet import ssl
+from twisted.web.resource import Resource as UnsecuredResource
 from twisted.plugin import IPlugin
 from twisted.python import log
 from twisted.python.util import sibpath
@@ -84,7 +85,7 @@ class ProvisioningService(Service):
                     dev_collection.ensure_index(u'mac')
                     dev_collection.ensure_index(u'ip')
                     dev_collection.ensure_index(u'sn')
-                except AttributeError, e:
+                except AttributeError as e:
                     logger.warning('This type of database doesn\'t seem to support index: %s', e)
             self.app = ProvisioningApplication(cfg_collection, dev_collection, self._config)
         except Exception:
@@ -126,7 +127,7 @@ class ProcessService(Service):
         conffile_globals = self._get_conffile_globals()
         try:
             execfile(pathname, conffile_globals)
-        except Exception, e:
+        except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
         if name not in conffile_globals:
@@ -209,19 +210,25 @@ class RemoteConfigurationService(Service):
         self._dhcp_process_service = dhcp_process_service
         self._config = config
 
+        auth_address = self._config['general.wazo_auth_host']
+        auth_port = self._config['general.wazo_auth_port']
+        verify_certificate = self._config.get('general.wazo_auth_verify_certificate', False)
+        auth_config = {
+            'host': auth_address,
+            'port': auth_port,
+            'verify_certificate': verify_certificate,
+        }
+        auth.get_auth_verifier().set_config(auth_config)
+
     def startService(self):
         app = self._prov_service.app
         dhcp_request_processing_service = self._dhcp_process_service.dhcp_request_processing_service
-        if self._config['general.rest_authentication']:
-            credentials = (self._config['general.rest_username'],
-                           self._config['general.rest_password'])
-            server_resource = new_restricted_server_resource(app, dhcp_request_processing_service, credentials)
-            logger.info('Authentication is required for REST API')
-        else:
-            server_resource = new_server_resource(app, dhcp_request_processing_service)
-            logger.warning('No authentication is required for REST API')
-        root_resource = Resource()
-        api_resource = Resource()
+        server_resource = new_authenticated_server_resource(
+            app, dhcp_request_processing_service
+        )
+        logger.info('Authentication is required for REST API')
+        root_resource = AuthResource()
+        api_resource = UnsecuredResource()
         api_resource.putChild('api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
         root_resource.putChild('api', api_resource)
         root_resource.putChild('provd', server_resource)

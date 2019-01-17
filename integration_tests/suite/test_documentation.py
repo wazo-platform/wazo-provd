@@ -16,7 +16,7 @@ class TestDocumentation(BaseIntegrationTest):
     wait_strategy = NoWaitStrategy()
 
     def test_documentation_errors(self):
-        api_url = 'http://provd:8666/api/api.yml'
+        api_url = 'https://provd:8666/api/api.yml'
         self.validate_api(api_url)
 
     def validate_api(self, url):

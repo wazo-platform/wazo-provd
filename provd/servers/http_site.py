@@ -15,8 +15,15 @@ from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
+from twisted.python.compat import nativeString
+from twisted.web.resource import _computeAllowedMethods
+from twisted.web.error import UnsupportedMethod
+
+from provd.rest.server import auth
 
 logger = logging.getLogger(__name__)
+
+auth_verifier = auth.get_auth_verifier()
 
 
 class Request(server.Request):
@@ -36,14 +43,40 @@ class Request(server.Request):
         # Resource Identification
         self.prepath = []
         self.postpath = map(server.unquote, string.split(self.path[1:], '/'))
-        d = self.site.getResourceFor(self)
-        d.addCallback(self.render)
-        d.addErrback(self.processingFailed)
+
+        # We do not really care about the content if the request is a CORS preflight
+        if self.method == 'OPTIONS':
+            self.finish()
+        else:
+            d = self.site.getResourceFor(self)
+            d.addCallback(self.render)
+            d.addErrback(self.processingFailed)
 
 
-class Resource(resource.Resource):
+class AuthResource(resource.Resource):
+
+    def render(self, request):
+        render_method = self._extract_render_method(request)
+        decorated_render_method = auth_verifier.verify_token(self, request, render_method)
+        try:
+            return decorated_render_method(request)
+        except auth.auth_verifier.Unauthorized:
+            request.setResponseCode(http.UNAUTHORIZED)
+            return 'Unauthorized'
+
+    def _extract_render_method(self, request):
+        # from twisted.web.resource.Resource
+        render_method = getattr(self, 'render_' + nativeString(request.method), None)
+        if not render_method:
+            try:
+                allowedMethods = self.allowedMethods
+            except AttributeError:
+                allowedMethods = _computeAllowedMethods(self)
+            raise UnsupportedMethod(allowedMethods)
+        return render_method
+
     def render_OPTIONS(self, request):
-        return b''
+        return ''
 
 
 class Site(server.Site):
