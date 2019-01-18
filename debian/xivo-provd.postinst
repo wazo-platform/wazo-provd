@@ -27,11 +27,11 @@ case "$1" in
 
 		chown "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 
-		if dpkg --compare-versions "$2" "<<" "16.09"; then
+		if dpkg --compare-versions "$2" lt "16.09"; then
 			chown -R "$USER:$USER" /var/lib/xivo-provd /var/cache/xivo-provd
 		fi
 
-        if dpkg --compare-versions "$2" lt '17.02'; then
+        if dpkg --compare-versions "$2" lt '19.03'; then
             ln -sf  /etc/nginx/locations/https-available/xivo-provd \
                     /etc/nginx/locations/https-enabled/xivo-provd
         fi
