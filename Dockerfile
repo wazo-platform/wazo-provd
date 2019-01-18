@@ -15,9 +15,6 @@ RUN cp -r etc/xivo/provd/* /etc/xivo/provd/
 # Fix the dropin.cache
 RUN twistd --help-reactors
 
-# Add an updated configuration file (updated by xivo-config template in a real engine)
-ADD ./contribs/docker/provd.conf /etc/xivo/provd/provd.conf
-
 # Add certificates
 ADD ./contribs/docker/certs /usr/share/xivo-certs
 WORKDIR /usr/share/xivo-certs
