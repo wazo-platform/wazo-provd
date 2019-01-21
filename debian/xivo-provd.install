@@ -1,1 +1,2 @@
 etc/xivo/provd/*  etc/xivo/provd
+etc/nginx/locations/* etc/nginx/locations
