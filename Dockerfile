@@ -12,9 +12,6 @@ RUN mkdir /var/cache/xivo-provd/
 RUN mkdir -p /etc/xivo/provd/
 RUN cp -r etc/xivo/provd/* /etc/xivo/provd/
 
-# Fix the dropin.cache
-RUN twistd --help-reactors
-
 # Add certificates
 ADD ./contribs/docker/certs /usr/share/xivo-certs
 WORKDIR /usr/share/xivo-certs
@@ -25,4 +22,4 @@ EXPOSE 8667
 EXPOSE 8666
 EXPOSE 69/udp
 
-CMD ["twistd", "--nodaemon", "--no_save", "--pidfile=", "--reactor=epoll", "xivo-provd", "--stderr", "--verbose"]
+CMD ["twistd", "--nodaemon", "--no_save", "--pidfile=", "xivo-provd", "--stderr", "--verbose"]
