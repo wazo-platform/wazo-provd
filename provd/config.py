@@ -99,8 +99,8 @@ _DEFAULT_CONFIG = {
         'ip': '127.0.0.1',
         'port': 8666,
         'ssl': True,
-        'ssl_certfile': '/etc/xivo/provd/keys/cert.pem',
-        'ssl_keyfile': '/etc/xivo/provd/keys/key.pem',
+        'ssl_certfile': '/usr/share/xivo-certs/server.crt',
+        'ssl_keyfile': '/usr/share/xivo-certs/server.key',
     },
     'auth': {
         'host': 'localhost',
