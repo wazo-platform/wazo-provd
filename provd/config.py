@@ -7,8 +7,7 @@
 Read raw parameter values from different sources and return a dictionary
 with well defined values.
 
-The following parameters are defined (parameters that can be set in the
-configuration file are documented in provd.conf):
+The following parameters are defined:
     config_file
     extra_config_files
     general:
@@ -37,6 +36,10 @@ configuration file are documented in provd.conf):
         ssl
         ssl_certfile
         ssl_keyfile
+    auth:
+        host
+        port
+        verify_certificate
     database:
         type
         generator
