@@ -1,9 +1,0 @@
-# Default configuration for the device updater
-
-outdated_ip_updater = RemoveOutdatedIpDeviceUpdater(app)
-add_info_updater = AddInfoDeviceUpdater()
-ip_updater = DynamicDeviceUpdater([u'ip', u'version'], True)
-pg_updater = PluginAssociatorDeviceUpdater(app.pg_mgr, ReverseAlphabeticConflictSolver())
-autocreate_cfg_updater = AutocreateConfigDeviceUpdater(app)
-updater = CompositeDeviceUpdater([outdated_ip_updater, add_info_updater,
-                                  ip_updater, pg_updater, autocreate_cfg_updater])
