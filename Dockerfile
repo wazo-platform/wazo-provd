@@ -9,8 +9,8 @@ RUN python setup.py install
 
 # Configure environment
 RUN mkdir /var/cache/xivo-provd/
-RUN mkdir -p /etc/xivo/provd/
-RUN cp -r etc/xivo/provd/* /etc/xivo/provd/
+RUN mkdir -p /etc/xivo-provd/
+RUN cp -r etc/xivo-provd/* /etc/xivo-provd/
 
 # Add certificates
 ADD ./contribs/docker/certs /usr/share/xivo-certs

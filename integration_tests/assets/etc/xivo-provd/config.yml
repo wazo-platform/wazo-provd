@@ -1,0 +1,12 @@
+general:
+  external_ip: 127.0.0.1
+  http_port: 8667
+  tftp_port: 69
+  plugin_server: http://pluginserver:8080/
+rest_api:
+  ip: 0.0.0.0
+  port: 8666
+auth:
+  host: auth
+  port: 9497
+  verify_certificate: False

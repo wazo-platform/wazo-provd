@@ -35,6 +35,10 @@ case "$1" in
             ln -sf  /etc/nginx/locations/https-available/xivo-provd \
                     /etc/nginx/locations/https-enabled/xivo-provd
         fi
+
+		if dpkg --compare-versions "$2" lt '19.03'; then
+			rm -r /etc/xivo/provd/
+		fi
 	;;
 	abort-upgrade)
 	;;

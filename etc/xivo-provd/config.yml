@@ -1,0 +1,13 @@
+general:
+  external_ip: 127.0.0.1
+  http_port: 8667
+  tftp_port: 69
+  sync_service_type: 'asterisk_ami'
+  asterisk_ami_servers: "[('127.0.0.1', 5038, False, 'xivo_provd', 'dio72GHdnSm')]"
+rest_api:
+  ip: 127.0.0.1
+  port: 8666
+auth:
+  host: localhost
+  port: 9497
+  verify_certificate: /usr/share/xivo-certs/server.crt

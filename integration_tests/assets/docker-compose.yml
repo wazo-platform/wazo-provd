@@ -14,7 +14,7 @@ services:
     image: wazopbx/xivo-provd
     volumes:
       - "../..:/usr/src/xivo-provisioning/"
-      - "./etc/xivo/provd/provd.conf:/etc/xivo/provd/provd.conf"
+      - "./etc/xivo-provd/config.yml:/etc/xivo-provd/config.yml"
       - "./provd/configs/base:/var/lib/xivo-provd/jsondb/configs/base"
       - "./provd/configs/default:/var/lib/xivo-provd/jsondb/configs/default"
       - "./provd/configs/defaultconfigdevice:/var/lib/xivo-provd/jsondb/configs/defaultconfigdevice"
