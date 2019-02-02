@@ -37,7 +37,7 @@ case "$1" in
         fi
 
 		if dpkg --compare-versions "$2" lt '19.03'; then
-			rm -r /etc/xivo/provd/
+			rm -fr /etc/xivo/provd
 		fi
 	;;
 	abort-upgrade)
