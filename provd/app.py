@@ -157,6 +157,7 @@ class ProvisioningApplication(object):
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
         self._splitted_config = config
+        self._token = None
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -191,6 +192,13 @@ class ProvisioningApplication(object):
         logger.info('Closing provisioning application...')
         self.pg_mgr.close()
         logger.info('Provisioning application closed')
+
+    def token(self):
+        return self._token
+
+    def set_token(self, token_id):
+        logger.debug('Setting token for provd app: %s', token_id)
+        self._token = token_id
 
     # device methods
 

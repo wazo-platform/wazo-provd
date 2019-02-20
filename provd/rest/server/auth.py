@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 The Wazo Authors  (see AUTHORS file)
+# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import logging
 import requests
 from functools import wraps
 from xivo import auth_verifier
+from xivo_auth_client import Client as AuthClient
 
 logger = logging.getLogger(__name__)
 
 required_acl = auth_verifier.required_acl
 _auth_verifier = None
+_auth_client = None
 
 
 def get_auth_verifier():
@@ -19,6 +21,13 @@ def get_auth_verifier():
         _auth_verifier = AuthVerifier()
 
     return _auth_verifier
+
+
+def get_auth_client(config=None):
+    global _auth_client
+    if not _auth_client and config:
+        _auth_client = AuthClient(**config)
+    return _auth_client
 
 
 class AuthVerifier(auth_verifier.AuthVerifier):
@@ -34,11 +43,12 @@ class AuthVerifier(auth_verifier.AuthVerifier):
 
             acl_check = getattr(func, 'acl', self._fallback_acl_check)
             token_id = request.getHeader('X-Auth-Token')
+            tenant_uuid = request.getHeader('Wazo-Tenant')
             kwargs_for_required_acl = dict(kwargs)
             kwargs_for_required_acl.update(obj.__dict__)
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
             try:
-                token_is_valid = self.client().token.is_valid(token_id, required_acl)
+                token_is_valid = self.client().token.is_valid(token_id, required_acl, tenant=tenant_uuid)
             except requests.RequestException as e:
                 return self.handle_unreachable(e)
 

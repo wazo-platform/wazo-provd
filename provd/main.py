@@ -28,6 +28,7 @@ from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
 from zope.interface.declarations import implements
+from xivo.token_renewer import TokenRenewer
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ class RemoteConfigurationService(Service):
         self._prov_service = prov_service
         self._dhcp_process_service = dhcp_process_service
         self._config = config
-        auth.get_auth_verifier().set_config(self._config['auth'])
+        auth.get_auth_verifier().set_client(auth.get_auth_client(self._config['auth']))
 
     def startService(self):
         app = self._prov_service.app
@@ -295,6 +296,25 @@ class LocalizationService(Service):
         provd.localization.unregister_localization_service()
 
 
+class TokenRenewerService(Service):
+
+    def __init__(self, prov_service, config):
+        self._config = config
+        self._prov_service = prov_service
+
+    def startService(self):
+        app = self._prov_service.app
+        self._token_renewer = TokenRenewer(auth.get_auth_client(self._config['auth']))
+        self._token_renewer.subscribe_to_token_change(app.set_token)
+        self._token_renewer.subscribe_to_token_change(auth.get_auth_client().set_token)
+        self._token_renewer.start()
+        Service.startService(self)
+
+    def stopService(self):
+        self._token_renewer.stop()
+        Service.stopService(self)
+
+
 class ProvisioningServiceMaker(object):
     implements(IServiceMaker, IPlugin)
 
@@ -328,6 +348,9 @@ class ProvisioningServiceMaker(object):
 
         prov_service = ProvisioningService(config)
         prov_service.setServiceParent(top_service)
+
+        token_renewer_service = TokenRenewerService(prov_service, config)
+        token_renewer_service.setServiceParent(top_service)
 
         process_service = ProcessService(prov_service, config)
         process_service.setServiceParent(top_service)
