@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
@@ -11,6 +11,8 @@ Only thing you need to do is to use this Site class instead of twisted.web.serve
 import copy
 import string
 import logging
+
+from collections import namedtuple
 from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
@@ -20,6 +22,10 @@ from twisted.web.resource import _computeAllowedMethods
 from twisted.web.error import UnsupportedMethod
 
 from provd.rest.server import auth
+from provd.rest.server.helpers.tenants import Tenant, Tokens
+from provd.app import InvalidIdError
+from xivo.tenant_helpers import Users
+from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +84,71 @@ class AuthResource(resource.Resource):
     def render_OPTIONS(self, request):
         return ''
 
+    def _build_tenant(self, request):
+        auth_client = auth.get_auth_client()
+        TenantInfo = namedtuple('TenantInfo', ('tenant_uuid', 'tokens', 'users'))
+
+        tokens = Tokens(auth_client)
+        users = Users(auth_client)
+        tenant = Tenant.autodetect(request, tokens, users).uuid
+
+        return TenantInfo(tenant, tokens, users)
+
+    def _build_tenant_list(self, request, tenant_info=None, recurse=False):
+        params = request.args
+
+        auth_client = auth.get_auth_client()
+        tenant, tokens, users = tenant_info or self._build_tenant(request)
+
+        # request.args is a dict of list, but since we expect recurse to be present
+        # only one time in the request arguments we take the first value
+        recurse = recurse or params.get('recurse', [False])[0] in ['true', 'True']
+        if not recurse:
+            return [tenant]
+
+        tenants = []
+
+        try:
+            tenants = auth_client.tenants.list(tenant_uuid=tenant)['items']
+            logger.debug('Tenant listing got %s', tenants)
+        except HTTPError as e:
+            response = getattr(e, 'response', None)
+            status_code = getattr(response, 'status_code', None)
+            if status_code == 401:
+                logger.debug('Tenant listing got a 401, returning %s', [tenant])
+                return [tenant]
+            raise
+
+        return [t['uuid'] for t in tenants]
+
+    @defer.inlineCallbacks
+    def _verify_tenant(self, app, device_id, request):
+        original_device = yield app._dev_get_or_raise(device_id)
+        try:
+            tenant_info = self._build_tenant(request)
+        except Exception as e:
+            raise InvalidIdError(e.message)
+
+        tenant, tokens, users = tenant_info
+        tenant_uuid = tenant_info.tenant_uuid
+        logger.debug('Received tenant: %s', tenant_uuid)
+
+        # No tenant change, so it is valid
+        if original_device['tenant_uuid'] == tenant_uuid:
+            defer.returnValue(tenant_uuid)
+
+        auth_client = auth.get_auth_client()
+        tenant_uuids = self._build_tenant_list(request, tenant_info=tenant_info, recurse=True)
+        provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
+
+        if (
+            original_device['tenant_uuid'] in tenant_uuids
+            or original_device['tenant_uuid'] == provd_tenant_uuid
+        ):
+            defer.returnValue(tenant_uuid)
+        else:
+            raise InvalidIdError('Invalid tenant for device "%s"', id)
+
 
 class Site(server.Site):
     # originally taken from twisted.web.server.Site
@@ -119,5 +190,5 @@ def corsify_request(request):
     # CORS
     request.setHeader('Access-Control-Allow-Origin', '*')
     request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token')
+    request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token,Wazo-Tenant')
     request.setHeader('Access-Control-Allow-Credentials', 'false')
