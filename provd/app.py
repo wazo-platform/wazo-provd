@@ -17,6 +17,8 @@ from provd.services import InvalidParameterError, JsonConfigPersister, \
     PersistentConfigureServiceDecorator
 from provd.synchro import DeferredRWLock
 from twisted.internet import defer
+from provd.rest.server import auth
+from provd.rest.server.helpers.tenants import Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -340,6 +342,12 @@ class ProvisioningApplication(object):
         try:
             # new device are never configured
             device[u'configured'] = False
+            # if the tenant is not specified in the device, set a default value
+            if ('tenant_uuid' in device and not device['tenant_uuid']) or 'tenant_uuid' not in device:
+                auth_client = auth.get_auth_client()
+                tenant_uuid = Tenant.from_token(auth_client.token.get(self._token)).uuid
+                logger.debug('Setting tenant_uuid to %s', tenant_uuid)
+                device['tenant_uuid'] = tenant_uuid
             try:
                 id = yield self._dev_collection.insert(device)
             except PersistInvalidIdError, e:
