@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
 Only thing you need to do is to use this Site class instead of twisted.web.server.Site.
