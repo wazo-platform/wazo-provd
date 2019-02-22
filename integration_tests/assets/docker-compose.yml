@@ -11,7 +11,7 @@ services:
       - "9497"
 
   provd:
-    image: wazopbx/xivo-provd
+    image: xivo-provd-tests
     volumes:
       - "../..:/usr/src/xivo-provisioning/"
       - "./etc/xivo-provd/config.yml:/etc/xivo-provd/config.yml"
