@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 """Device and device collection module.
@@ -46,7 +46,7 @@ from provd.persist.util import ForwardingDocumentCollection
 logger = logging.getLogger(__name__)
 
 _RECONF_KEYS = [u'plugin', u'config', u'mac', u'uuid',
-                u'vendor', u'model', u'version', 'options']
+                u'vendor', u'model', u'version', 'options', 'tenant_uuid']
 
 
 def copy(device):
