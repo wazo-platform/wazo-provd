@@ -1,14 +1,21 @@
-# Copyright 2017-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2017-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import os
 
 from wazo_provd_client import Client
+from xivo_test_helpers import until
 from xivo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
+from xivo_test_helpers.auth import AuthClient, MockCredentials
 
 from .wait_strategy import WaitStrategy
 
 VALID_TOKEN = 'valid-token'
+INVALID_TOKEN = 'invalid-token'
+VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
+MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
+SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
+SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
 
 
 class BaseIntegrationTest(AssetLaunchingTestCase):
@@ -20,7 +27,7 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls._client = cls.make_provd(VALID_TOKEN)
+        cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     def url(self, *parts):
         return 'http://localhost:{port}/provd/{path}'.format(
