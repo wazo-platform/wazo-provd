@@ -19,6 +19,7 @@ from wazo_provd_client.exceptions import ProvdError
 from .helpers import fixtures
 from .helpers.base import (
     BaseIntegrationTest,
+    VALID_TOKEN,
     INVALID_TOKEN,
     MAIN_TENANT,
     SUB_TENANT_1,
@@ -47,14 +48,6 @@ class TestDevices(BaseIntegrationTest):
         result_add = self._add_device('10.10.10.10', '00:11:22:33:44:55', id_='1234abcdef1234')
         assert_that(result_add, has_entry('id', '1234abcdef1234'))
 
-    def test_add_multitenant(self):
-        result_add = self._add_device(
-            '10.10.10.200', '01:02:03:04:05:06', tenant_uuid=SUB_TENANT_1
-        )
-        id_added = result_add['id']
-        result = self._client.devices.get(id_added, tenant_uuid=SUB_TENANT_1)
-        assert_that(result, has_entry('tenant_uuid', SUB_TENANT_1))
-
     def test_add_errors(self):
         assert_that(
             calling(self._add_device).with_args('10.0.1.xx', '00:11:22:33:44:55'),
@@ -70,6 +63,23 @@ class TestDevices(BaseIntegrationTest):
         assert_that(
             calling(provd.devices.create).with_args(
                 {'id': '*&!"/invalid _', 'ip': '10.0.1.xx', 'mac': '00:11:22:33:44:55'}
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
+
+    def test_add_multitenant(self):
+        result_add = self._add_device(
+            '10.10.10.200', '01:02:03:04:05:06', tenant_uuid=SUB_TENANT_1
+        )
+        id_added = result_add['id']
+        result = self._client.devices.get(id_added, tenant_uuid=SUB_TENANT_1)
+        assert_that(result, has_entry('tenant_uuid', SUB_TENANT_1))
+
+    def test_add_multitenant_wrong_token_errors(self):
+        provd = self.make_provd(VALID_TOKEN)
+        assert_that(
+            calling(self._add_device).with_args(
+                '10.10.10.200', '01:02:03:04:05:06', provd=provd, tenant_uuid=SUB_TENANT_1
             ),
             raises(ProvdError).matching(has_properties('status_code', 401))
         )
@@ -132,6 +142,14 @@ class TestDevices(BaseIntegrationTest):
             device_result = self._client.devices.get(device['id'], tenant_uuid=SUB_TENANT_1)
             assert_that(device_result, has_entry('id', device['id']))
 
+    def test_update_multitenant_wrong_token_errors(self):
+        provd = self.make_provd(VALID_TOKEN)
+        with fixtures.Device(self._client) as device:
+            assert_that(
+                calling(provd.devices.update).with_args(device, tenant_uuid=MAIN_TENANT),
+                raises(ProvdError).matching(has_properties('status_code', 404))
+            )
+
     def test_synchronize(self):
         with fixtures.Plugin(self._client, fixtures.PLUGIN_TO_INSTALL):
             with fixtures.Device(self._client) as device:
@@ -139,6 +157,18 @@ class TestDevices(BaseIntegrationTest):
                     until.assert_(
                         operation_successful, operation_progress, tries=20, interval=0.5
                     )
+
+    def test_synchronize_error_invalid_token(self):
+        provd = self.make_provd(INVALID_TOKEN)
+        with fixtures.Device(self._client) as device:
+            assert_that(
+                calling(provd.devices.synchronize).with_args(device['id']),
+                raises(ProvdError).matching(has_properties('status_code', 401))
+            )
+        assert_that(
+            calling(provd.devices.synchronize).with_args('device_id'),
+            raises(ProvdError).matching(has_properties('status_code', 401))
+        )
 
     def test_synchronize_subtenant_from_main(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
@@ -158,16 +188,16 @@ class TestDevices(BaseIntegrationTest):
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
 
-    def test_synchronize_error_invalid_token(self):
-        provd = self.make_provd(INVALID_TOKEN)
+    def test_synchronize_multitenant_wrong_token_errors(self):
+        provd = self.make_provd(VALID_TOKEN)
         with fixtures.Device(self._client) as device:
             assert_that(
-                calling(provd.devices.synchronize).with_args(device['id']),
-                raises(ProvdError).matching(has_properties('status_code', 401))
+                calling(provd.devices.synchronize).with_args(device['id'], tenant_uuid=SUB_TENANT_1),
+                raises(ProvdError).matching(has_properties('status_code', 404))
             )
         assert_that(
-            calling(provd.devices.synchronize).with_args('device_id'),
-            raises(ProvdError).matching(has_properties('status_code', 401))
+            calling(provd.devices.synchronize).with_args('device_id', tenant_uuid=MAIN_TENANT),
+            raises(ProvdError).matching(has_properties('status_code', 404))
         )
 
     def test_get(self):
