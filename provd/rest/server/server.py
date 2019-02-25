@@ -33,7 +33,7 @@ from twisted.web.server import NOT_DONE_YET
 from .auth import required_acl
 from .auth import get_auth_verifier, get_auth_client
 from provd.rest.server.helpers.tenants import Tenant, Tokens
-from xivo.tenant_helpers import Users
+from xivo.tenant_helpers import Users, UnauthorizedTenant
 
 logger = logging.getLogger(__name__)
 
@@ -831,7 +831,12 @@ class DevicesResource(AuthResource):
 
         tokens = Tokens(get_auth_client())
         users = Users(get_auth_client())
-        tenant = Tenant.autodetect(request, tokens, users)
+        try:
+            tenant = Tenant.autodetect(request, tokens, users)
+        except UnauthorizedTenant:
+            respond_unauthorized(request)
+            return NOT_DONE_YET
+
         device['tenant_uuid'] = tenant.uuid
         d = self._app.dev_insert(device)
         d.addCallbacks(on_callback, on_errback)
