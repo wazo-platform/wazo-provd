@@ -209,7 +209,8 @@ class RemoteConfigurationService(Service):
         self._prov_service = prov_service
         self._dhcp_process_service = dhcp_process_service
         self._config = config
-        auth.get_auth_verifier().set_client(auth.get_auth_client(self._config['auth']))
+        auth_client = auth.get_auth_client(**self._config['auth'])
+        auth.get_auth_verifier().set_client(auth_client)
 
     def startService(self):
         app = self._prov_service.app
@@ -304,9 +305,10 @@ class TokenRenewerService(Service):
 
     def startService(self):
         app = self._prov_service.app
-        self._token_renewer = TokenRenewer(auth.get_auth_client(self._config['auth']))
+        auth_client = auth.get_auth_client(**self._config['auth'])
+        self._token_renewer = TokenRenewer(auth_client)
         self._token_renewer.subscribe_to_token_change(app.set_token)
-        self._token_renewer.subscribe_to_token_change(auth.get_auth_client().set_token)
+        self._token_renewer.subscribe_to_token_change(auth_client.set_token)
         self._token_renewer.start()
         Service.startService(self)
 

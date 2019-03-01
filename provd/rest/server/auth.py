@@ -23,9 +23,9 @@ def get_auth_verifier():
     return _auth_verifier
 
 
-def get_auth_client(config=None):
+def get_auth_client(**config):
     global _auth_client
-    if not _auth_client and config:
+    if not _auth_client:
         _auth_client = AuthClient(**config)
     return _auth_client
 
