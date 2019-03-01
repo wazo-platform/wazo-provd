@@ -166,7 +166,7 @@ class TestDevices(BaseIntegrationTest):
                 raises(ProvdError).matching(has_properties('status_code', 401))
             )
         assert_that(
-            calling(provd.devices.synchronize).with_args('device_id'),
+            calling(provd.devices.synchronize).with_args('invalid_id'),
             raises(ProvdError).matching(has_properties('status_code', 401))
         )
 
