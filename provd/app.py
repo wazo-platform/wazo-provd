@@ -342,8 +342,7 @@ class ProvisioningApplication(object):
         try:
             # new device are never configured
             device[u'configured'] = False
-            # if the tenant is not specified in the device, set a default value
-            if ('tenant_uuid' in device and not device['tenant_uuid']) or 'tenant_uuid' not in device:
+            if not device.get('tenant_uuid'):
                 auth_client = auth.get_auth_client()
                 tenant_uuid = Tenant.from_token(auth_client.token.get(self._token)).uuid
                 logger.debug('Setting tenant_uuid to %s', tenant_uuid)
