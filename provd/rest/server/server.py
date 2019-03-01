@@ -707,7 +707,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
                     deferred_respond_no_resource(request)
                 else:
                     deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-            d = self._verify_tenant(self._app, id, request)
+            d = self._verify_tenant(self._app, request, id)
             d.addCallbacks(on_valid_tenant, on_invalid_tenant)
             return NOT_DONE_YET
 
@@ -739,7 +739,7 @@ class DeviceReconfigureResource(AuthResource):
                 logger.debug('Invalid tenant: %s', failure)
                 return failure
 
-            d = self._verify_tenant(self._app, id, request)
+            d = self._verify_tenant(self._app, request, id)
             d.addCallbacks(on_valid_tenant, on_invalid_tenant)
             d.addCallbacks(on_callback, on_errback)
             return NOT_DONE_YET
@@ -900,7 +900,7 @@ class DeviceResource(AuthResource):
             logger.debug('Invalid tenant: %s', failure)
             return failure
 
-        d = self._verify_tenant(self._app, self.device_id, request)
+        d = self._verify_tenant_on_update(self._app, request, self.device_id)
         d.addCallbacks(on_valid_tenant, on_invalid_tenant)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -924,7 +924,7 @@ class DeviceResource(AuthResource):
             logger.debug('Invalid tenant: %s', failure)
             return failure
 
-        d = self._verify_tenant(self._app, self.device_id, request)
+        d = self._verify_tenant(self._app, request, self.device_id)
         d.addCallbacks(on_valid_tenant, on_invalid_tenant)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET

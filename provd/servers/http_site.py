@@ -119,7 +119,7 @@ class AuthResource(resource.Resource):
         return self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=recurse)
 
     @defer.inlineCallbacks
-    def _verify_tenant(self, app, device_id, request):
+    def _verify_tenant(self, app, request, device_id):
         device = yield app._dev_get_or_raise(device_id)
         tenant_uuid = self._extract_tenant_uuid(request)
         logger.debug('Received tenant: %s', tenant_uuid)
@@ -130,7 +130,27 @@ class AuthResource(resource.Resource):
         auth_client = auth.get_auth_client()
         tenant_uuids = self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
         provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
+        logger.debug('Provd tenant is %s', provd_tenant_uuid)
+        logger.debug('Device tenant_uuid: %s', device['tenant_uuid'])
+        if device['tenant_uuid'] in tenant_uuids:
+            defer.returnValue(tenant_uuid)
 
+        raise InvalidIdError('Invalid tenant for device "%s"', device_id)
+
+    @defer.inlineCallbacks
+    def _verify_tenant_on_update(self, app, request, device_id):
+        device = yield app._dev_get_or_raise(device_id)
+        tenant_uuid = self._extract_tenant_uuid(request)
+        logger.debug('Received tenant: %s', tenant_uuid)
+
+        if device['tenant_uuid'] == tenant_uuid:
+            defer.returnValue(tenant_uuid)
+
+        auth_client = auth.get_auth_client()
+        tenant_uuids = self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
+        provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
+        logger.debug('Provd tenant is %s', provd_tenant_uuid)
+        logger.debug('Device tenant_uuid: %s', device['tenant_uuid'])
         if device['tenant_uuid'] in tenant_uuids or device['tenant_uuid'] == provd_tenant_uuid:
             defer.returnValue(tenant_uuid)
 
