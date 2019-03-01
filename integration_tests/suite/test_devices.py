@@ -236,32 +236,19 @@ class TestDevices(BaseIntegrationTest):
             assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_subtenant(self):
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device1:
-            with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_2) as device2:
-                result = self._client.devices.get(device1['id'], tenant_uuid=SUB_TENANT_1)
-                assert_that(result['id'], is_(equal_to(device1['id'])))
-
-                result = self._client.devices.get(device2['id'], tenant_uuid=SUB_TENANT_2)
-                assert_that(result['id'], is_(equal_to(device2['id'])))
+        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                result = self._client.devices.get(device['id'], tenant_uuid=SUB_TENANT_1)
+                assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_subtenant_from_main_tenant(self):
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device1:
-            with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_2) as device2:
-                result = self._client.devices.get(device1['id'], tenant_uuid=MAIN_TENANT)
-                assert_that(result['id'], is_(equal_to(device1['id'])))
-
-                result = self._client.devices.get(device2['id'], tenant_uuid=MAIN_TENANT)
-                assert_that(result['id'], is_(equal_to(device2['id'])))
+        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
+                assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_subtenant_from_other_subtenant_errors(self):
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device1:
-            with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_2) as device2:
+        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
                 assert_that(
-                    calling(self._client.devices.get).with_args(device1['id'], tenant_uuid=SUB_TENANT_2),
-                    raises(ProvdError).matching(has_properties('status_code', 404))
-                )
-                assert_that(
-                    calling(self._client.devices.get).with_args(device2['id'], tenant_uuid=SUB_TENANT_1),
+                    calling(self._client.devices.get).with_args(device['id'], tenant_uuid=SUB_TENANT_2),
                     raises(ProvdError).matching(has_properties('status_code', 404))
                 )
 
