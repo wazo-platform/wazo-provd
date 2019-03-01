@@ -796,6 +796,11 @@ class DevicesResource(AuthResource):
     def getChild(self, path, request):
         return DeviceResource(self._app, path)
 
+    def _extract_recurse(self, request):
+        for value in request.args.get('recurse', []):
+            return value in ['true', 'True']
+        return False
+
     @json_response_entity
     @required_acl('provd.dev_mgr.devices.read')
     def render_GET(self, request):
@@ -808,7 +813,8 @@ class DevicesResource(AuthResource):
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
 
-        tenant_uuids = self._build_tenant_list(request)
+        recurse = self._extract_recurse(request)
+        tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
         find_arguments['selector']['tenant_uuid'] = {'$in': tenant_uuids}
         d = self._app.dev_find(**find_arguments)
         d.addCallbacks(on_callback, on_errback)
@@ -838,6 +844,7 @@ class DevicesResource(AuthResource):
             return NOT_DONE_YET
 
         device['tenant_uuid'] = tenant.uuid
+        logger.debug('Inserting device using tenant_uuid %s', tenant.uuid)
         d = self._app.dev_insert(device)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -862,7 +869,7 @@ class DeviceResource(AuthResource):
         def on_error(failure):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
-        tenant_uuids = self._build_tenant_list(request, recurse=True)
+        tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
         d = self._app.dev_find_one({'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}})
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET

@@ -12,7 +12,6 @@ import copy
 import string
 import logging
 
-from collections import namedtuple
 from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
@@ -84,70 +83,58 @@ class AuthResource(resource.Resource):
     def render_OPTIONS(self, request):
         return ''
 
-    def _build_tenant(self, request):
+    def _extract_tenant_uuid(self, request):
         auth_client = auth.get_auth_client()
-        TenantInfo = namedtuple('TenantInfo', ('tenant_uuid', 'tokens', 'users'))
 
         tokens = Tokens(auth_client)
         users = Users(auth_client)
         try:
-            tenant = Tenant.autodetect(request, tokens, users).uuid
+            tenant_uuid = Tenant.autodetect(request, tokens, users).uuid
         except UnauthorizedTenant as e:
             raise InvalidIdError(e.message)
 
-        return TenantInfo(tenant, tokens, users)
+        return tenant_uuid
 
-    def _build_tenant_list(self, request, tenant_info=None, recurse=False):
-        params = request.args
-
+    def _build_tenant_list(self, tenant_uuid=None, recurse=False):
         auth_client = auth.get_auth_client()
-        tenant, tokens, users = tenant_info or self._build_tenant(request)
 
-        # request.args is a dict of list, but since we expect recurse to be present
-        # only one time in the request arguments we take the first value
-        recurse = recurse or params.get('recurse', [False])[0] in ['true', 'True']
         if not recurse:
-            return [tenant]
-
-        tenants = []
+            return [tenant_uuid]
 
         try:
-            tenants = auth_client.tenants.list(tenant_uuid=tenant)['items']
+            tenants = auth_client.tenants.list(tenant_uuid=tenant_uuid)['items']
             logger.debug('Tenant listing got %s', tenants)
         except HTTPError as e:
             response = getattr(e, 'response', None)
             status_code = getattr(response, 'status_code', None)
             if status_code == 401:
-                logger.debug('Tenant listing got a 401, returning %s', [tenant])
-                return [tenant]
+                logger.debug('Tenant listing got a 401, returning %s', [tenant_uuid])
+                return [tenant_uuid]
             raise
 
         return [t['uuid'] for t in tenants]
 
+    def _build_tenant_list_from_request(self, request, recurse=False):
+        tenant_uuid = self._extract_tenant_uuid(request)
+        return self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=recurse)
+
     @defer.inlineCallbacks
     def _verify_tenant(self, app, device_id, request):
-        original_device = yield app._dev_get_or_raise(device_id)
-        tenant_info = self._build_tenant(request)
-
-        tenant, tokens, users = tenant_info
-        tenant_uuid = tenant_info.tenant_uuid
+        device = yield app._dev_get_or_raise(device_id)
+        tenant_uuid = self._extract_tenant_uuid(request)
         logger.debug('Received tenant: %s', tenant_uuid)
 
-        # No tenant change, so it is valid
-        if original_device['tenant_uuid'] == tenant_uuid:
+        if device['tenant_uuid'] == tenant_uuid:
             defer.returnValue(tenant_uuid)
 
         auth_client = auth.get_auth_client()
-        tenant_uuids = self._build_tenant_list(request, tenant_info=tenant_info, recurse=True)
+        tenant_uuids = self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
         provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
 
-        if (
-            original_device['tenant_uuid'] in tenant_uuids
-            or original_device['tenant_uuid'] == provd_tenant_uuid
-        ):
+        if device['tenant_uuid'] in tenant_uuids or device['tenant_uuid'] == provd_tenant_uuid:
             defer.returnValue(tenant_uuid)
-        else:
-            raise InvalidIdError('Invalid tenant for device "%s"', id)
+
+        raise InvalidIdError('Invalid tenant for device "%s"', device_id)
 
 
 class Site(server.Site):
