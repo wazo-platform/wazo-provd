@@ -88,12 +88,8 @@ class AuthResource(resource.Resource):
 
         tokens = Tokens(auth_client)
         users = Users(auth_client)
-        try:
-            tenant_uuid = Tenant.autodetect(request, tokens, users).uuid
-        except UnauthorizedTenant as e:
-            raise InvalidIdError(e.message)
 
-        return tenant_uuid
+        return Tenant.autodetect(request, tokens, users).uuid
 
     def _build_tenant_list(self, tenant_uuid=None, recurse=False):
         auth_client = auth.get_auth_client()
@@ -135,7 +131,7 @@ class AuthResource(resource.Resource):
         if device['tenant_uuid'] in tenant_uuids:
             defer.returnValue(tenant_uuid)
 
-        raise InvalidIdError('Invalid tenant for device "%s"', device_id)
+        raise UnauthorizedTenant(tenant_uuid)
 
     @defer.inlineCallbacks
     def _verify_tenant_on_update(self, app, request, device_id):
@@ -154,7 +150,7 @@ class AuthResource(resource.Resource):
         if device['tenant_uuid'] in tenant_uuids or device['tenant_uuid'] == provd_tenant_uuid:
             defer.returnValue(tenant_uuid)
 
-        raise InvalidIdError('Invalid tenant for device "%s"', device_id)
+        raise UnauthorizedTenant(tenant_uuid)
 
 
 class Site(server.Site):

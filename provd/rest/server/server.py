@@ -703,7 +703,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
 
             def on_invalid_tenant(failure):
                 logger.debug('Invalid tenant: %s', failure)
-                if failure.check(InvalidIdError):
+                if failure.check(InvalidIdError, UnauthorizedTenant):
                     deferred_respond_no_resource(request)
                 else:
                     deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
@@ -886,7 +886,7 @@ class DeviceResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
@@ -911,7 +911,7 @@ class DeviceResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
@@ -1047,7 +1047,7 @@ class ConfigResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
@@ -1061,7 +1061,7 @@ class ConfigResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
