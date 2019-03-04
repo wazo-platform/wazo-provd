@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
 Only thing you need to do is to use this Site class instead of twisted.web.server.Site.
@@ -11,6 +11,7 @@ Only thing you need to do is to use this Site class instead of twisted.web.serve
 import copy
 import string
 import logging
+
 from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
@@ -20,6 +21,10 @@ from twisted.web.resource import _computeAllowedMethods
 from twisted.web.error import UnsupportedMethod
 
 from provd.rest.server import auth
+from provd.rest.server.helpers.tenants import Tenant, Tokens
+from provd.app import InvalidIdError
+from xivo.tenant_helpers import Users, UnauthorizedTenant
+from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +83,74 @@ class AuthResource(resource.Resource):
     def render_OPTIONS(self, request):
         return ''
 
+    def _extract_tenant_uuid(self, request):
+        auth_client = auth.get_auth_client()
+
+        tokens = Tokens(auth_client)
+        users = Users(auth_client)
+
+        return Tenant.autodetect(request, tokens, users).uuid
+
+    def _build_tenant_list(self, tenant_uuid=None, recurse=False):
+        auth_client = auth.get_auth_client()
+
+        if not recurse:
+            return [tenant_uuid]
+
+        try:
+            tenants = auth_client.tenants.list(tenant_uuid=tenant_uuid)['items']
+            logger.debug('Tenant listing got %s', tenants)
+        except HTTPError as e:
+            response = getattr(e, 'response', None)
+            status_code = getattr(response, 'status_code', None)
+            if status_code == 401:
+                logger.debug('Tenant listing got a 401, returning %s', [tenant_uuid])
+                return [tenant_uuid]
+            raise
+
+        return [t['uuid'] for t in tenants]
+
+    def _build_tenant_list_from_request(self, request, recurse=False):
+        tenant_uuid = self._extract_tenant_uuid(request)
+        return self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=recurse)
+
+    def _is_tenant_valid_for_device(self, tenant_uuid, device):
+        logger.debug('Device tenant_uuid: %s', device['tenant_uuid'])
+        if device['tenant_uuid'] == tenant_uuid:
+            return True
+        tenant_uuids = self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
+        if device['tenant_uuid'] in tenant_uuids:
+            return True
+        return False
+
+    @defer.inlineCallbacks
+    def _verify_tenant(self, app, request, device_id):
+        device = yield app._dev_get_or_raise(device_id)
+        tenant_uuid = self._extract_tenant_uuid(request)
+        logger.debug('Received tenant: %s', tenant_uuid)
+
+        if self._is_tenant_valid_for_device(tenant_uuid, device):
+            defer.returnValue(tenant_uuid)
+
+        raise UnauthorizedTenant(tenant_uuid)
+
+    @defer.inlineCallbacks
+    def _verify_tenant_on_update(self, app, request, device_id):
+        device = yield app._dev_get_or_raise(device_id)
+        tenant_uuid = self._extract_tenant_uuid(request)
+        logger.debug('Received tenant: %s', tenant_uuid)
+
+        if self._is_tenant_valid_for_device(tenant_uuid, device):
+            defer.returnValue(tenant_uuid)
+
+        auth_client = auth.get_auth_client()
+        provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
+        logger.debug('Provd tenant is %s', provd_tenant_uuid)
+        if device['tenant_uuid'] == provd_tenant_uuid:
+            defer.returnValue(tenant_uuid)
+
+        raise UnauthorizedTenant(tenant_uuid)
+
 
 class Site(server.Site):
     # originally taken from twisted.web.server.Site
@@ -119,5 +192,5 @@ def corsify_request(request):
     # CORS
     request.setHeader('Access-Control-Allow-Origin', '*')
     request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token')
+    request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token,Wazo-Tenant')
     request.setHeader('Access-Control-Allow-Credentials', 'false')

@@ -5,4 +5,7 @@ twisted/plugins/dropin.cache
 MANIFEST
 pep8.txt
 pylint.txt
+pycodestyle.txt
+nosetests.xml
 *.egg-info
+dist/

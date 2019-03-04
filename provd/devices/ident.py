@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
 
@@ -8,7 +8,7 @@
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from os.path import basename, normpath
+from os.path import basename
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
@@ -54,7 +54,7 @@ class IDeviceInfoExtractor(Interface):
     """A device info extractor object extract device information from
     requests. In our context, requests are either HTTP, TFTP or DHCP
     requests.
-    
+
     Example of information that can be extracted are:
     - IP address
     - MAC address
@@ -62,24 +62,24 @@ class IDeviceInfoExtractor(Interface):
     - model name
     - version number
     - serial number
-    
+
     Note: DHCP requests are not processed by the provisioning server per se.
     The provisioning server use them only to get information from it and update
     the corresponding device object. For example, with a valid source of DHCP
     information, we can then always make sure the IP <-> MAC for a device is
-    up to date. 
-    
+    up to date.
+
     """
 
     def extract(request, request_type):
         """Return a deferred that will fire with either an non empty
         device info object or an object that evaluates to false in a boolean
         context if no information could be extracted.
-        
+
         So far, request_type is either 'http', 'tftp' or 'dhcp'. See the
         various {HTTP,TFTP,DHCP}RequestProcessingService for more information
         about the type of each request.
-        
+
         """
 
 
@@ -87,9 +87,9 @@ class StandardDeviceInfoExtractor(object):
     """Device info extractor that return standard and readily available
     information from requests, like IP addresses, or MAC addresses for DHCP
     requests.
-    
+
     You SHOULD always use this extractor.
-    
+
     """
 
     implements(IDeviceInfoExtractor)
@@ -104,7 +104,7 @@ class StandardDeviceInfoExtractor(object):
 class LastSeenUpdater(object):
     """Updater for CollaboratingDeviceInfoExtractor that, on conflict, keep
     the last seen value.
-    
+
     """
     def __init__(self):
         self.dev_info = {}
@@ -116,9 +116,9 @@ class LastSeenUpdater(object):
 class VotingUpdater(object):
     """Updater for CollaboratingDeviceInfoExtractor that will return a device
     info object such that values are the most popular one.
-    
+
     Note that in the case of a tie, it returns any of the most popular values.
-    
+
     """
 
     def __init__(self):
@@ -152,11 +152,11 @@ class CollaboratingDeviceInfoExtractor(object):
 
     Takes an Updater factory to control the way the returned device info
     object is builded.
-    
+
     An Updater is an object with an:
     - 'update' method, taking a dev_info object and returning nothing
     - 'dev_info' attribute, which is the current computed dev_info
-    
+
     """
 
     implements(IDeviceInfoExtractor)
@@ -182,7 +182,7 @@ class CollaboratingDeviceInfoExtractor(object):
 class AllPluginsDeviceInfoExtractor(object):
     """Composite device info extractor that forward extraction requests to
     device info extractors of every loaded plugins.
-    
+
     """
 
     implements(IDeviceInfoExtractor)
@@ -226,16 +226,16 @@ class AllPluginsDeviceInfoExtractor(object):
 
 class IDeviceRetriever(Interface):
     """A device retriever return a device object from device information.
-    
+
     Instances providing this interface MAY have some side effect on the
     application, like adding a new device.
-    
+
     """
 
     def retrieve(dev_info):
         """Return a deferred that will fire with either a device object
         or None if it can't find such object.
-        
+
         """
 
 
@@ -243,7 +243,7 @@ class SearchDeviceRetriever(object):
     """Device retriever who search in the application for a device with a
     key's value the same as a device info key's value, and return the first
     one found.
-    
+
     """
 
     implements(IDeviceRetriever)
@@ -301,7 +301,7 @@ class IpDeviceRetriever(object):
 def MacDeviceRetriever(app):
     """Retrieve device object by looking up in a device manager for an
     object which MAC is the same as the device info object.
-    
+
     """
     return SearchDeviceRetriever(app, u'mac')
 
@@ -309,7 +309,7 @@ def MacDeviceRetriever(app):
 def SerialNumberDeviceRetriever(app):
     """Retrieve device object by looking up in a device manager for an
     object which serial number is the same as the device info object.
-    
+
     """
     return SearchDeviceRetriever(app, u'sn')
 
@@ -317,7 +317,7 @@ def SerialNumberDeviceRetriever(app):
 def UUIDDeviceRetriever(app):
     """Retrieve device object by looking up in a device manager for an
     object which UUID is the same as the device info object.
-    
+
     """
     return SearchDeviceRetriever(app, u'uuid')
 
@@ -325,11 +325,11 @@ def UUIDDeviceRetriever(app):
 class AddDeviceRetriever(object):
     """A device retriever that does no lookup and always insert a new device
     in the application.
-    
+
     Mostly useful if used in a FirstCompositeDeviceRetriever at the end of
     the list, in a way that it will be called only if the other retrievers
     don't find anything.
-    
+
     """
 
     implements(IDeviceRetriever)
@@ -355,7 +355,7 @@ class AddDeviceRetriever(object):
 class FirstCompositeDeviceRetriever(object):
     """Composite device retriever which return the device its first retriever
     returns.
-    
+
     """
 
     implements(IDeviceRetriever)
@@ -375,7 +375,7 @@ class FirstCompositeDeviceRetriever(object):
 
 class IDeviceUpdater(Interface):
     """Update a device object device from an info object.
-    
+
     This operation can have side effect, like updating the device. In fact,
     being able to do side effects is why this interface exist.
 
@@ -384,10 +384,10 @@ class IDeviceUpdater(Interface):
     def update(device, dev_info, request, request_type):
         """Update a device object, returning a deferred that will fire once
         the device object has been updated.
-        
+
         device -- a nonempty device object
         dev_info -- a potentially empty device info object
-        
+
         """
 
 
@@ -403,13 +403,13 @@ class NullDeviceUpdater(object):
 class DynamicDeviceUpdater(object):
     """Device updater that updates zero or more of the device key with the
     value of the device info key.
-    
+
     If the key is already present in the device, then the device will be
     updated only if force_update is true.
-    
+
     Its update method always return false, i.e. does not force a device
     reconfiguration.
-    
+
     """
 
     implements(IDeviceUpdater)
@@ -433,10 +433,10 @@ class DynamicDeviceUpdater(object):
 class AddInfoDeviceUpdater(object):
     """Device updater that add any missing information to the device from
     the device info.
-    
+
     Its update method always return false, i.e. does not force a device
     reconfiguration.
-    
+
     """
 
     implements(IDeviceUpdater)
@@ -451,7 +451,7 @@ class AddInfoDeviceUpdater(object):
 class AutocreateConfigDeviceUpdater(object):
     """Device updater that set an autocreated config to the device if the
     device has no config.
-    
+
     """
     def __init__(self, app):
         self._app = app
@@ -494,7 +494,7 @@ class CompositeDeviceUpdater(object):
 class RequestProcessingService(object):
     """The base object responsible for dynamically modifying the process state
     when processing a request from a device.
-    
+
     """
 
     def __init__(self, app, dev_info_extractor, dev_retriever, dev_updater):
@@ -513,12 +513,12 @@ class RequestProcessingService(object):
     def process(self, request, request_type):
         """Return a deferred that will eventually fire with a (device, pg_id)
         pair, where:
-        
+
         - device is a device object or None, identifying which device is doing
           this request.
         - pg_id is a plugin identifier or None, identifying which plugin should
           continue to process this request.
-        
+
         """
         helper = _RequestHelper(self._app, request, request_type, self._new_request_id())
 
@@ -691,19 +691,19 @@ def _log_sensitive_request(plugin, request, request_type):
 class HTTPRequestProcessingService(Resource):
     """An HTTP service that does HTTP request processing and routing to
     the HTTP service of plugins.
-    
+
     It's possible to add additional processing between this service and the
     plugin service by using a 'service factory' object which is a callable
     taking a plugin ID and a HTTP service and return a new service that will
     be used to continue with the processing of the request.
-    
+
     Note that in the case the plugin doesn't offer an HTTP service, the
     'service factory' object is not used and the request is processed by
     the default service.
-    
+
     If the process service returns an unknown plugin ID, a default service
     is used to continue with the request processing.
-    
+
     """
 
     # implements(IHTTPService)
@@ -751,7 +751,7 @@ class HTTPRequestProcessingService(Resource):
 class TFTPRequestProcessingService(object):
     """A TFTP read service that does TFTP request processing and routing to
     the TFTP read service of plugins.
-    
+
     """
 
     # implements(ITFTPReadService)
@@ -786,24 +786,24 @@ class TFTPRequestProcessingService(object):
 
 class DHCPRequestProcessingService(Resource):
     """A DHCP request service that does DHCP request processing.
-    
+
     Contrary to the HTTP/TFTP request processing service, this service does
     not route the request to a plugin specific DHCP request service, since
     there's no such thing. It is only used to process DHCP request to
     extract information from it and potentially update affected device
     objects.
-    
+
     Also, in this context, these are not real DHCP request, but more like
     DHCP transaction information objects. We use the term request for
     homogeneity sake.
-    
+
     """
     def __init__(self, process_service):
         self._process_service = process_service
 
     def handle_dhcp_request(self, request):
         """Handle DHCP request.
-        
+
         DHCP requests are dictionary objects with the following keys:
           u'ip' -- the IP address of the client who made the request, in
             normalized format

@@ -17,6 +17,8 @@ from provd.services import InvalidParameterError, JsonConfigPersister, \
     PersistentConfigureServiceDecorator
 from provd.synchro import DeferredRWLock
 from twisted.internet import defer
+from provd.rest.server import auth
+from provd.rest.server.helpers.tenants import Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +159,7 @@ class ProvisioningApplication(object):
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
         self._splitted_config = config
+        self._token = None
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -191,6 +194,13 @@ class ProvisioningApplication(object):
         logger.info('Closing provisioning application...')
         self.pg_mgr.close()
         logger.info('Provisioning application closed')
+
+    def token(self):
+        return self._token
+
+    def set_token(self, token_id):
+        logger.debug('Setting token for provd app: %s', token_id)
+        self._token = token_id
 
     # device methods
 
@@ -332,6 +342,11 @@ class ProvisioningApplication(object):
         try:
             # new device are never configured
             device[u'configured'] = False
+            if not device.get('tenant_uuid'):
+                auth_client = auth.get_auth_client()
+                tenant_uuid = Tenant.from_token(auth_client.token.get(self._token)).uuid
+                logger.debug('Setting tenant_uuid to %s', tenant_uuid)
+                device['tenant_uuid'] = tenant_uuid
             try:
                 id = yield self._dev_collection.insert(device)
             except PersistInvalidIdError, e:

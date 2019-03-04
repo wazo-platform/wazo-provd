@@ -40,6 +40,7 @@ The following parameters are defined:
         host
         port
         verify_certificate
+        key_file
     database:
         type
         generator
@@ -70,7 +71,7 @@ import os.path
 import socket
 from twisted.python import usage
 from xivo.chain_map import ChainMap
-from xivo.config_helper import read_config_file_hierarchy
+from xivo.config_helper import parse_config_file, read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,7 @@ _DEFAULT_CONFIG = {
         'host': 'localhost',
         'port': 9497,
         'verify_certificate': CERT_FILE,
+        'key_file': '/var/lib/wazo-auth-keys/xivo-provd-key.yml',
     },
     'database': {
         'type': 'json',
@@ -198,7 +200,6 @@ def _process_aliases(raw_config):
         raw_config['general']['external_ip'] = raw_config['general']['ip']
 
 
-
 def _check_and_convert_parameters(raw_config):
     if raw_config['rest_api']['ssl']:
         if 'ssl_certfile' not in raw_config['rest_api']:
@@ -250,13 +251,20 @@ def _post_update_raw_config(raw_config):
                                                              raw_config['database']['json_db_dir'])
 
 
+def _load_key_file(config):
+    key_file = parse_config_file(config['auth']['key_file'])
+    return {'auth': {'username': key_file.get('service_id'),
+                     'password': key_file.get('service_key')}}
+
+
 def get_config(argv):
     """Pull the raw parameters values from the configuration sources and
     return a config dictionary.
     """
     cli_config = _convert_cli_to_config(argv)
     file_config = read_config_file_hierarchy(ChainMap(cli_config, _DEFAULT_CONFIG))
-    raw_config = ChainMap(cli_config, file_config, _DEFAULT_CONFIG)
+    service_key = _load_key_file(ChainMap(cli_config, file_config, _DEFAULT_CONFIG))
+    raw_config = ChainMap(cli_config, service_key, file_config, _DEFAULT_CONFIG)
     _process_aliases(raw_config)
     _check_and_convert_parameters(raw_config)
     _post_update_raw_config(raw_config)

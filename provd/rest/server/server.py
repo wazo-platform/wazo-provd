@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2018 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
 configuration.
@@ -31,7 +31,9 @@ from provd.util import norm_mac, norm_ip
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 from .auth import required_acl
-from .auth import get_auth_verifier
+from .auth import get_auth_verifier, get_auth_client
+from provd.rest.server.helpers.tenants import Tenant, Tokens
+from xivo.tenant_helpers import Users, UnauthorizedTenant
 
 logger = logging.getLogger(__name__)
 
@@ -668,7 +670,7 @@ class DeviceManagerResource(IntermediaryResource):
         links = [
             (u'dev.synchronize', 'synchronize', DeviceSynchronizeResource(app)),
             (u'dev.reconfigure', 'reconfigure', DeviceReconfigureResource(app)),
-            (u'dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(dhcp_request_processing_service)),
+            (u'dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(app, dhcp_request_processing_service)),
             (u'dev.devices', 'devices', DevicesResource(app)),
         ]
         IntermediaryResource.__init__(self, links)
@@ -691,11 +693,23 @@ class DeviceSynchronizeResource(_OipInstallResource):
         except KeyError:
             return respond_bad_json_entity(request, 'Missing "id" key')
         else:
-            deferred = self._app.dev_synchronize(id)
-            oip = operation_in_progres_from_deferred(deferred)
-            _ignore_deferred_error(deferred)
-            location = self._add_new_oip(oip, request)
-            return respond_created_no_content(request, location)
+            def on_valid_tenant(tenant_uuid):
+                logger.debug('Valid tenant_uuid %s', tenant_uuid)
+                deferred = self._app.dev_synchronize(id)
+                oip = operation_in_progres_from_deferred(deferred)
+                _ignore_deferred_error(deferred)
+                location = self._add_new_oip(oip, request)
+                return respond_created_no_content(request, location)
+
+            def on_invalid_tenant(failure):
+                logger.debug('Invalid tenant: %s', failure)
+                if failure.check(InvalidIdError, UnauthorizedTenant):
+                    deferred_respond_no_resource(request)
+                else:
+                    deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+            d = self._verify_tenant(self._app, request, id)
+            d.addCallbacks(on_valid_tenant, on_invalid_tenant)
+            return NOT_DONE_YET
 
 
 class DeviceReconfigureResource(AuthResource):
@@ -713,17 +727,29 @@ class DeviceReconfigureResource(AuthResource):
         else:
             def on_callback(ign):
                 deferred_respond_no_content(request)
+
             def on_errback(failure):
                 deferred_respond_error(request, failure.value)
-            d = self._app.dev_reconfigure(id)
+
+            def on_valid_tenant(tenant_uuid):
+                logger.debug('Valid tenant_uuid %s', tenant_uuid)
+                return self._app.dev_reconfigure(id)
+
+            def on_invalid_tenant(failure):
+                logger.debug('Invalid tenant: %s', failure)
+                return failure
+
+            d = self._verify_tenant(self._app, request, id)
+            d.addCallbacks(on_valid_tenant, on_invalid_tenant)
             d.addCallbacks(on_callback, on_errback)
             return NOT_DONE_YET
 
 
 class DeviceDHCPInfoResource(AuthResource):
     """Resource for pushing DHCP information into the provisioning server."""
-    def __init__(self, dhcp_request_processing_service):
+    def __init__(self, app, dhcp_request_processing_service):
         AuthResource.__init__(self)
+        self._app = app
         self._dhcp_req_processing_srv = dhcp_request_processing_service
 
     def _transform_options(self, raw_options):
@@ -762,12 +788,18 @@ class DeviceDHCPInfoResource(AuthResource):
 
 
 class DevicesResource(AuthResource):
+
     def __init__(self, app):
         AuthResource.__init__(self)
         self._app = app
 
     def getChild(self, path, request):
         return DeviceResource(self._app, path)
+
+    def _extract_recurse(self, request):
+        for value in request.args.get('recurse', []):
+            return value in ['true', 'True']
+        return False
 
     @json_response_entity
     @required_acl('provd.dev_mgr.devices.read')
@@ -780,6 +812,10 @@ class DevicesResource(AuthResource):
 
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
+
+        recurse = self._extract_recurse(request)
+        tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
+        find_arguments['selector']['tenant_uuid'] = {'$in': tenant_uuids}
         d = self._app.dev_find(**find_arguments)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -798,6 +834,17 @@ class DevicesResource(AuthResource):
 
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
+
+        tokens = Tokens(get_auth_client())
+        users = Users(get_auth_client())
+        try:
+            tenant = Tenant.autodetect(request, tokens, users)
+        except UnauthorizedTenant:
+            respond_unauthorized(request)
+            return NOT_DONE_YET
+
+        device['tenant_uuid'] = tenant.uuid
+        logger.debug('Inserting device using tenant_uuid %s', tenant.uuid)
         d = self._app.dev_insert(device)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -821,7 +868,9 @@ class DeviceResource(AuthResource):
 
         def on_error(failure):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-        d = self._app.dev_retrieve(self.device_id)
+
+        tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
+        d = self._app.dev_find_one({'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}})
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
@@ -837,11 +886,22 @@ class DeviceResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-        d = self._app.dev_update(device)
+
+        def on_valid_tenant(tenant_uuid):
+            logger.debug('Valid tenant_uuid %s', tenant_uuid)
+            device['tenant_uuid'] = tenant_uuid
+            return self._app.dev_update(device)
+
+        def on_invalid_tenant(failure):
+            logger.debug('Invalid tenant: %s', failure)
+            return failure
+
+        d = self._verify_tenant_on_update(self._app, request, self.device_id)
+        d.addCallbacks(on_valid_tenant, on_invalid_tenant)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
@@ -851,11 +911,21 @@ class DeviceResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-        d = self._app.dev_delete(self.device_id)
+
+        def on_valid_tenant(tenant_uuid):
+            logger.debug('Valid tenant_uuid %s', tenant_uuid)
+            return self._app.dev_delete(self.device_id)
+
+        def on_invalid_tenant(failure):
+            logger.debug('Invalid tenant: %s', failure)
+            return failure
+
+        d = self._verify_tenant(self._app, request, self.device_id)
+        d.addCallbacks(on_valid_tenant, on_invalid_tenant)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
@@ -977,7 +1047,7 @@ class ConfigResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
@@ -991,7 +1061,7 @@ class ConfigResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError):
+            if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
