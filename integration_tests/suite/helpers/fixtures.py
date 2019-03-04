@@ -39,7 +39,7 @@ class Device(object):
     def __exit__(self, type, value, traceback):
         if self._delete_on_exit:
             Device.device_counter -= 1
-            self._client.devices.delete(self._device['id'], tenant_uuid=self._tenant_uuid)
+            self._client.devices.delete(self._device['id'])
 
 
 class Plugin(object):
