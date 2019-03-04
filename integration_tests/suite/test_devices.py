@@ -121,13 +121,13 @@ class TestDevices(BaseIntegrationTest):
         with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
             self._client.devices.update(device, tenant_uuid=SUB_TENANT_1)
             device_result = self._client.devices.get(device['id'])
-            assert_that(device_result, has_entry(tenant_uuid=SUB_TENANT_1))
+            assert_that(device_result, has_entry('tenant_uuid', SUB_TENANT_1))
 
     def test_update_change_tenant_to_main_tenant(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
             self._client.devices.update(device, tenant_uuid=MAIN_TENANT)
             device_result = self._client.devices.get(device['id'])
-            assert_that(device_result, has_entry(tenant_uuid=MAIN_TENANT))
+            assert_that(device_result, has_entry('tenant_uuid', MAIN_TENANT))
 
     def test_update_change_tenant_to_other_subtenant_error(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
