@@ -119,19 +119,15 @@ class TestDevices(BaseIntegrationTest):
 
     def test_update_change_tenant_from_main_to_subtenant(self):
         with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            assert_that(
-                calling(self._client.devices.get).with_args(device['id'], tenant_uuid=SUB_TENANT_1),
-                raises(ProvdError).matching(has_properties('status_code', 404))
-            )
             self._client.devices.update(device, tenant_uuid=SUB_TENANT_1)
-            device_result = self._client.devices.get(device['id'], tenant_uuid=SUB_TENANT_1)
-            assert_that(device_result, has_entry('id', device['id']))
+            device_result = self._client.devices.get(device['id'])
+            assert_that(device_result, has_entry(tenant_uuid=SUB_TENANT_1))
 
     def test_update_change_tenant_to_main_tenant(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
             self._client.devices.update(device, tenant_uuid=MAIN_TENANT)
-            device_result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
-            assert_that(device_result, has_entry('id', device['id']))
+            device_result = self._client.devices.get(device['id'])
+            assert_that(device_result, has_entry(tenant_uuid=MAIN_TENANT))
 
     def test_update_change_tenant_to_other_subtenant_error(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
@@ -139,8 +135,6 @@ class TestDevices(BaseIntegrationTest):
                 calling(self._client.devices.update).with_args(device, tenant_uuid=SUB_TENANT_2),
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
-            device_result = self._client.devices.get(device['id'], tenant_uuid=SUB_TENANT_1)
-            assert_that(device_result, has_entry('id', device['id']))
 
     def test_update_multitenant_wrong_token_errors(self):
         provd = self.make_provd(VALID_TOKEN)
@@ -201,10 +195,6 @@ class TestDevices(BaseIntegrationTest):
                 calling(provd.devices.synchronize).with_args(device['id'], tenant_uuid=SUB_TENANT_1),
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
-        assert_that(
-            calling(provd.devices.synchronize).with_args('device_id', tenant_uuid=MAIN_TENANT),
-            raises(ProvdError).matching(has_properties('status_code', 404))
-        )
 
     def test_get(self):
         with fixtures.Device(self._client) as device:
@@ -229,27 +219,10 @@ class TestDevices(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 401))
         )
 
-    def test_get_main_tenant(self):
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
-            assert_that(result['id'], is_(equal_to(device['id'])))
-
-    def test_get_subtenant(self):
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-                result = self._client.devices.get(device['id'], tenant_uuid=SUB_TENANT_1)
-                assert_that(result['id'], is_(equal_to(device['id'])))
-
     def test_get_subtenant_from_main_tenant(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-                result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
-                assert_that(result['id'], is_(equal_to(device['id'])))
-
-    def test_get_subtenant_from_other_subtenant_errors(self):
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-                assert_that(
-                    calling(self._client.devices.get).with_args(device['id'], tenant_uuid=SUB_TENANT_2),
-                    raises(ProvdError).matching(has_properties('status_code', 404))
-                )
+            result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
+            assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_main_tenant_from_subtenant_errors(self):
         with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
@@ -280,14 +253,6 @@ class TestDevices(BaseIntegrationTest):
                 raises(ProvdError).matching(has_properties('status_code', 401))
             )
 
-    def test_delete_subtenant(self):
-        with fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device:
-            self._client.devices.delete(device['id'], tenant_uuid=SUB_TENANT_1)
-            assert_that(
-                calling(self._client.devices.get).with_args(device['id'], tenant_uuid=SUB_TENANT_1),
-                raises(ProvdError).matching(has_properties('status_code', 404))
-            )
-
     def test_delete_subtenant_from_main_tenant(self):
         with fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device:
             self._client.devices.delete(device['id'], tenant_uuid=MAIN_TENANT)
@@ -303,15 +268,6 @@ class TestDevices(BaseIntegrationTest):
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
             result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
-            assert_that(result['id'], is_(equal_to(device['id'])))
-
-    def test_delete_subtenant_from_other_subtenant_errors(self):
-        with fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device:
-            assert_that(
-                calling(self._client.devices.delete).with_args(device['id'], tenant_uuid=SUB_TENANT_2),
-                raises(ProvdError).matching(has_properties('status_code', 404))
-            )
-            result = self._client.devices.get(device['id'], tenant_uuid=SUB_TENANT_1)
             assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_reconfigure(self):
@@ -336,10 +292,6 @@ class TestDevices(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 401))
         )
 
-    def test_reconfigure_main_tenant(self):
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            self._client.devices.reconfigure(device['id'], tenant_uuid=MAIN_TENANT)
-
     def test_reconfigure_subtenant_from_main_tenant(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
             self._client.devices.reconfigure(device['id'], tenant_uuid=MAIN_TENANT)
@@ -348,13 +300,6 @@ class TestDevices(BaseIntegrationTest):
         with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
             assert_that(
                 calling(self._client.devices.reconfigure).with_args(device['id'], tenant_uuid=SUB_TENANT_1),
-                raises(ProvdError).matching(has_properties('status_code', 400))
-            )
-
-    def test_reconfigure_subtenant_from_other_subtenant_errors(self):
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            assert_that(
-                calling(self._client.devices.reconfigure).with_args(device['id'], tenant_uuid=SUB_TENANT_2),
                 raises(ProvdError).matching(has_properties('status_code', 400))
             )
 
