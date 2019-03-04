@@ -18,6 +18,11 @@ class Tenant(tenant_helpers.Tenant):
         except InvalidTenant:
             return cls.from_token(token)
 
+        try:
+            return tenant.check_against_token(token)
+        except InvalidTenant:
+            pass  # check against user
+
         user = users.get(token['metadata'].get('uuid'))
         try:
             return tenant.check_against_user(user)
