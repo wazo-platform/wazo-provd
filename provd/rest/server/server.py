@@ -18,7 +18,7 @@ import functools
 import json
 import logging
 from binascii import a2b_base64
-from provd.app import InvalidIdError
+from provd.app import InvalidIdError, DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from provd.localization import get_locale_and_language
 from provd.operation import format_oip, operation_in_progres_from_deferred
 from provd.persist.common import ID_KEY
@@ -93,7 +93,7 @@ def respond_no_resource(request, response_code=http.NOT_FOUND):
     return 'No such resource'
 
 
-def respond_unauthorized(request):
+def deferred_respond_unauthorized(request):
     request.setResponseCode(401)
     request.write('Unauthorized')
     request.finish()
@@ -694,21 +694,25 @@ class DeviceSynchronizeResource(_OipInstallResource):
             return respond_bad_json_entity(request, 'Missing "id" key')
         else:
             def on_valid_tenant(tenant_uuid):
-                logger.debug('Valid tenant_uuid %s', tenant_uuid)
+                return self._is_tenant_valid_for_device(self._app, id, tenant_uuid)
+
+            def on_tenant_valid_for_device(tenant_uuid):
                 deferred = self._app.dev_synchronize(id)
                 oip = operation_in_progres_from_deferred(deferred)
                 _ignore_deferred_error(deferred)
                 location = self._add_new_oip(oip, request)
                 return respond_created_no_content(request, location)
 
-            def on_invalid_tenant(failure):
-                logger.debug('Invalid tenant: %s', failure)
-                if failure.check(InvalidIdError, UnauthorizedTenant):
+            def on_errback(failure):
+                if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
                     deferred_respond_no_resource(request)
                 else:
                     deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-            d = self._verify_tenant(self._app, request, id)
-            d.addCallbacks(on_valid_tenant, on_invalid_tenant)
+
+            d = self._verify_tenant(request)
+            d.addCallback(on_valid_tenant)
+            d.addCallback(on_tenant_valid_for_device)
+            d.addErrback(on_errback)
             return NOT_DONE_YET
 
 
@@ -725,22 +729,21 @@ class DeviceReconfigureResource(AuthResource):
         except KeyError:
             return respond_bad_json_entity(request, 'Missing "id" key')
         else:
+            def on_valid_tenant(tenant_uuid):
+                return self._is_tenant_valid_for_device(self._app, id, tenant_uuid)
+
+            def on_tenant_valid_for_device(tenant_uuid):
+                return self._app.dev_reconfigure(id)
+
             def on_callback(ign):
                 deferred_respond_no_content(request)
 
             def on_errback(failure):
                 deferred_respond_error(request, failure.value)
 
-            def on_valid_tenant(tenant_uuid):
-                logger.debug('Valid tenant_uuid %s', tenant_uuid)
-                return self._app.dev_reconfigure(id)
-
-            def on_invalid_tenant(failure):
-                logger.debug('Invalid tenant: %s', failure)
-                return failure
-
-            d = self._verify_tenant(self._app, request, id)
-            d.addCallbacks(on_valid_tenant, on_invalid_tenant)
+            d = self._verify_tenant(request)
+            d.addCallbacks(on_valid_tenant)
+            d.addCallback(on_tenant_valid_for_device)
             d.addCallbacks(on_callback, on_errback)
             return NOT_DONE_YET
 
@@ -826,6 +829,11 @@ class DevicesResource(AuthResource):
         # XXX praise KeyError
         device = content[u'device']
 
+        def on_valid_tenant(tenant_uuid):
+            device['tenant_uuid'] = tenant_uuid
+            logger.debug('Inserting device using tenant_uuid %s', tenant_uuid)
+            return self._app.dev_insert(device)
+
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
             request.setHeader('Location', location)
@@ -833,19 +841,13 @@ class DevicesResource(AuthResource):
             deferred_respond_ok(request, data, http.CREATED)
 
         def on_errback(failure):
-            deferred_respond_error(request, failure.value)
+            if failure.check(UnauthorizedTenant):
+                deferred_respond_unauthorized(request)
+            else:
+                deferred_respond_error(request, failure.value)
 
-        tokens = Tokens(get_auth_client())
-        users = Users(get_auth_client())
-        try:
-            tenant = Tenant.autodetect(request, tokens, users)
-        except UnauthorizedTenant:
-            respond_unauthorized(request)
-            return NOT_DONE_YET
-
-        device['tenant_uuid'] = tenant.uuid
-        logger.debug('Inserting device using tenant_uuid %s', tenant.uuid)
-        d = self._app.dev_insert(device)
+        d = self._verify_tenant(request)
+        d.addCallback(on_valid_tenant)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
@@ -882,50 +884,57 @@ class DeviceResource(AuthResource):
         # XXX praise TypeError if device not dict
         device[ID_KEY] = self.device_id
 
+        def on_valid_tenant(tenant_uuid):
+            return self._is_device_in_provd_tenant(self._app, self.device_id, tenant_uuid)
+
+        def on_device_in_provd_tenant(tenant_uuid):
+            device['tenant_uuid'] = tenant_uuid
+            return self._app.dev_update(device)
+
+        def on_device_not_in_provd_tenant(failure):
+            failure.trap(DeviceNotInProvdTenantError)
+            tenant_uuid = failure.value.tenant_uuid
+            return self._is_tenant_valid_for_device(self._app, self.device_id, tenant_uuid)
+
+        def on_tenant_valid_for_device(tenant_uuid):
+            return self._app.dev_update(device)
+
         def on_callback(_):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError, UnauthorizedTenant):
+            if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
-        def on_valid_tenant(tenant_uuid):
-            logger.debug('Valid tenant_uuid %s', tenant_uuid)
-            device['tenant_uuid'] = tenant_uuid
-            return self._app.dev_update(device)
-
-        def on_invalid_tenant(failure):
-            logger.debug('Invalid tenant: %s', failure)
-            return failure
-
-        d = self._verify_tenant_on_update(self._app, request, self.device_id)
-        d.addCallbacks(on_valid_tenant, on_invalid_tenant)
+        d = self._verify_tenant(request)
+        d.addCallback(on_valid_tenant)
+        d.addCallbacks(on_device_in_provd_tenant, on_device_not_in_provd_tenant)
+        d.addCallbacks(on_tenant_valid_for_device)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
     @required_acl('provd.dev_mgr.devices.{device_id}.delete')
     def render_DELETE(self, request):
+        def on_valid_tenant(tenant_uuid):
+            return self._is_tenant_valid_for_device(self._app, self.device_id, tenant_uuid)
+
+        def on_tenant_valid_for_device(tenant_uuid):
+            return self._app.dev_delete(self.device_id)
+
         def on_callback(_):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError, UnauthorizedTenant):
+            if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
-        def on_valid_tenant(tenant_uuid):
-            logger.debug('Valid tenant_uuid %s', tenant_uuid)
-            return self._app.dev_delete(self.device_id)
-
-        def on_invalid_tenant(failure):
-            logger.debug('Invalid tenant: %s', failure)
-            return failure
-
-        d = self._verify_tenant(self._app, request, self.device_id)
-        d.addCallbacks(on_valid_tenant, on_invalid_tenant)
+        d = self._verify_tenant(request)
+        d.addCallbacks(on_valid_tenant)
+        d.addCallbacks(on_tenant_valid_for_device)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 

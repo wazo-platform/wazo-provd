@@ -31,6 +31,20 @@ class InvalidIdError(Exception):
     pass
 
 
+class DeviceNotInProvdTenantError(Exception):
+
+    def __init__(self, tenant_uuid):
+        super(DeviceNotInProvdTenantError, self).__init__('Device not in provd tenant')
+        self.tenant_uuid = tenant_uuid
+
+
+class TenantInvalidForDeviceError(Exception):
+
+    def __init__(self, tenant_uuid):
+        super(TenantInvalidForDeviceError, self).__init__('Tenant invalid for device')
+        self.tenant_uuid = tenant_uuid
+
+
 def _rlock_arg(rw_lock):
     def decorator(fun):
         @functools.wraps(fun)
