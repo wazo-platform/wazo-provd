@@ -22,7 +22,7 @@ from twisted.web.error import UnsupportedMethod
 
 from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
-from provd.app import InvalidIdError
+from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from xivo.tenant_helpers import Users, UnauthorizedTenant
 from requests.exceptions import HTTPError
 
@@ -88,7 +88,6 @@ class AuthResource(resource.Resource):
 
         tokens = Tokens(auth_client)
         users = Users(auth_client)
-
         return Tenant.autodetect(request, tokens, users).uuid
 
     def _build_tenant_list(self, tenant_uuid=None, recurse=False):
@@ -96,10 +95,8 @@ class AuthResource(resource.Resource):
 
         if not recurse:
             return [tenant_uuid]
-
         try:
             tenants = auth_client.tenants.list(tenant_uuid=tenant_uuid)['items']
-            logger.debug('Tenant listing got %s', tenants)
         except HTTPError as e:
             response = getattr(e, 'response', None)
             status_code = getattr(response, 'status_code', None)
@@ -114,34 +111,28 @@ class AuthResource(resource.Resource):
         tenant_uuid = self._extract_tenant_uuid(request)
         return self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=recurse)
 
-    def _is_tenant_valid_for_device(self, tenant_uuid, device):
-        logger.debug('Device tenant_uuid: %s', device['tenant_uuid'])
+    @defer.inlineCallbacks
+    def _is_tenant_valid_for_device(self, app, device_id, tenant_uuid):
+        device = yield app._dev_get_or_raise(device_id)
+
         if device['tenant_uuid'] == tenant_uuid:
-            return True
+            defer.returnValue(tenant_uuid)
+
         tenant_uuids = self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
+
         if device['tenant_uuid'] in tenant_uuids:
-            return True
-        return False
-
-    @defer.inlineCallbacks
-    def _verify_tenant(self, app, request, device_id):
-        device = yield app._dev_get_or_raise(device_id)
-        tenant_uuid = self._extract_tenant_uuid(request)
-        logger.debug('Received tenant: %s', tenant_uuid)
-
-        if self._is_tenant_valid_for_device(tenant_uuid, device):
             defer.returnValue(tenant_uuid)
 
-        raise UnauthorizedTenant(tenant_uuid)
+        raise TenantInvalidForDeviceError(tenant_uuid)
 
     @defer.inlineCallbacks
-    def _verify_tenant_on_update(self, app, request, device_id):
-        device = yield app._dev_get_or_raise(device_id)
+    def _verify_tenant(self, request):
         tenant_uuid = self._extract_tenant_uuid(request)
-        logger.debug('Received tenant: %s', tenant_uuid)
+        yield defer.returnValue(tenant_uuid)
 
-        if self._is_tenant_valid_for_device(tenant_uuid, device):
-            defer.returnValue(tenant_uuid)
+    @defer.inlineCallbacks
+    def _is_device_in_provd_tenant(self, app, device_id, tenant_uuid):
+        device = yield app._dev_get_or_raise(device_id)
 
         auth_client = auth.get_auth_client()
         provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
@@ -149,7 +140,7 @@ class AuthResource(resource.Resource):
         if device['tenant_uuid'] == provd_tenant_uuid:
             defer.returnValue(tenant_uuid)
 
-        raise UnauthorizedTenant(tenant_uuid)
+        raise DeviceNotInProvdTenantError(tenant_uuid)
 
 
 class Site(server.Site):

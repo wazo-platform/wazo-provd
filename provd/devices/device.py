@@ -68,6 +68,8 @@ def _check_device_validity(device):
     if u'ip' in device:
         if not is_normed_ip(device[u'ip']):
             raise ValueError('Non-normalized IP address %s' % device[u'ip'])
+    if u'tenant_uuid' not in device:
+        raise ValueError('Tenant UUID not specified')
 
 
 class DeviceCollection(ForwardingDocumentCollection):
