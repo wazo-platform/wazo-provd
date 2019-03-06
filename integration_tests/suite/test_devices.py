@@ -7,6 +7,7 @@ from hamcrest import (
     empty,
     equal_to,
     has_entry,
+    has_entries,
     has_key,
     is_,
     is_not,
@@ -86,8 +87,8 @@ class TestDevices(BaseIntegrationTest):
 
     def test_update(self):
         with fixtures.Device(self._client) as device:
-            new_info = {'id': device['id'], 'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
-            self._client.devices.update(new_info)
+            device.update({'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'})
+            self._client.devices.update(device)
 
             result = self._client.devices.get(device['id'])
             assert_that(result['ip'], is_(equal_to('5.6.7.8')))
@@ -96,7 +97,7 @@ class TestDevices(BaseIntegrationTest):
         with fixtures.Device(self._client) as device:
             assert_that(
                 calling(self._client.devices.update).with_args(
-                    {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
+                    {'id': 'invalid_id', 'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
                 ),
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
@@ -123,11 +124,12 @@ class TestDevices(BaseIntegrationTest):
             device_result = self._client.devices.get(device['id'])
             assert_that(device_result, has_entry('tenant_uuid', SUB_TENANT_1))
 
-    def test_update_change_tenant_to_main_tenant(self):
+    def test_update_change_tenant_to_main_tenant_does_not_change_tenant_but_update_anyway(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+            device['ip'] = '10.10.10.10'
             self._client.devices.update(device, tenant_uuid=MAIN_TENANT)
             device_result = self._client.devices.get(device['id'])
-            assert_that(device_result, has_entry('tenant_uuid', MAIN_TENANT))
+            assert_that(device_result, has_entries(**device))
 
     def test_update_change_tenant_to_other_subtenant_error(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
