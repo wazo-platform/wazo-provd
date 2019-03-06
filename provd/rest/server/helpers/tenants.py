@@ -21,12 +21,6 @@ class Tenant(tenant_helpers.Tenant):
         try:
             return tenant.check_against_token(token)
         except InvalidTenant:
-            pass  # check against user
-
-        user = users.get(token['metadata'].get('uuid'))
-        try:
-            return tenant.check_against_user(user)
-        except InvalidTenant:
             raise UnauthorizedTenant(tenant.uuid)
 
     @classmethod
