@@ -20,6 +20,7 @@ services:
       - "./provd/configs/default:/var/lib/xivo-provd/jsondb/configs/default"
       - "./provd/configs/defaultconfigdevice:/var/lib/xivo-provd/jsondb/configs/defaultconfigdevice"
       - "./provd/configs/autoprov:/var/lib/xivo-provd/jsondb/configs/autoprov"
+      # - "${LOCAL_GIT_REPOS}/xivo-lib-python/xivo:/usr/local/lib/python2.7/site-packages/xivo"
     ports:
       - "8666"
       - "8667"
