@@ -8,10 +8,7 @@ from xivo.tenant_helpers import InvalidTenant, InvalidToken, UnauthorizedTenant
 class Tenant(tenant_helpers.Tenant):
 
     @classmethod
-    def autodetect(cls, request, tokens, users):
-        # Only need to instantiate a Tokens and Users object for the
-        # tokens and users parameters, using auth client as their
-        # parameter
+    def autodetect(cls, request, tokens):
         token = tokens.from_headers(request)
         try:
             tenant = cls.from_headers(request)
@@ -20,12 +17,6 @@ class Tenant(tenant_helpers.Tenant):
 
         try:
             return tenant.check_against_token(token)
-        except InvalidTenant:
-            pass  # check against user
-
-        user = users.get(token['metadata'].get('uuid'))
-        try:
-            return tenant.check_against_user(user)
         except InvalidTenant:
             raise UnauthorizedTenant(tenant.uuid)
 

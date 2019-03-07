@@ -18,7 +18,7 @@ from provd.services import InvalidParameterError, JsonConfigPersister, \
 from provd.synchro import DeferredRWLock
 from twisted.internet import defer
 from provd.rest.server import auth
-from provd.rest.server.helpers.tenants import Tenant
+from provd.rest.server.helpers.tenants import Tenant, Tokens
 
 logger = logging.getLogger(__name__)
 
@@ -358,7 +358,8 @@ class ProvisioningApplication(object):
             device[u'configured'] = False
             if not device.get('tenant_uuid'):
                 auth_client = auth.get_auth_client()
-                tenant_uuid = Tenant.from_token(auth_client.token.get(self._token)).uuid
+                token = Tokens(auth_client).get(self._token)
+                tenant_uuid = Tenant.from_token(token).uuid
                 logger.debug('Setting tenant_uuid to %s', tenant_uuid)
                 device['tenant_uuid'] = tenant_uuid
             try:
