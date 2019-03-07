@@ -23,7 +23,6 @@ from twisted.web.error import UnsupportedMethod
 from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
 from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
-from xivo.tenant_helpers import Users, UnauthorizedTenant
 from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
@@ -87,8 +86,7 @@ class AuthResource(resource.Resource):
         auth_client = auth.get_auth_client()
 
         tokens = Tokens(auth_client)
-        users = Users(auth_client)
-        return Tenant.autodetect(request, tokens, users).uuid
+        return Tenant.autodetect(request, tokens).uuid
 
     def _build_tenant_list(self, tenant_uuid=None, recurse=False):
         auth_client = auth.get_auth_client()

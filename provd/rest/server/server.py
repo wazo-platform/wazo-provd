@@ -33,7 +33,7 @@ from twisted.web.server import NOT_DONE_YET
 from .auth import required_acl
 from .auth import get_auth_verifier, get_auth_client
 from provd.rest.server.helpers.tenants import Tenant, Tokens
-from xivo.tenant_helpers import Users, UnauthorizedTenant
+from xivo.tenant_helpers import UnauthorizedTenant
 
 logger = logging.getLogger(__name__)
 
