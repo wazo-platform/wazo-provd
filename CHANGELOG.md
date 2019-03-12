@@ -13,5 +13,3 @@ Changelog
   not tenant accessible will result in a 404.
 
   * `/provd/dev_mgr`
-
-  See :ref:`intro-provisioning` for more information on how device tenants are handled.
