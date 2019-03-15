@@ -132,10 +132,7 @@ class AuthResource(resource.Resource):
     def _is_device_in_provd_tenant(self, app, device_id, tenant_uuid):
         device = yield app._dev_get_or_raise(device_id)
 
-        auth_client = auth.get_auth_client()
-        provd_tenant_uuid = auth_client.token.get(app.token())['metadata']['tenant_uuid']
-        logger.debug('Provd tenant is %s', provd_tenant_uuid)
-        if device['tenant_uuid'] == provd_tenant_uuid:
+        if device['is_new']:
             defer.returnValue(tenant_uuid)
 
         raise DeviceNotInProvdTenantError(tenant_uuid)
