@@ -174,6 +174,7 @@ class ProvisioningApplication(object):
         self._dev_collection = dev_collection
         self._splitted_config = config
         self._token = None
+        self._tenant_uuid = None
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -215,6 +216,12 @@ class ProvisioningApplication(object):
     def set_token(self, token_id):
         logger.debug('Setting token for provd app: %s', token_id)
         self._token = token_id
+        auth_client = auth.get_auth_client()
+        token = Tokens(auth_client).get(self._token)
+        self._tenant_uuid = Tenant.from_token(token).uuid
+
+    def tenant_uuid(self):
+        return self._tenant_uuid
 
     # device methods
 
@@ -356,12 +363,10 @@ class ProvisioningApplication(object):
         try:
             # new device are never configured
             device[u'configured'] = False
+
             if not device.get('tenant_uuid'):
-                auth_client = auth.get_auth_client()
-                token = Tokens(auth_client).get(self._token)
-                tenant_uuid = Tenant.from_token(token).uuid
-                logger.debug('Setting tenant_uuid to %s', tenant_uuid)
-                device['tenant_uuid'] = tenant_uuid
+                device['tenant_uuid'] = self._tenant_uuid
+
             try:
                 id = yield self._dev_collection.insert(device)
             except PersistInvalidIdError, e:
