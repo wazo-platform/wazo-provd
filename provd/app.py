@@ -367,6 +367,8 @@ class ProvisioningApplication(object):
             if not device.get('tenant_uuid'):
                 device['tenant_uuid'] = self._tenant_uuid
 
+            device['is_new'] = device['tenant_uuid'] == self._tenant_uuid
+
             try:
                 id = yield self._dev_collection.insert(device)
             except PersistInvalidIdError, e:
@@ -425,6 +427,7 @@ class ProvisioningApplication(object):
                 # Update device collection if the device is different from
                 # the old device
                 if device != old_device:
+                    device['is_new'] = device['tenant_uuid'] == self._tenant_uuid
                     yield self._dev_collection.update(device)
                     # check if old device was using a transient config that is
                     # no more in use
