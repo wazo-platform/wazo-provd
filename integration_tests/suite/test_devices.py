@@ -346,3 +346,15 @@ class TestDevices(BaseIntegrationTest):
         assert_that(find_results, has_key('devices'))
         assert_that(find_results['devices'], is_not(empty()))
         assert_that(find_results['devices'][0], has_entry('ip', '10.10.0.1'))
+
+    def test_modify_tenant_in_device_remain_unchanged(self):
+        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+            self._client.devices.update({'id': device['id'], 'tenant_uuid': SUB_TENANT_1})
+            result = self._client.devices.get(device['id'])
+            assert_that(result, has_entry('tenant_uuid', MAIN_TENANT))
+
+    def test_modify_is_new_in_device_remain_unchanged(self):
+        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+            self._client.devices.update({'id': device['id'], 'is_new': False})
+            result = self._client.devices.get(device['id'])
+            assert_that(result, has_entry('is_new', True))
