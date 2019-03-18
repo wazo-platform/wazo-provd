@@ -46,7 +46,7 @@ from provd.persist.util import ForwardingDocumentCollection
 logger = logging.getLogger(__name__)
 
 _RECONF_KEYS = [u'plugin', u'config', u'mac', u'uuid',
-                u'vendor', u'model', u'version', 'options', 'tenant_uuid']
+                u'vendor', u'model', u'version', 'options']
 
 
 def copy(device):

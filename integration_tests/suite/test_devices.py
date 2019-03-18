@@ -48,6 +48,8 @@ class TestDevices(BaseIntegrationTest):
     def test_add(self):
         result_add = self._add_device('10.10.10.10', '00:11:22:33:44:55', id_='1234abcdef1234')
         assert_that(result_add, has_entry('id', '1234abcdef1234'))
+        result = self._client.devices.get(result_add['id'])
+        assert_that(result, has_entry('is_new', True))
 
     def test_add_errors(self):
         assert_that(
@@ -75,6 +77,7 @@ class TestDevices(BaseIntegrationTest):
         id_added = result_add['id']
         result = self._client.devices.get(id_added, tenant_uuid=SUB_TENANT_1)
         assert_that(result, has_entry('tenant_uuid', SUB_TENANT_1))
+        assert_that(result, has_entry('is_new', False))  # Not added in master tenant, so not new
 
     def test_add_multitenant_wrong_token_errors(self):
         provd = self.make_provd(VALID_TOKEN)
@@ -92,6 +95,7 @@ class TestDevices(BaseIntegrationTest):
 
             result = self._client.devices.get(device['id'])
             assert_that(result['ip'], is_(equal_to('5.6.7.8')))
+            assert_that(result, has_entry('is_new', True))  # Still in master tenant, so still new
 
     def test_update_errors(self):
         with fixtures.Device(self._client) as device:
@@ -123,6 +127,7 @@ class TestDevices(BaseIntegrationTest):
             self._client.devices.update(device, tenant_uuid=SUB_TENANT_1)
             device_result = self._client.devices.get(device['id'])
             assert_that(device_result, has_entry('tenant_uuid', SUB_TENANT_1))
+            assert_that(device_result, has_entry('is_new', False))
 
     def test_update_change_tenant_to_main_tenant_does_not_change_tenant_but_update_anyway(self):
         with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
@@ -341,3 +346,15 @@ class TestDevices(BaseIntegrationTest):
         assert_that(find_results, has_key('devices'))
         assert_that(find_results['devices'], is_not(empty()))
         assert_that(find_results['devices'][0], has_entry('ip', '10.10.0.1'))
+
+    def test_modify_tenant_in_device_remain_unchanged(self):
+        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+            self._client.devices.update({'id': device['id'], 'tenant_uuid': SUB_TENANT_1})
+            result = self._client.devices.get(device['id'])
+            assert_that(result, has_entry('tenant_uuid', MAIN_TENANT))
+
+    def test_modify_is_new_in_device_remain_unchanged(self):
+        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+            self._client.devices.update({'id': device['id'], 'is_new': False})
+            result = self._client.devices.get(device['id'])
+            assert_that(result, has_entry('is_new', True))
