@@ -4,7 +4,7 @@ info:
   description: Provisioning application REST API
   version: '0.2'
 schemes:
-- http
+- https
 basePath: /
 consumes:
   - "application/vnd.proformatique.provd+json"
