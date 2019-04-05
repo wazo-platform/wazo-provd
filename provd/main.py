@@ -251,13 +251,8 @@ class SynchronizeService(Service):
         self._config = config
 
     def _new_sync_service_asterisk_ami(self):
-        server_list = self._config['general']['asterisk_ami_servers']
-        servers = []
-        for server in server_list:
-            host, port, tls, user, pwd = server
-            servers.append({'host': host, 'port': port, 'enable_tls': tls,
-                            'username': user, 'password': pwd})
-        return provd.synchronize.AsteriskAMISynchronizeService(servers)
+        amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
+        return provd.synchronize.AsteriskAMISynchronizeService(amid_client)
 
     def _new_sync_service_none(self):
         return None
@@ -306,9 +301,11 @@ class TokenRenewerService(Service):
     def startService(self):
         app = self._prov_service.app
         auth_client = auth.get_auth_client(**self._config['auth'])
+        amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
         self._token_renewer = TokenRenewer(auth_client)
         self._token_renewer.subscribe_to_token_change(app.set_token)
         self._token_renewer.subscribe_to_token_change(auth_client.set_token)
+        self._token_renewer.subscribe_to_token_change(amid_client.set_token)
         self._token_renewer.start()
         Service.startService(self)
 
