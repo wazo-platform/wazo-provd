@@ -97,7 +97,6 @@ _DEFAULT_CONFIG = {
         'tftp_port': 69,
         'verbose': False,
         'sync_service_type': 'none',
-        'asterisk_ami_servers': '[("127.0.0.1", 5038, False, "provd", "provd")]',
     },
     'rest_api': {
         'ip': '127.0.0.1',
@@ -173,23 +172,6 @@ def _convert_cli_to_config(options):
     return raw_config
 
 
-def _ast_ami_server(raw_value):
-    try:
-        value = eval(raw_value)
-    except Exception as e:
-        raise ValueError(e)
-    else:
-        if isinstance(value, list):
-            for e in value:
-                if isinstance(e, tuple) and len(e) == 5:
-                    pass
-                else:
-                    break
-            else:
-                return value
-        raise ValueError('invalid asterisk ami server: %s' % value)
-
-
 def _load_json_file(raw_value):
     # Return a dictionary representing the JSON document contained in the
     # file pointed by raw value. The file must be encoded in UTF-8.
@@ -212,9 +194,6 @@ def _check_and_convert_parameters(raw_config):
         if 'ssl_keyfile' not in raw_config['rest_api']:
             raise ConfigError('Missing parameter "ssl_keyfile"')
 
-    ami_servers = raw_config['general']['asterisk_ami_servers']
-    if ami_servers:
-        raw_config['general']['asterisk_ami_servers'] = _ast_ami_server(ami_servers)
     # load base_raw_config_file JSON document
     # XXX maybe we should put this in a separate method since it's more or less
     #     a check and not really a convert...

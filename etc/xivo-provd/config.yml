@@ -3,7 +3,6 @@ general:
   http_port: 8667
   tftp_port: 69
   sync_service_type: 'asterisk_ami'
-  asterisk_ami_servers: "[('127.0.0.1', 5038, False, 'xivo_provd', 'dio72GHdnSm')]"
 rest_api:
   ip: 0.0.0.0
   port: 8666
