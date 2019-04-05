@@ -117,7 +117,12 @@ _DEFAULT_CONFIG = {
         'generator': 'default',
         'ensure_common_indexes': True,
         'json_db_dir': 'jsondb',
-    }
+    },
+    'amid': {
+        'host': 'localhost',
+        'port': 9491,
+        'verify_certificate': CERT_FILE,
+    },
 }
 
 _OPTION_TO_PARAM_LIST = [
