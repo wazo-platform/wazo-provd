@@ -1,3 +1,4 @@
+git+https://github.com/wazo-pbx/xivo-amid-client.git
 git+https://github.com/wazo-pbx/xivo-auth-client.git
 git+https://github.com/wazo-pbx/xivo-bus.git
 git+https://github.com/wazo-pbx/xivo-fetchfw.git
