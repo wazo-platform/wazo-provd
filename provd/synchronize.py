@@ -46,7 +46,7 @@ class AsteriskAMISynchronizeService(object):
         self._amid.action('PJSIPNotify', params)
 
     def sip_notify_by_ip(self, ip, event, extra_vars=None):
-        destination = {'URI', 'sip:anonymous@{}'.format(ip)}
+        destination = {'URI': 'sip:anonymous@{}'.format(ip)}
         self._sip_notify(destination, event, extra_vars)
 
     def sip_notify_by_peer(self, peer, event, extra_vars=None):
