@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Config and config collection module.
@@ -499,6 +499,15 @@ def _needs_childs_and_parents_indexes(fun):
     return aux
 
 
+def _remove_none_values(config):
+    if isinstance(config, list):
+        return [_remove_none_values(x) for x in config]
+    elif isinstance(config, dict):
+        return {_remove_none_values(k): _remove_none_values(v) for k, v in config.iteritems() if v is not None}
+    else:
+        return config
+
+
 class ConfigCollection(ForwardingDocumentCollection):
     @defer.inlineCallbacks
     def _build_childs_and_parents_indexes(self):
@@ -530,6 +539,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
     @_needs_childs_and_parents_indexes
     def insert(self, config):
+        config = _remove_none_values(config)
         _check_config_validity(config)
         def callback(id):
             parent_ids = config[u'parent_ids']
@@ -548,6 +558,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
     @_needs_childs_and_parents_indexes
     def update(self, config):
+        config = _remove_none_values(config)
         _check_config_validity(config)
         def callback(_):
             id = config[ID_KEY]
