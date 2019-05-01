@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Config and config collection module.
@@ -289,63 +289,63 @@ sip_subscribe_mwi [optional]
 sip_lines [optional|default to empty dictionary]
   A dictionary where keys are line number (unicode string) and values are
   dictionaries with the following keys:
-  
+
     proxy_ip [mandatory if proxy_ip is not defined globally]
       See sip_proxy_ip.
-    
+
     proxy_port [optional]
       See sip_proxy_port.
-    
+
     backup_proxy_ip [optional]
       See sip_backup_proxy_ip.
-    
+
     backup_proxy_port [optional]
       See sip_backup_proxy_port.
-    
+
     registrar_ip [optional|default to value of proxy_ip]
       See sip_registrar_ip.
-    
+
     registrar_port [optional]
       See sip_registrar_port.
-    
+
     backup_registrar_ip [optional]
       See sip_backup_registrar_ip.
-    
+
     backup_registrar_port [optional]
       See sip_backup_registrar_port.
-    
+
     outbound_proxy_ip [optional]
       See sip_outbound_proxy_ip.
-    
+
     outbound_proxy_port [optional]
       See sip_outbound_proxy_port.
-    
+
     username [mandatory]
       The username of this SIP identity.
-    
+
     auth_username [optional|default to value of username]
       The username used for authentication (i.e. the username in the SIP
       Authorization or Proxy-Authorization header field).
       If the device doesn't allow the auth username to be different from
       the username, then the username MUST be used for authentication.
-    
+
     password [mandatory]
       The password used for authentication.
-    
+
     display_name [mandatory]
       The display name to use in the From header field. It should also be
       usable as a label for the line.
-    
+
     number [optional]
       The main extension number other users can dial to reach this line.
       This parameter is for display purpose only.
-    
+
     dtmf_mode [optional]
       See: sip_dtmf_mode.
-    
+
     srtp_mode [optional]
       See: sip_srtp_mode.
-    
+
     voicemail [optional]
       The extension number to retrieve voicemail for this line.
       See: exten_voicemail.
@@ -354,10 +354,10 @@ sccp_call_managers [optional|default to empty dictionary]
   A dictionary where keys are priority number (unicode string representing
   integers > 0, where 1 is the highest priority) and values are dictionaries
   with the following keys:
-  
+
     ip [mandatory]
       The IP address of the call manager.
-    
+
     port [optional]
       The port number of the call manager.
 
@@ -391,7 +391,7 @@ exten_voicemail [optional]
 funckeys [optional|default to empty dictionary]
   A dictionary where keys are function key number (unicode string representing
   integers > 0) and values are dictionary:
-  
+
     type [mandatory]
       The type of the function key.
       This parameter can take one of the following value:
@@ -400,16 +400,16 @@ funckeys [optional|default to empty dictionary]
       - park
       Note that when possible, a blf function key should also be usable as
       a speeddial function key.
-      
+
     value [mandatory if type is speeddial or blf]
       The value of the function key.
       For the speeddial type, this is an extension number.
       For the blf type, this is the monitored extension number.
       For the park type, this is the parking extension number.
-    
+
     label [optional]
       The label.
-    
+
     line [optional]
       The line number (as an integer).
 
@@ -428,7 +428,6 @@ specific values to a template.
 
 
 import logging
-import time
 import uuid
 from copy import deepcopy
 from functools import wraps
@@ -499,6 +498,15 @@ def _needs_childs_and_parents_indexes(fun):
     return aux
 
 
+def _remove_none_values(config):
+    if isinstance(config, list):
+        return [_remove_none_values(x) for x in config]
+    elif isinstance(config, dict):
+        return {k: _remove_none_values(v) for k, v in config.iteritems() if v is not None}
+    else:
+        return config
+
+
 class ConfigCollection(ForwardingDocumentCollection):
     @defer.inlineCallbacks
     def _build_childs_and_parents_indexes(self):
@@ -530,7 +538,9 @@ class ConfigCollection(ForwardingDocumentCollection):
 
     @_needs_childs_and_parents_indexes
     def insert(self, config):
+        config = _remove_none_values(config)
         _check_config_validity(config)
+
         def callback(id):
             parent_ids = config[u'parent_ids']
             # update childs idx
@@ -548,7 +558,9 @@ class ConfigCollection(ForwardingDocumentCollection):
 
     @_needs_childs_and_parents_indexes
     def update(self, config):
+        config = _remove_none_values(config)
         _check_config_validity(config)
+
         def callback(_):
             id = config[ID_KEY]
             new_parent_ids = config[u'parent_ids']
@@ -593,9 +605,10 @@ class ConfigCollection(ForwardingDocumentCollection):
         config with the given ID, i.e. the set of config ID that the given
         config depends on, directly or indirectly, or fire with an empty set
         if id is unknown.
-        
+
         """
         visited = set()
+
         def aux(cur_id):
             if cur_id in self._parents_idx:
                 for parent_id in self._parents_idx[cur_id]:
@@ -612,9 +625,10 @@ class ConfigCollection(ForwardingDocumentCollection):
         config with the given ID, i.e. the set of config ID that depends on
         this config, directly or indirectly, or fire with an empty set if id
         is unknown.
-        
+
         """
         visited = set()
+
         def aux(cur_id):
             if cur_id in self._childs_idx:
                 for child_id in self._childs_idx[cur_id]:
@@ -629,7 +643,7 @@ class ConfigCollection(ForwardingDocumentCollection):
         """Return a deferred that will fire with a raw config with every
         parameters from its ancestors config, or fire with None if id is not
         a known ID.
-        
+
         """
         # flattened_raw_config is set to a copy of base_raw_config only once
         # we know that the id is valid. This is a bit ugly, but it's the
