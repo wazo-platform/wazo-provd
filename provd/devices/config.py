@@ -503,7 +503,7 @@ def _remove_none_values(config):
     if isinstance(config, list):
         return [_remove_none_values(x) for x in config]
     elif isinstance(config, dict):
-        return {_remove_none_values(k): _remove_none_values(v) for k, v in config.iteritems() if v is not None}
+        return {k: _remove_none_values(v) for k, v in config.iteritems() if v is not None}
     else:
         return config
 
