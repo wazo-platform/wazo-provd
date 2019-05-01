@@ -66,7 +66,7 @@ class TestDefaultConfigFactory(unittest.TestCase):
 
 class TestRemoveNoneValues(unittest.TestCase):
 
-     def test_empty_dict(self):
+    def test_empty_dict(self):
         empty_dict = {}
         expected_result = {}
 
@@ -99,16 +99,10 @@ class TestRemoveNoneValues(unittest.TestCase):
     def test_with_nested_dict(self):
         dict_with_nones = {
             'key1': {'nkey1': 123, 'nkey2': None},
-            'key2': '123',
-            'key3': 123,
-            'key4': False,
         }
 
         expected_result = {
             'key1': {'nkey1': 123},
-            'key2': '123',
-            'key3': 123,
-            'key4': False,
         }
 
         result = _remove_none_values(dict_with_nones)
@@ -120,16 +114,10 @@ class TestRemoveNoneValues(unittest.TestCase):
     def test_with_list(self):
         dict_with_list = {
             'key1': [123, None],
-            'key2': '123',
-            'key3': 123,
-            'key4': False,
         }
 
         expected_result = {
             'key1': [123, None],
-            'key2': '123',
-            'key3': 123,
-            'key4': False,
         }
 
         result = _remove_none_values(dict_with_list)
@@ -141,16 +129,10 @@ class TestRemoveNoneValues(unittest.TestCase):
     def test_with_dict_in_list(self):
         dict_with_list = {
             'key1': [{'nkey1': 123, 'nkey2': None}, {'nkey1': None, 'nkey2': '123'}],
-            'key2': '123',
-            'key3': 123,
-            'key4': False,
         }
 
         expected_result = {
             'key1': [{'nkey1': 123}, {'nkey2': '123'}],
-            'key2': '123',
-            'key3': 123,
-            'key4': False,
         }
 
         result = _remove_none_values(dict_with_list)

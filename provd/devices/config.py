@@ -428,7 +428,6 @@ specific values to a template.
 
 
 import logging
-import time
 import uuid
 from copy import deepcopy
 from functools import wraps
@@ -541,6 +540,7 @@ class ConfigCollection(ForwardingDocumentCollection):
     def insert(self, config):
         config = _remove_none_values(config)
         _check_config_validity(config)
+
         def callback(id):
             parent_ids = config[u'parent_ids']
             # update childs idx
@@ -560,6 +560,7 @@ class ConfigCollection(ForwardingDocumentCollection):
     def update(self, config):
         config = _remove_none_values(config)
         _check_config_validity(config)
+
         def callback(_):
             id = config[ID_KEY]
             new_parent_ids = config[u'parent_ids']
@@ -607,6 +608,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
         """
         visited = set()
+
         def aux(cur_id):
             if cur_id in self._parents_idx:
                 for parent_id in self._parents_idx[cur_id]:
@@ -626,6 +628,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
         """
         visited = set()
+
         def aux(cur_id):
             if cur_id in self._childs_idx:
                 for child_id in self._childs_idx[cur_id]:
