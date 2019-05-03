@@ -498,6 +498,18 @@ def _needs_childs_and_parents_indexes(fun):
     return aux
 
 
+# This method is for compatibility reasons for the following provisioning plugins:
+# wazo-htek, xivo-aastra, xivo-alcatel, xivo-avaya, xivo-cisco-sccp, xivo-cisco-spa, xivo-fanvil,
+# xivo-grandstream, xivo-jitsi, xivo-panasonic, xivo-patton, xivo-polycom, xivo-snom,
+# xivo-technicolor, xivo-yealink, xivo-zenitel
+# These plugins assume that because a key exists (with the in operator), the value is valid.
+# However, sometimes the value is None and this causes issues.
+def _remove_none_values_for_device(config):
+    if config.get('X_type') == 'device':
+        return _remove_none_values(config)
+    return config
+
+
 def _remove_none_values(config):
     if isinstance(config, list):
         return [_remove_none_values(x) for x in config]
@@ -538,7 +550,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
     @_needs_childs_and_parents_indexes
     def insert(self, config):
-        config = _remove_none_values(config)
+        config = _remove_none_values_for_device(config)
         _check_config_validity(config)
 
         def callback(id):
@@ -558,7 +570,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
     @_needs_childs_and_parents_indexes
     def update(self, config):
-        config = _remove_none_values(config)
+        config = _remove_none_values_for_device(config)
         _check_config_validity(config)
 
         def callback(_):
