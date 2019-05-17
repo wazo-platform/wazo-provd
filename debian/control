@@ -22,6 +22,7 @@ Architecture: all
 Depends:
  ${python:Depends},
  ${misc:Depends},
+ wazo-auth-client,
  xivo-amid-client,
  xivo-fetchfw,
  xivo-lib-python,

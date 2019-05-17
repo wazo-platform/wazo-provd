@@ -5,8 +5,8 @@
 import logging
 import requests
 from functools import wraps
+from wazo_auth_client import Client as AuthClient
 from xivo import auth_verifier
-from xivo_auth_client import Client as AuthClient
 
 logger = logging.getLogger(__name__)
 
