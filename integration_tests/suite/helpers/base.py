@@ -31,13 +31,6 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
         super().setUpClass()
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
-    def url(self, *parts):
-        return 'http://localhost:{port}/{version}/{path}'.format(
-            port=self.service_port(8666, 'provd'),
-            version=API_VERSION,
-            path='/'.join(parts)
-        )
-
     @classmethod
     def make_provd(cls, token):
         return Client(
