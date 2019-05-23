@@ -10,6 +10,8 @@ from xivo_test_helpers.auth import AuthClient, MockCredentials
 
 from .wait_strategy import WaitStrategy
 
+API_VERSION = '0.2'
+
 VALID_TOKEN = 'valid-token'
 INVALID_TOKEN = 'invalid-token'
 VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
@@ -30,8 +32,9 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     def url(self, *parts):
-        return 'http://localhost:{port}/provd/{path}'.format(
+        return 'http://localhost:{port}/{version}/{path}'.format(
             port=self.service_port(8666, 'provd'),
+            version=API_VERSION,
             path='/'.join(parts)
         )
 
@@ -43,5 +46,5 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
             verify_certificate=False,
             token=token,
             port=cls.service_port(8666, 'provd'),
-            prefix='/provd',
+            version=API_VERSION,
         )
