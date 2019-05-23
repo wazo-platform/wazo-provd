@@ -4,9 +4,7 @@
 import os
 
 from wazo_provd_client import Client
-from xivo_test_helpers import until
 from xivo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
-from xivo_test_helpers.auth import AuthClient, MockCredentials
 
 from .wait_strategy import WaitStrategy
 
