@@ -33,6 +33,7 @@ from xivo.token_renewer import TokenRenewer
 logger = logging.getLogger(__name__)
 
 LOG_FILE_NAME = '/var/log/xivo-provd.log'
+API_VERSION = '0.2'
 
 
 # given in command line to redirect logs to standard logging
@@ -219,11 +220,15 @@ class RemoteConfigurationService(Service):
             app, dhcp_request_processing_service
         )
         logger.info('Authentication is required for REST API')
+        # /{version}
         root_resource = AuthResource()
+        root_resource.putChild(API_VERSION, server_resource)
+
+        # /{version}/api/api.yml
         api_resource = UnsecuredResource()
         api_resource.putChild('api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
-        root_resource.putChild('api', api_resource)
-        root_resource.putChild('provd', server_resource)
+        server_resource.putChild('api', api_resource)
+
         rest_site = Site(root_resource)
 
         port = self._config['rest_api']['port']

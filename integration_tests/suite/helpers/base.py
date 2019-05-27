@@ -4,11 +4,11 @@
 import os
 
 from wazo_provd_client import Client
-from xivo_test_helpers import until
 from xivo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
-from xivo_test_helpers.auth import AuthClient, MockCredentials
 
 from .wait_strategy import WaitStrategy
+
+API_VERSION = '0.2'
 
 VALID_TOKEN = 'valid-token'
 INVALID_TOKEN = 'invalid-token'
@@ -29,12 +29,6 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
         super().setUpClass()
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
-    def url(self, *parts):
-        return 'http://localhost:{port}/provd/{path}'.format(
-            port=self.service_port(8666, 'provd'),
-            path='/'.join(parts)
-        )
-
     @classmethod
     def make_provd(cls, token):
         return Client(
@@ -43,5 +37,5 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
             verify_certificate=False,
             token=token,
             port=cls.service_port(8666, 'provd'),
-            prefix='/provd',
+            version=API_VERSION,
         )

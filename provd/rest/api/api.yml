@@ -5,7 +5,7 @@ info:
   version: '0.2'
 schemes:
 - https
-basePath: /
+basePath: /0.2
 consumes:
   - "application/vnd.proformatique.provd+json"
 produces:
@@ -20,7 +20,7 @@ securityDefinitions:
 security:
 - wazo_auth_token: []
 paths:
-  /provd:
+  /:
     get:
       summary: Get the Provd Manager resource
       description: |
@@ -34,7 +34,7 @@ paths:
           schema:
             $ref: '#/definitions/LinksObject'
 
-  /provd/configure:
+  /configure:
     get:
       summary: Get the general provd configuration
       description: |
@@ -47,7 +47,7 @@ paths:
           schema:
             $ref: '#/definitions/GeneralConfigsObject'
 
-  /provd/configure/{param_id}:
+  /configure/{param_id}:
     get:
       summary: Get the configuration parameter value
       description: |
@@ -80,7 +80,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/dev_mgr:
+  /dev_mgr:
     get:
       summary: Get the Device Manager resource
       description: |
@@ -95,16 +95,16 @@ paths:
             $ref: '#/definitions/LinksObject'
           examples:
             links:
-              - href: "/provd/dev_mgr/synchronize"
+              - href: "/dev_mgr/synchronize"
                 rel: "dev.synchronize"
-              - href: "/provd/dev_mgr/reconfigure"
+              - href: "/dev_mgr/reconfigure"
                 rel: "dev.reconfigure"
-              - href: "/provd/dev_mgr/dhcpinfo"
+              - href: "/dev_mgr/dhcpinfo"
                 rel: "dev.dhcpinfo"
-              - href: "/provd/dev_mgr/devices"
+              - href: "/dev_mgr/devices"
                 rel: "dev.devices"
 
-  /provd/dev_mgr/devices:
+  /dev_mgr/devices:
     get:
       summary: List and find devices
       description: |
@@ -143,7 +143,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/dev_mgr/devices/{device_id}:
+  /dev_mgr/devices/{device_id}:
     get:
       summary: Get a device by ID
       description: |
@@ -198,7 +198,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/dev_mgr/synchronize:
+  /dev_mgr/synchronize:
     post:
       summary: Synchronize a device
       description: |
@@ -218,7 +218,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/dev_mgr/synchronize/{operation_id}:
+  /dev_mgr/synchronize/{operation_id}:
     get:
       summary: Get the status of a synchronize Operation In Progress
       description: |
@@ -250,7 +250,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/dev_mgr/reconfigure:
+  /dev_mgr/reconfigure:
     post:
       summary: Reconfigure a device
       description: |
@@ -267,7 +267,7 @@ paths:
         400:
           $ref: '#/responses/BadRequestError'
 
-  /provd/dev_mgr/dhcpinfo:
+  /dev_mgr/dhcpinfo:
     post:
       summary: Push DHCP request information
       description: |
@@ -283,7 +283,7 @@ paths:
           $ref: '#/responses/NoContentResponse'
 
 
-  /provd/cfg_mgr:
+  /cfg_mgr:
     get:
       summary: Get the Config Manager resource
       description: |
@@ -298,12 +298,12 @@ paths:
             $ref: '#/definitions/LinksObject'
           examples:
             links:
-              - href: "/provd/cfg_mgr/configs"
+              - href: "/cfg_mgr/configs"
                 rel: "cfg.configs"
-              - href: "/provd/cfg_mgr/autocreate"
+              - href: "/cfg_mgr/autocreate"
                 rel: "cfg.autocreate"
 
-  /provd/cfg_mgr/configs:
+  /cfg_mgr/configs:
     get:
       summary: List and find configurations
       description: |
@@ -331,7 +331,7 @@ paths:
         201:
           $ref: '#/responses/ConfigCreationResponse'
 
-  /provd/cfg_mgr/configs/{config_id}:
+  /cfg_mgr/configs/{config_id}:
     get:
       summary: Get a configuration
       description: |
@@ -375,7 +375,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/cfg_mgr/configs/{config_id}/raw:
+  /cfg_mgr/configs/{config_id}/raw:
     get:
       summary: Get a raw configuration
       description: |
@@ -392,7 +392,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/cfg_mgr/autocreate:
+  /cfg_mgr/autocreate:
     post:
       summary: Create an autocreate configuration
       description: |
@@ -407,7 +407,7 @@ paths:
           $ref: '#/responses/ConfigCreationResponse'
 
 
-  /provd/pg_mgr:
+  /pg_mgr:
     get:
       summary: Get the Plugin Manager resource
       description: |
@@ -422,14 +422,14 @@ paths:
             $ref: '#/definitions/LinksObject'
           examples:
             links:
-              - href: "/provd/pg_mgr/install"
+              - href: "/pg_mgr/install"
                 rel: "srv.install"
-              - href: "/provd/pg_mgr/plugins"
+              - href: "/pg_mgr/plugins"
                 rel: "pg.plugins"
-              - href: "/provd/pg_mgr/reload"
+              - href: "/pg_mgr/reload"
                 rel: "pg.reload"
 
-  /provd/pg_mgr/plugins:
+  /pg_mgr/plugins:
     get:
       summary: List the installed plugins
       description: |
@@ -445,14 +445,14 @@ paths:
             plugins:
               "xivo-aastra-3.3.1-SP4":
                 links:
-                  - href: "/provd/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
+                  - href: "/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
                     rel: "pg.plugin"
               "xivo-cisco-sccp-9.0.3":
                 links:
-                  - href: "/provd/pg_mgr/plugins/xivo-cisco-sccp-9.0.3"
+                  - href: "/pg_mgr/plugins/xivo-cisco-sccp-9.0.3"
                     rel: "pg.plugin"
 
-  /provd/pg_mgr/plugins/{plugin_id}:
+  /pg_mgr/plugins/{plugin_id}:
     get:
       summary: Get the resources of a specific plugin
       description: |
@@ -468,12 +468,12 @@ paths:
             $ref: '#/definitions/LinksObject'
           examples:
             links:
-              - href: "/provd/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
+              - href: "/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
                 rel: "pg.plugin"
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/info:
+  /pg_mgr/plugins/{plugin_id}/info:
     get:
       summary: Get the information of a plugin
       description: |
@@ -500,7 +500,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install:
+  /pg_mgr/plugins/{plugin_id}/install:
     get:
       summary: Get the package installation service resources
       description: |
@@ -516,18 +516,18 @@ paths:
             $ref: '#/definitions/LinksObject'
           examples:
               links:
-                - "href": "/provd/pg_mgr/plugins/test-plugin/install/install"
+                - "href": "/pg_mgr/plugins/test-plugin/install/install"
                   "rel": "srv.install.install"
-                - "href": "/provd/pg_mgr/plugins/test-plugin/install/uninstall"
+                - "href": "/pg_mgr/plugins/test-plugin/install/uninstall"
                   "rel": "srv.install.uninstall"
-                - "href": "/provd/pg_mgr/plugins/test-plugin/install/installed"
+                - "href": "/pg_mgr/plugins/test-plugin/install/installed"
                   "rel": "srv.install.installed"
-                - "href": "/provd/pg_mgr/plugins/test-plugin/install/installable"
+                - "href": "/pg_mgr/plugins/test-plugin/install/installable"
                   "rel": "srv.install.installable"
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/install:
+  /pg_mgr/plugins/{plugin_id}/install/install:
     post:
       summary: Install a package
       description: |
@@ -547,7 +547,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
+  /pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
     get:
       summary: Get the status of a package installation Operation In Progress
       description: |
@@ -581,7 +581,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/uninstall:
+  /pg_mgr/plugins/{plugin_id}/install/uninstall:
     post:
       summary: Uninstall a package
       description: |
@@ -601,7 +601,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
+  /pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a package upgrade Operation In Progress
       description: |
@@ -635,7 +635,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/installable:
+  /pg_mgr/plugins/{plugin_id}/install/installable:
     get:
       summary: Get the installable packages list
       description: |
@@ -652,7 +652,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/plugins/{plugin_id}/install/installed:
+  /pg_mgr/plugins/{plugin_id}/install/installed:
     get:
       summary: Get the installed packages list
       description: |
@@ -669,7 +669,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/install:
+  /pg_mgr/install:
     get:
       summary: Get the installation service resources
       description: |
@@ -683,20 +683,20 @@ paths:
             $ref: '#/definitions/LinksObject'
           examples:
               links:
-                - "href": "/provd/pg_mgr/install/install"
+                - "href": "/pg_mgr/install/install"
                   "rel": "srv.install.install"
-                - "href": "/provd/pg_mgr/install/uninstall"
+                - "href": "/pg_mgr/install/uninstall"
                   "rel": "srv.install.uninstall"
-                - "href": "/provd/pg_mgr/install/installed"
+                - "href": "/pg_mgr/install/installed"
                   "rel": "srv.install.installed"
-                - "href": "/provd/pg_mgr/install/installable"
+                - "href": "/pg_mgr/install/installable"
                   "rel": "srv.install.installable"
-                - "href": "/provd/pg_mgr/install/upgrade"
+                - "href": "/pg_mgr/install/upgrade"
                   "rel": "srv.install.upgrade"
-                - "href": "/provd/pg_mgr/install/update"
+                - "href": "/pg_mgr/install/update"
                   "rel": "srv.install.update"
 
-  /provd/pg_mgr/install/install:
+  /pg_mgr/install/install:
     post:
       summary: Install a plugin
       description: |
@@ -713,7 +713,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/install/install/{operation_id}:
+  /pg_mgr/install/install/{operation_id}:
     get:
       summary: Get the status of a plugin installation Operation In Progress
       description: |
@@ -745,7 +745,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/install/uninstall:
+  /pg_mgr/install/uninstall:
     post:
       summary: Uninstall a plugin
       description: |
@@ -762,7 +762,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/install/upgrade:
+  /pg_mgr/install/upgrade:
     post:
       summary: Upgrade a plugin
       description: |
@@ -779,7 +779,7 @@ paths:
         415:
           $ref: '#/responses/UnsupportedMediaError'
 
-  /provd/pg_mgr/install/upgrade/{operation_id}:
+  /pg_mgr/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a plugin upgrade Operation In Progress
       description: |
@@ -811,7 +811,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/install/update:
+  /pg_mgr/install/update:
     post:
       summary: Update the List of installable plugins
       description: |
@@ -826,7 +826,7 @@ paths:
         400:
           $ref: '#/responses/InvalidJSONError'
 
-  /provd/pg_mgr/install/update/{operation_id}:
+  /pg_mgr/install/update/{operation_id}:
     get:
       summary: Get the status of a plugin database update Operation In Progress
       description: |
@@ -858,7 +858,7 @@ paths:
         404:
           $ref: '#/responses/NoSuchResourceError'
 
-  /provd/pg_mgr/install/installable:
+  /pg_mgr/install/installable:
     get:
       summary: Get the installable plugins list
       description: |
@@ -871,7 +871,7 @@ paths:
           schema:
             $ref: '#/definitions/PackageList'
 
-  /provd/pg_mgr/install/installed:
+  /pg_mgr/install/installed:
     get:
       summary: Get the installed plugins list
       description: |
@@ -884,7 +884,7 @@ paths:
           schema:
             $ref: '#/definitions/PackageList'
 
-  /provd/pg_mgr/reload:
+  /pg_mgr/reload:
     post:
       summary: Reload a plugin
       description: |
