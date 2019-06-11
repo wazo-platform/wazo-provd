@@ -29,7 +29,7 @@ paths:
       tags:
         - provd
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/LinksObject'
@@ -42,7 +42,7 @@ paths:
       tags:
         - provd
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/GeneralConfigsObject'
@@ -57,11 +57,11 @@ paths:
       parameters:
         - $ref: '#/parameters/ParamId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/Param'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
@@ -73,11 +73,11 @@ paths:
         - $ref: '#/parameters/ParamId'
         - $ref: '#/parameters/ParamBody'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /dev_mgr:
@@ -89,7 +89,7 @@ paths:
       tags:
       - devices
       responses:
-        200:
+        '200':
           description: Links to the different devices resources
           schema:
             $ref: '#/definitions/LinksObject'
@@ -120,7 +120,7 @@ paths:
         - $ref: '#/parameters/TenantUUID'
         - $ref: '#/parameters/Recurse'
       responses:
-        200:
+        '200':
           $ref: '#/responses/DevicesResponse'
     post:
       summary: Create a device
@@ -136,11 +136,11 @@ paths:
             $ref: '#/definitions/DeviceObject'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        201:
+        '201':
           $ref: '#/responses/DeviceCreationResponse'
-        400:
+        '400':
           $ref: '#/responses/BadRequestError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /dev_mgr/devices/{device_id}:
@@ -155,9 +155,9 @@ paths:
         - $ref: '#/parameters/DeviceId'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        200:
+        '200':
           $ref: '#/responses/DeviceUniqueResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a device
@@ -175,13 +175,13 @@ paths:
             $ref: '#/definitions/DeviceObject'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
-        500:
+        '500':
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a device
@@ -193,9 +193,9 @@ paths:
         - $ref: '#/parameters/DeviceId'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /dev_mgr/synchronize:
@@ -209,13 +209,13 @@ paths:
         - $ref: '#/parameters/DeviceIdBody'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        201:
+        '201':
           description: Device synchronized
           headers:
             Location:
               description: Location of the OperationInProgress resource
               type: string
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /dev_mgr/synchronize/{operation_id}:
@@ -228,26 +228,26 @@ paths:
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/OperationInProgressObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
-        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+        Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - devices
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /dev_mgr/reconfigure:
@@ -262,9 +262,9 @@ paths:
         - $ref: '#/parameters/DeviceIdBody'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        400:
+        '400':
           $ref: '#/responses/BadRequestError'
 
   /dev_mgr/dhcpinfo:
@@ -279,7 +279,7 @@ paths:
         - $ref: '#/parameters/DeviceDHCPInfo'
         - $ref: '#/parameters/TenantUUID'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
 
 
@@ -292,7 +292,7 @@ paths:
       tags:
         - configs
       responses:
-        200:
+        '200':
           description: Links to the different configuration resources
           schema:
             $ref: '#/definitions/LinksObject'
@@ -317,7 +317,7 @@ paths:
         - $ref: '#/parameters/SortEntries'
         - $ref: '#/parameters/SortOrder'
       responses:
-        200:
+        '200':
           $ref: '#/responses/ConfigsResponse'
     post:
       summary: Create a configuration
@@ -328,7 +328,7 @@ paths:
       parameters:
         - $ref: '#/parameters/ConfigParam'
       responses:
-        201:
+        '201':
           $ref: '#/responses/ConfigCreationResponse'
 
   /cfg_mgr/configs/{config_id}:
@@ -341,9 +341,9 @@ paths:
       parameters:
         - $ref: '#/parameters/ConfigId'
       responses:
-        200:
+        '200':
           $ref: '#/responses/ConfigUniqueResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a configuration
@@ -355,11 +355,11 @@ paths:
         - $ref: '#/parameters/ConfigId'
         - $ref: '#/parameters/ConfigParam'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
-        500:
+        '500':
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a configuration
@@ -370,9 +370,9 @@ paths:
       parameters:
         - $ref: '#/parameters/ConfigId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /cfg_mgr/configs/{config_id}/raw:
@@ -385,11 +385,11 @@ paths:
       parameters:
         - $ref: '#/parameters/ConfigId'
       responses:
-        200:
+        '200':
           description: A raw configuration response
           schema:
             $ref: '#/definitions/RawConfigurationObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /cfg_mgr/autocreate:
@@ -403,7 +403,7 @@ paths:
       parameters:
         - $ref: '#/parameters/EmptyBody'
       responses:
-        201:
+        '201':
           $ref: '#/responses/ConfigCreationResponse'
 
 
@@ -416,7 +416,7 @@ paths:
       tags:
         - plugins
       responses:
-        200:
+        '200':
           description: Links to the different plugin resources
           schema:
             $ref: '#/definitions/LinksObject'
@@ -437,7 +437,7 @@ paths:
       tags:
         - plugins
       responses:
-        200:
+        '200':
           description: List of all the installed plugins and their resources
           schema:
             $ref: '#/definitions/PluginsObject'
@@ -462,7 +462,7 @@ paths:
       parameters:
         - $ref: '#/parameters/PluginId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/LinksObject'
@@ -470,7 +470,7 @@ paths:
             links:
               - href: "/pg_mgr/plugins/xivo-aastra-3.3.1-SP4"
                 rel: "pg.plugin"
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/plugins/{plugin_id}/info:
@@ -483,7 +483,7 @@ paths:
       parameters:
         - $ref: '#/parameters/PluginId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/PluginInfo'
@@ -497,7 +497,7 @@ paths:
                   switchboard: true
               description: "Plugin for Aastra 6730i, 6731i, ..."
               version: "1.1"
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/plugins/{plugin_id}/install:
@@ -510,7 +510,7 @@ paths:
       parameters:
         - $ref: '#/parameters/PluginId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/LinksObject'
@@ -524,7 +524,7 @@ paths:
                   "rel": "srv.install.installed"
                 - "href": "/pg_mgr/plugins/test-plugin/install/installable"
                   "rel": "srv.install.installable"
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/plugins/{plugin_id}/install/install:
@@ -538,13 +538,13 @@ paths:
         - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/PackageIdBody'
       responses:
-        201:
+        '201':
           $ref: '#/responses/OperationInProgressResponse'
-        400:
+        '400':
           $ref: '#/responses/InvalidJSONError'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
@@ -558,27 +558,27 @@ paths:
         - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/OperationId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/OperationInProgressObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
-        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+        Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
       parameters:
         - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/OperationId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/plugins/{plugin_id}/install/uninstall:
@@ -592,13 +592,13 @@ paths:
         - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/PackageIdBody'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        400:
+        '400':
           $ref: '#/responses/InvalidJSONError'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
@@ -612,27 +612,27 @@ paths:
         - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/OperationId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/OperationInProgressObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
-        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+        Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
       parameters:
         - $ref: '#/parameters/PluginId'
         - $ref: '#/parameters/OperationId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/plugins/{plugin_id}/install/installable:
@@ -645,11 +645,11 @@ paths:
       parameters:
         - $ref: '#/parameters/PluginId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/PackageList'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/plugins/{plugin_id}/install/installed:
@@ -662,11 +662,11 @@ paths:
       parameters:
         - $ref: '#/parameters/PluginId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/PackageList'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/install:
@@ -677,7 +677,7 @@ paths:
       tags:
         - plugins
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/LinksObject'
@@ -706,11 +706,11 @@ paths:
       parameters:
         - $ref: '#/parameters/PackageIdBody'
       responses:
-        201:
+        '201':
           $ref: '#/responses/OperationInProgressResponse'
-        400:
+        '400':
           $ref: '#/responses/InvalidJSONError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /pg_mgr/install/install/{operation_id}:
@@ -723,26 +723,26 @@ paths:
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/OperationInProgressObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
-        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+        Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/install/uninstall:
@@ -755,11 +755,11 @@ paths:
       parameters:
         - $ref: '#/parameters/PackageIdBody'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        400:
+        '400':
           $ref: '#/responses/InvalidJSONError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /pg_mgr/install/upgrade:
@@ -772,11 +772,11 @@ paths:
       parameters:
         - $ref: '#/parameters/PackageIdBody'
       responses:
-        201:
+        '201':
           $ref: '#/responses/OperationInProgressResponse'
-        400:
+        '400':
           $ref: '#/responses/InvalidJSONError'
-        415:
+        '415':
           $ref: '#/responses/UnsupportedMediaError'
 
   /pg_mgr/install/upgrade/{operation_id}:
@@ -789,26 +789,26 @@ paths:
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/OperationInProgressObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
-        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+        Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/install/update:
@@ -821,9 +821,9 @@ paths:
       parameters:
         - $ref: '#/parameters/EmptyBody'
       responses:
-        201:
+        '201':
           $ref: '#/responses/OperationInProgressResponse'
-        400:
+        '400':
           $ref: '#/responses/InvalidJSONError'
 
   /pg_mgr/install/update/{operation_id}:
@@ -836,26 +836,26 @@ paths:
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/OperationInProgressObject'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
     delete:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
         This does not cancel the underlying operation; it only deletes the monitor
-        Every monitor that is created should be deleted, else they won’t be freed by the process and they will accumulate, taking memory
+        Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
       parameters:
         - $ref: '#/parameters/OperationId'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
-        404:
+        '404':
           $ref: '#/responses/NoSuchResourceError'
 
   /pg_mgr/install/installable:
@@ -866,7 +866,7 @@ paths:
       tags:
         - plugins
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/PackageList'
@@ -879,7 +879,7 @@ paths:
       tags:
         - plugins
       responses:
-        200:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/PackageList'
@@ -895,7 +895,7 @@ paths:
       parameters:
         - $ref: '#/parameters/PluginIdBody'
       responses:
-        204:
+        '204':
           $ref: '#/responses/NoContentResponse'
 
 parameters:

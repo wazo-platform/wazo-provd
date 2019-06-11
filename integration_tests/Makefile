@@ -7,7 +7,6 @@ test-setup: egg-info pull-images provd
 
 pull-images:
 	docker pull wazopbx/wait
-	docker pull swaggerapi/swagger-validator
 	docker pull trinitronx/python-simplehttpserver
 	docker pull wazopbx/wazo-auth-mock
 
