@@ -308,9 +308,14 @@ class TokenRenewerService(Service):
         auth_client = auth.get_auth_client(**self._config['auth'])
         amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
         self._token_renewer = TokenRenewer(auth_client)
-        self._token_renewer.subscribe_to_token_change(app.set_token)
-        self._token_renewer.subscribe_to_token_change(auth_client.set_token)
-        self._token_renewer.subscribe_to_token_change(amid_client.set_token)
+
+        def _on_token_change(token):
+            token_id = token['token']
+            app.set_token(token_id)
+            auth_client.set_token(token_id)
+            amid_client.set_token(token_id)
+
+        self._token_renewer.subscribe_to_token_change(_on_token_change)
         self._token_renewer.start()
         Service.startService(self)
 
