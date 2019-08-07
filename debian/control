@@ -1,4 +1,4 @@
-Source: xivo-provisioning
+Source: wazo-provd
 Section: python
 Priority: extra
 Maintainer: Wazo Maintainers <dev@wazo.community>
@@ -6,33 +6,28 @@ Build-Depends: debhelper (>= 9), dh-python, dh-systemd (>= 1.5), python-all (>= 
 Standards-Version: 3.9.6
 X-Python-Version: >= 2.7
 
-Package: xivo-provd
+Package: wazo-provd
 Architecture: all
-Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
-Depends: ${python:Depends}, ${misc:Depends}, adduser
-Description: Wazo provisioning daemon
- Wazo is a system based on a powerful IPBX, to bring an easy to
- install solution for telephony and related services.
- .
- This is the provisioning daemon for Wazo.
- .
-
-Package: xivo-libprovd
-Architecture: all
+Provides: xivo-provd, xivo-libprovd
+Conflicts: xivo-provd, xivo-libprovd
+Replaces: xivo-provd, xivo-libprovd
+Pre-Depends: ${misc:Pre-Depends}
 Depends:
- ${python:Depends},
- ${misc:Depends},
- wazo-auth-client,
- xivo-amid-client,
- xivo-fetchfw,
- xivo-lib-python,
- python-jinja2,
- python-openssl,
- python-twisted-core,
- python-twisted-web,
- unar,
- unrar-free,
- unzip
+    ${python:Depends},
+    ${misc:Depends},
+    adduser,
+    python-jinja2,
+    python-openssl,
+    python-twisted-core,
+    python-twisted-web,
+    rename,
+    unar,
+    unrar-free,
+    unzip,
+    wazo-auth-client,
+    xivo-amid-client,
+    xivo-fetchfw,
+    xivo-lib-python
 Description: Wazo provisioning daemon
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
@@ -40,9 +35,12 @@ Description: Wazo provisioning daemon
  This is the provisioning daemon for Wazo.
  .
 
-Package: xivo-dhcpd-update
+Package: wazo-dhcpd-update
 Architecture: all
-Pre-Depends: xivo-libprovd, ${misc:Pre-Depends}
+Provides: xivo-dhcpd-update
+Conflicts: xivo-dhcpd-update
+Replaces: xivo-dhcpd-update
+Pre-Depends: wazo-provd, ${misc:Pre-Depends}
 Depends: ${python:Depends}, ${misc:Depends}
 Description: Wazo dhcpd configuration file for Wazo
  Wazo is a system based on a powerful IPBX, to bring an easy to

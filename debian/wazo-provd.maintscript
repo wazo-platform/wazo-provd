@@ -1,0 +1,8 @@
+# see: dh_installdeb(1)
+
+mv_conffile /etc/xivo/provd/base_raw_config.json /etc/wazo-provd/base_raw_config.json 19.02
+mv_conffile /etc/xivo/provd/info_extractor.py.conf.default /etc/wazo-provd/info_extractor.py.conf.default 19.02
+mv_conffile /etc/xivo/provd/retriever.py.conf.default /etc/wazo-provd/retriever.py.conf.default 19.02
+mv_conffile /etc/xivo/provd/retriever.py.conf.secure /etc/wazo-provd/retriever.py.conf.secure 19.02
+mv_conffile /etc/xivo/provd/updater.py.conf.default /etc/wazo-provd/updater.py.conf.default 19.02
+mv_conffile /etc/xivo/provd/updater.py.conf.secure /etc/wazo-provd/updater.py.conf.secure 19.02

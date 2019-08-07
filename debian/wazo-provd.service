@@ -1,0 +1,14 @@
+[Unit]
+Description=wazo-provd server
+ConditionPathExists=!/var/lib/wazo/disabled
+After=network.target xivo-confgend.service
+Before=monit.service
+
+[Service]
+Type=forking
+ExecStartPre=/usr/bin/install -d -o wazo-provd -g wazo-provd /var/run/wazo-provd
+ExecStart=/usr/bin/twistd --pidfile=/var/run/wazo-provd/wazo-provd.pid --rundir=/ --uid=wazo-provd --gid=wazo-provd --no_save --logger provd.main.twistd_logs wazo-provd
+PIDFile=/var/run/wazo-provd/wazo-provd.pid
+
+[Install]
+WantedBy=multi-user.target
