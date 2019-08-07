@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright 2008-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2008-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from setuptools import setup
 from setuptools import find_packages
 
 setup(
-    name='provisioning',
+    name='wazo-provd',
     version='0.2',
-    description='XiVO provisioning daemon',
+    description='Wazo provisioning daemon',
     author='Wazo Authors',
     author_email='dev@wazo.community',
     url='http://wazo.community',
