@@ -11,11 +11,11 @@ pull-images:
 	docker pull wazopbx/wazo-auth-mock
 
 provd:
-	docker build --pull -t wazopbx/xivo-provd $(PROVD_DIR)
+	docker build --pull -t wazopbx/wazo-provd $(PROVD_DIR)
 	$(MAKE) provd-test
 
 provd-test:
-	docker build --no-cache -t xivo-provd-tests -f Dockerfile $(PROVD_DIR)
+	docker build --no-cache -t wazo-provd-tests -f Dockerfile $(PROVD_DIR)
 
 test:
 	nosetests -x

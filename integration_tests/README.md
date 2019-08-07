@@ -1,4 +1,4 @@
-# xivo-provd integration tests
+# wazo-provd integration tests
 
 This README attempts to document various bits of information pertaining to the integration tests for
 this project.
