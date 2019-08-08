@@ -1,2 +1,3 @@
 etc/nginx/locations/* etc/nginx/locations
 etc/wazo-provd/*  etc/wazo-provd
+debian/tmp/usr/lib usr/
