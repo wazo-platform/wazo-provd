@@ -32,7 +32,7 @@ from xivo.token_renewer import TokenRenewer
 
 logger = logging.getLogger(__name__)
 
-LOG_FILE_NAME = '/var/log/xivo-provd.log'
+LOG_FILE_NAME = '/var/log/wazo-provd.log'
 API_VERSION = '0.2'
 
 
@@ -322,7 +322,7 @@ class TokenRenewerService(Service):
 class ProvisioningServiceMaker(object):
     implements(IServiceMaker, IPlugin)
 
-    tapname = 'xivo-provd'
+    tapname = 'wazo-provd'
     description = 'A provisioning server.'
     options = provd.config.Options
 

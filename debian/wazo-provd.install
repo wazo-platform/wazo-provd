@@ -1,2 +1,2 @@
 etc/nginx/locations/* etc/nginx/locations
-etc/xivo-provd/*  etc/xivo-provd
+etc/wazo-provd/*  etc/wazo-provd

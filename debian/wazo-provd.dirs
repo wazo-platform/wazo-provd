@@ -1,0 +1,4 @@
+etc/wazo-provd/conf.d
+var/lib/wazo-provd
+var/cache/wazo-provd
+etc/nginx/locations/https-enabled

@@ -78,17 +78,17 @@ logger = logging.getLogger(__name__)
 CERT_FILE = '/usr/share/xivo-certs/server.crt'
 
 _DEFAULT_CONFIG = {
-    'config_file': '/etc/xivo-provd/config.yml',
-    'extra_config_files': '/etc/xivo-provd/conf.d',
+    'config_file': '/etc/wazo-provd/config.yml',
+    'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
         'external_ip': '127.0.0.1',
-        'base_raw_config_file': '/etc/xivo-provd/base_raw_config.json',
-        'request_config_dir': '/etc/xivo-provd',
-        'cache_dir': '/var/cache/xivo-provd',
+        'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
+        'request_config_dir': '/etc/wazo-provd',
+        'cache_dir': '/var/cache/wazo-provd',
         'cache_plugin': True,
         'check_compat_min': True,
         'check_compat_max': True,
-        'base_storage_dir': '/var/lib/xivo-provd',
+        'base_storage_dir': '/var/lib/wazo-provd',
         'plugin_server': 'http://provd.wazo.community/plugins/1/stable/',
         'info_extractor': 'default',
         'retriever': 'default',
@@ -109,7 +109,7 @@ _DEFAULT_CONFIG = {
         'host': 'localhost',
         'port': 9497,
         'verify_certificate': CERT_FILE,
-        'key_file': '/var/lib/wazo-auth-keys/xivo-provd-key.yml',
+        'key_file': '/var/lib/wazo-auth-keys/wazo-provd-key.yml',
     },
     'database': {
         'type': 'json',

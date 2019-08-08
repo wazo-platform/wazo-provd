@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  title: xivo-provd
+  title: wazo-provd
   description: Provisioning application REST API
   version: '0.2'
 schemes:
@@ -25,7 +25,7 @@ paths:
       summary: Get the Provd Manager resource
       description: |
         **Required ACL:** `provd.read`
-        The provd manager resource represents the main entry point to the xivo-provd REST API
+        The provd manager resource represents the main entry point to the wazo-provd REST API
       tags:
         - provd
       responses:
@@ -85,7 +85,7 @@ paths:
       summary: Get the Device Manager resource
       description: |
         **Required ACL:** `provd.dev_mgr.read`
-        The device manager resource represents the entry point to the xivo-provd device REST API
+        The device manager resource represents the entry point to the wazo-provd device REST API
       tags:
       - devices
       responses:
@@ -288,7 +288,7 @@ paths:
       summary: Get the Config Manager resource
       description: |
         **Required ACL:** `provd.cfg_mgr.read`
-        The configuration manager resource represents the entry point to the xivo-provd configuration REST API
+        The configuration manager resource represents the entry point to the wazo-provd configuration REST API
       tags:
         - configs
       responses:
@@ -412,7 +412,7 @@ paths:
       summary: Get the Plugin Manager resource
       description: |
         **Required ACL:** `provd.pg_mgr.read`
-        The plugin manager resource represents the entry point to the xivo-provd plugin REST API
+        The plugin manager resource represents the entry point to the wazo-provd plugin REST API
       tags:
         - plugins
       responses:
@@ -889,7 +889,7 @@ paths:
       summary: Reload a plugin
       description: |
         **Required ACL:** `provd.pg_mgr.reload.create`
-        This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the xivo-provd application
+        This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the wazo-provd application
       tags:
         - plugins
       parameters:

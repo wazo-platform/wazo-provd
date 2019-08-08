@@ -1,4 +1,4 @@
-xivo-provd
+wazo-provd
 ==========
 
 Running unit tests

@@ -1,3 +1,9 @@
+wazo-provd (19.12~20190806.160550) wazo-dev-stretch; urgency=medium
+
+  * Rename xivo-provisioning to wazo-provd
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 06 Aug 2019 16:05:50 -0400
+
 xivo-provisioning (14.06~20140318.155859.ca890eb) xivo-dev; urgency=low
 
   * test packaging
