@@ -36,7 +36,7 @@ case "$1" in
         fi
         if [ -d /var/cache/xivo-provd ] ; then
             mv /var/cache/xivo-provd/* /var/cache/wazo-provd/
-            rmdir -ignore-fail-on-non-empty -p /var/cache/xivo-provd
+            rmdir --ignore-fail-on-non-empty -p /var/cache/xivo-provd
         fi
         if getent passwd $OLD_USER > /dev/null; then
             echo "Removing old system user $OLD_USER" 1>&2
