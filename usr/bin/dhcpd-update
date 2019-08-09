@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-# Copyright 2011-2016 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Small utility to download and update the configuration files of the DHCP
-server installed on a XiVO, so that any phone that is supported by one
-of the xivo-* provd plugins is able to boot correctly using the DHCP server
-installed on a XiVO.
+server installed on a Wazo, so that any phone that is supported by one
+of the wazo-* provd plugins is able to boot correctly using the DHCP server
+installed on a Wazo.
 
 """
 
