@@ -6,76 +6,76 @@ OLD_USER='xivo-provd'
 USER='wazo-provd'
 
 case "$1" in
-	configure)
-		# add/update user
-		if ! getent passwd $USER > /dev/null; then
-			echo "Adding system user $USER" 1>&2
-			adduser --quiet --system --group --no-create-home \
-					--home /var/lib/wazo-provd \
-					$USER
-		fi
+    configure)
+        # add/update user
+        if ! getent passwd $USER > /dev/null; then
+            echo "Adding system user $USER" 1>&2
+            adduser --quiet --system --group --no-create-home \
+                    --home /var/lib/wazo-provd \
+                    $USER
+        fi
 
-		adduser --quiet $USER www-data
+        adduser --quiet $USER www-data
 
-		# move files from xivo-provd
+        # move files from xivo-provd
         rm -f /etc/nginx/locations/https-enabled/xivo-provd
         if [ -f /var/log/xivo-provd.log ] ; then
             rename 's/xivo-provd/wazo-provd/g' /var/log/xivo-provd.log*
         fi
-		if [ -f /var/log/xivo-provd-fail2ban.log ] ; then
-			rename 's/xivo-provd/wazo-provd/g' /var/log/xivo-provd-fail2ban.log*
-		fi
+        if [ -f /var/log/xivo-provd-fail2ban.log ] ; then
+            rename 's/xivo-provd/wazo-provd/g' /var/log/xivo-provd-fail2ban.log*
+        fi
         rm -rf /var/run/xivo-provd
         if [ -d /etc/xivo-provd/conf.d ] ; then
             find /etc/xivo-provd/conf.d/ -mindepth 1 -exec mv {} /etc/wazo-provd/conf.d/ \;
             rmdir --ignore-fail-on-non-empty -p /etc/xivo-provd/conf.d
         fi
-		if [ -d /var/lib/xivo-provd ] ; then
-			mv /var/lib/xivo-provd/* /var/lib/wazo-provd/
-			rmdir --ignore-fail-on-non-empty -p /var/lib/xivo-provd
-		fi
-		if [ -d /var/cache/xivo-provd ] ; then
-			mv /var/cache/xivo-provd/* /var/cache/wazo-provd/
-			rmdir -ignore-fail-on-non-empty -p /var/cache/xivo-provd
-		fi
-		if getent passwd $OLD_USER > /dev/null; then
-			echo "Removing old system user $OLD_USER" 1>&2
-			deluser --quiet --system --remove-home $OLD_USER
-		fi
+        if [ -d /var/lib/xivo-provd ] ; then
+            mv /var/lib/xivo-provd/* /var/lib/wazo-provd/
+            rmdir --ignore-fail-on-non-empty -p /var/lib/xivo-provd
+        fi
+        if [ -d /var/cache/xivo-provd ] ; then
+            mv /var/cache/xivo-provd/* /var/cache/wazo-provd/
+            rmdir -ignore-fail-on-non-empty -p /var/cache/xivo-provd
+        fi
+        if getent passwd $OLD_USER > /dev/null; then
+            echo "Removing old system user $OLD_USER" 1>&2
+            deluser --quiet --system --remove-home $OLD_USER
+        fi
         # End of move files from xivo-provd
 
 
-		for filename in /var/log/wazo-provd.log \
-		                /var/log/wazo-provd-fail2ban.log; do
-			if [ ! -e $filename ]; then
-				touch $filename
-			fi
+        for filename in /var/log/wazo-provd.log \
+                        /var/log/wazo-provd-fail2ban.log; do
+            if [ ! -e $filename ]; then
+                touch $filename
+            fi
 
-			chown "$USER:$USER" $filename
-		done
+            chown "$USER:$USER" $filename
+        done
 
-		chown "$USER:$USER" /var/lib/wazo-provd /var/cache/wazo-provd
+        chown "$USER:$USER" /var/lib/wazo-provd /var/cache/wazo-provd
 
-		if dpkg --compare-versions "$2" lt "16.09"; then
-			chown -R "$USER:$USER" /var/lib/wazo-provd /var/cache/wazo-provd
-		fi
+        if dpkg --compare-versions "$2" lt "16.09"; then
+            chown -R "$USER:$USER" /var/lib/wazo-provd /var/cache/wazo-provd
+        fi
 
         if dpkg --compare-versions "$2" lt '19.03'; then
             ln -sf  /etc/nginx/locations/https-available/wazo-provd \
                     /etc/nginx/locations/https-enabled/wazo-provd
         fi
 
-		if dpkg --compare-versions "$2" lt '19.03'; then
-			rm -fr /etc/xivo/provd
-		fi
-	;;
-	abort-upgrade)
-	;;
+        if dpkg --compare-versions "$2" lt '19.03'; then
+            rm -fr /etc/xivo/provd
+        fi
+    ;;
+    abort-upgrade)
+    ;;
 
-	*)
-		echo "preinst called with unknown argument \`$1'" >&2
-		exit 1
-	;;
+    *)
+        echo "preinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
 esac
 
 # dh_installdeb will replace this with shell code automatically
