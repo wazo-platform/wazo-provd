@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2015 Avencall
+# Copyright 2015-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -7,7 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-_URL_META_FORMAT = u'{{scheme}}://{{hostname}}:{{port}}/0.1/directories/{entry_point}/{{profile}}/{vendor}?{qs_prefix}xivo_user_uuid={{user_uuid}}{qs_suffix}'
+_URL_META_FORMAT = u'{{scheme}}://{{hostname}}:{{port}}/0.1/directories/{entry_point}/default/{vendor}?{qs_prefix}xivo_user_uuid={{user_uuid}}{qs_suffix}'
+
 
 def add_xivo_phonebook_url(raw_config, vendor, entry_point=u'input', qs_prefix=u'', qs_suffix=u''):
     url_format = _build_url_format(vendor, entry_point, qs_prefix, qs_suffix)
@@ -30,11 +31,6 @@ def add_xivo_phonebook_url_from_format(raw_config, url_format):
     if not hostname:
         return
 
-    profile = raw_config.get(u'X_xivo_phonebook_profile')
-    if not profile:
-        logger.warning('Not adding XX_xivo_phonebook_url: no phonebook profile')
-        return
-
     user_uuid = raw_config.get(u'X_xivo_user_uuid')
     if not user_uuid:
         logger.warning('Not adding XX_xivo_phonebook_url: no user uuid')
@@ -45,5 +41,4 @@ def add_xivo_phonebook_url_from_format(raw_config, url_format):
     raw_config[u'XX_xivo_phonebook_url'] = url_format.format(scheme=scheme,
                                                              hostname=hostname,
                                                              port=port,
-                                                             profile=profile,
                                                              user_uuid=user_uuid)
