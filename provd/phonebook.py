@@ -40,5 +40,6 @@ def add_xivo_phonebook_url_from_format(raw_config, url_format):
     port = raw_config.get(u'X_xivo_phonebook_port', 9498)
     raw_config[u'XX_xivo_phonebook_url'] = url_format.format(scheme=scheme,
                                                              hostname=hostname,
+                                                             profile='default',
                                                              port=port,
                                                              user_uuid=user_uuid)
