@@ -18,7 +18,12 @@ import functools
 import json
 import logging
 from binascii import a2b_base64
-from provd.app import InvalidIdError, DeviceNotInProvdTenantError, TenantInvalidForDeviceError
+from provd.app import (
+    InvalidIdError,
+    DeviceNotInProvdTenantError,
+    TenantInvalidForDeviceError,
+    NonDeletableError,
+)
 from provd.localization import get_locale_and_language
 from provd.operation import format_oip, operation_in_progres_from_deferred
 from provd.persist.common import ID_KEY
@@ -1071,6 +1076,8 @@ class ConfigResource(AuthResource):
         def on_errback(failure):
             if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
+            elif failure.check(NonDeletableError):
+                deferred_respond_error(request, failure.value, http.FORBIDDEN)
             else:
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
         d = self._app.cfg_delete(self.config_id)

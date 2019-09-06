@@ -156,11 +156,34 @@ class TestConfigs(BaseIntegrationTest):
         with fixtures.Configuration(self._client, delete_on_exit=False) as config:
             self._client.configs.delete(config['id'])
 
-    def test_delete_errors(self):
+    def test_delete_nonexistant_error(self):
         assert_that(
             calling(self._client.configs.delete).with_args('invalid_id'),
             raises(ProvdError).matching(has_properties('status_code', 404))
         )
+
+    def test_delete_undeletable_error(self):
+        config = {
+            'id': 'test1',
+            'parent_ids': ['base'],
+            'deletable': False,
+            'X_type': 'internal',
+            'raw_config': {
+                'ntp_ip': '127.0.0.1',
+                'X_xivo_phonebook_ip': '127.0.0.1',
+                'ntp_enabled': True,
+            }
+        }
+        self._client.configs.create(config)
+        assert_that(
+            calling(self._client.configs.delete).with_args(config['id']),
+            raises(ProvdError).matching(has_properties('status_code', 403))
+        )
+
+        # To actually delete the config we need to update it
+        config['deletable'] = True
+        self._client.configs.update(config)
+        self._client.configs.delete(config['id'])
 
     def test_delete_error_invalid_token(self):
         provd = self.make_provd('invalid-token')

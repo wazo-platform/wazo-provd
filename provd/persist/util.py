@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
 from itertools import ifilter, imap
-from provd.persist.common import ID_KEY, InvalidIdError
+from provd.persist.common import ID_KEY, InvalidIdError, NonDeletableError
 from twisted.internet import defer
 
 logger = logging.getLogger(__name__)
@@ -247,8 +247,11 @@ class SimpleBackendDocumentCollection(object):
     def delete(self, id):
         try:
             old_document = self._backend[id]
-            self._del_document_update_indexes(old_document)
-            del self._backend[id]
+            if old_document.get('deletable', True):
+                self._del_document_update_indexes(old_document)
+                del self._backend[id]
+            else:
+                return defer.fail(NonDeletableError(id))
         except KeyError:
             return defer.fail(InvalidIdError(id))
         else:

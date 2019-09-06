@@ -11,7 +11,11 @@ from provd.devices.config import RawConfigError, DefaultConfigFactory
 from provd.devices.device import needs_reconfiguration
 from provd.localization import get_localization_service
 from provd.operation import OIP_PROGRESS, OIP_FAIL, OIP_SUCCESS
-from provd.persist.common import ID_KEY, InvalidIdError as PersistInvalidIdError
+from provd.persist.common import (
+    ID_KEY,
+    InvalidIdError as PersistInvalidIdError,
+    NonDeletableError as PersistNonDeletableError,
+)
 from provd.plugins import PluginManager, PluginNotLoadedError
 from provd.services import InvalidParameterError, JsonConfigPersister, \
     PersistentConfigureServiceDecorator
@@ -43,6 +47,11 @@ class TenantInvalidForDeviceError(Exception):
     def __init__(self, tenant_uuid):
         super(TenantInvalidForDeviceError, self).__init__('Tenant invalid for device')
         self.tenant_uuid = tenant_uuid
+
+
+class NonDeletableError(Exception):
+    """Raised when a document is non deletable"""
+    pass
 
 
 def _rlock_arg(rw_lock):
@@ -692,6 +701,8 @@ class ProvisioningApplication(object):
                 yield self._cfg_collection.delete(id)
             except PersistInvalidIdError, e:
                 raise InvalidIdError(e)
+            except PersistNonDeletableError, e:
+                raise NonDeletableError(e)
             else:
                 # 1. get the set of affected configs
                 affected_cfg_ids = yield self._cfg_collection.get_descendants(id)
