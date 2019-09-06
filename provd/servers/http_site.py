@@ -178,5 +178,5 @@ def corsify_request(request):
     # CORS
     request.setHeader('Access-Control-Allow-Origin', '*')
     request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    request.setHeader('Access-Control-Allow-Headers', 'origin,x-requested-with,accept,content-type,x-auth-token,Wazo-Tenant')
+    request.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Accept, Content-Type, X-Auth-Token, Wazo-Tenant')
     request.setHeader('Access-Control-Allow-Credentials', 'false')
