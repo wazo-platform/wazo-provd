@@ -180,3 +180,4 @@ def corsify_request(request):
     request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     request.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Accept, Content-Type, X-Auth-Token, Wazo-Tenant')
     request.setHeader('Access-Control-Allow-Credentials', 'false')
+    request.setHeader('Access-Control-Expose-Headers', 'Location')
