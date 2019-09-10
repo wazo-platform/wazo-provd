@@ -372,6 +372,8 @@ paths:
       responses:
         '204':
           $ref: '#/responses/NoContentResponse'
+        '403':
+          $ref: '#/responses/ForbiddenResponse'
         '404':
           $ref: '#/responses/NoSuchResourceError'
 
@@ -1070,6 +1072,10 @@ responses:
     description: No content
   UnsupportedMediaError:
     description: Unsupported media type. This error occurs if you forgot to include the Content-Type header
+    schema:
+      $ref: '#/definitions/ErrorMessage'
+  ForbiddenError:
+    description: The operation is not permitted for this resource.
     schema:
       $ref: '#/definitions/ErrorMessage'
   NoSuchResourceError:
