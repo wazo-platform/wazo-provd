@@ -1,4 +1,4 @@
-FROM python:2.7.13-stretch
+FROM python:2.7.16-buster
 MAINTAINER Wazo Maintainers <dev@wazo.community>
 
 # Install
