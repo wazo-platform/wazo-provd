@@ -1,7 +1,7 @@
 [Unit]
 Description=wazo-provd server
 ConditionPathExists=!/var/lib/wazo/disabled
-After=network.target xivo-confgend.service
+After=network.target wazo-confgend.service
 Before=monit.service
 
 [Service]
