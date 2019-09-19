@@ -1,2 +1,2 @@
 !exec
-command: xivo-confgen provd/network.yml
+command: wazo-confgen provd/network.yml
