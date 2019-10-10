@@ -25,7 +25,7 @@ case "$1" in
         if [ -f /var/log/xivo-provd-fail2ban.log ] ; then
             rename 's/xivo-provd/wazo-provd/g' /var/log/xivo-provd-fail2ban.log*
         fi
-        rm -rf /var/run/xivo-provd
+        rm -rf /run/xivo-provd
         if [ -d /etc/xivo-provd/conf.d ] ; then
             find /etc/xivo-provd/conf.d/ -mindepth 1 -exec mv {} /etc/wazo-provd/conf.d/ \;
             rmdir --ignore-fail-on-non-empty -p /etc/xivo-provd/conf.d
