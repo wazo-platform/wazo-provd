@@ -1,9 +1,9 @@
+https://github.com/wazo-platform/wazo-lib-rest-client/archive/master.zip
 https://github.com/wazo-platform/wazo-auth-client/archive/master.zip
 https://github.com/wazo-platform/xivo-amid-client/archive/master.zip
 https://github.com/wazo-platform/xivo-bus/archive/master.zip
 https://github.com/wazo-platform/xivo-fetchfw/archive/master.zip
 https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
-https://github.com/wazo-platform/xivo-lib-rest-client/archive/master.zip
 beautifulsoup4==4.7.1  # from xivo-fetchfw
 jinja2==2.10
 pyopenssl==19.0.0
