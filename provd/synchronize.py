@@ -7,7 +7,7 @@
 
 import logging
 from twisted.internet import defer, threads
-from xivo_amid_client import Client as AmidClient
+from wazo_amid_client import Client as AmidClient
 
 logger = logging.getLogger(__name__)
 

@@ -24,8 +24,8 @@ Depends:
     unar,
     unrar-free,
     unzip,
+    wazo-amid-client,
     wazo-auth-client,
-    xivo-amid-client,
     xivo-fetchfw,
     xivo-lib-python
 Description: Wazo provisioning daemon
