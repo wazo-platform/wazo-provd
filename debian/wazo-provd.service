@@ -9,6 +9,7 @@ Type=forking
 ExecStartPre=/usr/bin/install -d -o wazo-provd -g wazo-provd /run/wazo-provd
 ExecStart=/usr/bin/twistd --pidfile=/run/wazo-provd/wazo-provd.pid --rundir=/ --uid=wazo-provd --gid=wazo-provd --no_save --logger provd.main.twistd_logs wazo-provd
 PIDFile=/run/wazo-provd/wazo-provd.pid
+SyslogIdentifier=wazo-provd
 
 [Install]
 WantedBy=multi-user.target
