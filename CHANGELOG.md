@@ -1,6 +1,12 @@
 Changelog
 =========
 
+20.02
+-----
+
+* The `/0.2/status` resource has been added
+
+
 19.12
 -----
 
