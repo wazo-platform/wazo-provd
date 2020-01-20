@@ -900,6 +900,18 @@ paths:
         '204':
           $ref: '#/responses/NoContentResponse'
 
+  /status:
+    get:
+      summary: Print infos about internal status of wazo-provd
+      description: '**Required ACL:** `provd.status.read`'
+      tags:
+        - status
+      responses:
+        '200':
+          description: The internal infos of wazo-provd
+          schema:
+            $ref: '#/definitions/StatusSummary'
+
 parameters:
   SearchQuery:
     name: q
@@ -1097,6 +1109,11 @@ responses:
 
 
 definitions:
+  ComponentWithStatus:
+    type: object
+    properties:
+      status:
+        $ref: '#/definitions/StatusValue'
   ErrorMessage:
     description: Error message response
     type: string
@@ -1353,3 +1370,13 @@ definitions:
     properties:
       plugins:
         $ref: '#/definitions/Plugins'
+  StatusSummary:
+    type: object
+    properties:
+      rest_api:
+        $ref: '#/definitions/ComponentWithStatus'
+  StatusValue:
+    type: string
+    enum:
+      - fail
+      - ok

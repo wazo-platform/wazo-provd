@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -327,6 +327,7 @@ class ServerResource(IntermediaryResource):
             (u'dev', 'dev_mgr', DeviceManagerResource(app, dhcp_request_processing_service)),
             (u'cfg', 'cfg_mgr', ConfigManagerResource(app)),
             (u'pg', 'pg_mgr', PluginManagerResource(app)),
+            (u'status', 'status', StatusResource()),
             (REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(app.configure_service)),
         ]
         IntermediaryResource.__init__(self, links)
@@ -1283,6 +1284,14 @@ class PluginResource(IntermediaryResource):
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.read')
     def render_GET(self, request):
         return IntermediaryResource.render_GET(self, request)
+
+
+class StatusResource(AuthResource):
+
+    @json_response_entity
+    @required_acl('provd.status.read')
+    def render_GET(self, request):
+        return json_dumps({u'rest_api': 'ok'})
 
 
 def new_authenticated_server_resource(app, dhcp_request_processing_service):
