@@ -8,5 +8,3 @@ rest_api:
   port: 8666
 auth:
   host: auth
-  port: 9497
-  verify_certificate: False
