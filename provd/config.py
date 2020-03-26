@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Provisioning server configuration module.
@@ -120,7 +120,8 @@ _DEFAULT_CONFIG = {
     'amid': {
         'host': 'localhost',
         'port': 9491,
-        'verify_certificate': CERT_FILE,
+        'prefix': None,
+        'https': False,
     },
 }
 
