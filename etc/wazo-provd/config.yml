@@ -13,4 +13,4 @@ auth:
 amid:
   host: localhost
   port: 9491
-  https: false
+  verify_certificate: /usr/share/xivo-certs/server.crt
