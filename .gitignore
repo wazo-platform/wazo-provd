@@ -1,11 +1,9 @@
-_trial_temp
-twisted/plugins/dropin.cache
+*.egg-info
 *.pyc
 .tox
-MANIFEST
-pep8.txt
-pylint.txt
+.coverage
+coverage.xml
 pycodestyle.txt
-nosetests.xml
-*.egg-info
-dist/
+pylint.txt
+twisted/plugins/dropin.cache
+unit-tests.xml
