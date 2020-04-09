@@ -25,8 +25,6 @@ class Tenant(tenant_helpers.Tenant):
         tenant_uuid = request.getHeader('Wazo-Tenant')
         if not tenant_uuid:
             raise InvalidTenant()
-        if ',' in tenant_uuid:
-            raise InvalidTenant()
         return cls(uuid=tenant_uuid)
 
 
