@@ -1,4 +1,4 @@
-# Copyright 2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2019-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from xivo import tenant_helpers
@@ -22,14 +22,8 @@ class Tenant(tenant_helpers.Tenant):
 
     @classmethod
     def from_headers(cls, request):
-        return cls.from_headers_one(request)
-
-    @classmethod
-    def from_headers_one(cls, request):
         tenant_uuid = request.getHeader('Wazo-Tenant')
         if not tenant_uuid:
-            raise InvalidTenant()
-        if ',' in tenant_uuid:
             raise InvalidTenant()
         return cls(uuid=tenant_uuid)
 
