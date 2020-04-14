@@ -39,7 +39,8 @@ The following parameters are defined:
     auth:
         host
         port
-        verify_certificate
+        prefix
+        https
         key_file
     database:
         type
@@ -75,8 +76,6 @@ from xivo.config_helper import parse_config_file, read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
-CERT_FILE = '/usr/share/xivo-certs/server.crt'
-
 _DEFAULT_CONFIG = {
     'config_file': '/etc/wazo-provd/config.yml',
     'extra_config_files': '/etc/wazo-provd/conf.d',
@@ -108,7 +107,8 @@ _DEFAULT_CONFIG = {
     'auth': {
         'host': 'localhost',
         'port': 9497,
-        'verify_certificate': CERT_FILE,
+        'prefix': None,
+        'https': False,
         'key_file': '/var/lib/wazo-auth-keys/wazo-provd-key.yml',
     },
     'database': {
