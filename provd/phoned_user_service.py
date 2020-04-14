@@ -14,7 +14,6 @@ def add_wazo_phoned_user_service_url(
     raw_config,
     vendor,
     service_name,
-    enabled,
     destination=None,
 ):
     # NOTE(afournier): phoned is actually exposed as the phonebook.
@@ -31,16 +30,33 @@ def add_wazo_phoned_user_service_url(
     scheme = raw_config.get(u'X_xivo_phonebook_scheme', u'http')
     port = raw_config.get(u'X_xivo_phonebook_port', 9498)
 
-    formatted_url = URL_FORMAT.format(
+    formatted_enabled_url = URL_FORMAT.format(
         scheme=scheme,
         hostname=hostname,
         port=port,
         vendor=vendor,
         service=service_name,
         user_uuid=user_uuid,
-        enabled=enabled,
+        enabled=True,
+    )
+
+    formatted_disabled_url = URL_FORMAT.format(
+        scheme=scheme,
+        hostname=hostname,
+        port=port,
+        vendor=vendor,
+        service=service_name,
+        user_uuid=user_uuid,
+        enabled=False,
     )
     if destination:
-        formatted_url = u'{}&destination={}'.format(formatted_url, destination)
+        formatted_enabled_url = u'{}&destination={}'.format(formatted_enabled_url, destination)
+        formatted_disabled_url = u'{}&destination={}'.format(formatted_disabled_url, destination)
 
-    raw_config[u'XX_wazo_phoned_user_service_{}_url'.format(service_name)] = formatted_url
+    raw_config[
+        u'XX_wazo_phoned_user_service_{}_enabled_url'.format(service_name)
+    ] = formatted_enabled_url
+
+    raw_config[
+        u'XX_wazo_phoned_user_service_{}_disabled_url'.format(service_name)
+    ] = formatted_disabled_url
