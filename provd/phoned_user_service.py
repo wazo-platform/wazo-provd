@@ -51,7 +51,6 @@ def add_wazo_phoned_user_service_url(
     )
     if destination:
         formatted_enabled_url = u'{}&destination={}'.format(formatted_enabled_url, destination)
-        formatted_disabled_url = u'{}&destination={}'.format(formatted_disabled_url, destination)
 
     raw_config[
         u'XX_wazo_phoned_user_service_{}_enabled_url'.format(service_name)

@@ -33,7 +33,7 @@ class TestAddWazoPhonedUserServiceURL(unittest.TestCase):
         expected = u'https://8.8.8.8:1234/0.1/acme/user_service/fwdall?user_uuid=12-345&enabled=True&destination=1234'
         assert_that(self.raw_config[u'XX_wazo_phoned_user_service_fwdall_enabled_url'], equal_to(expected))
 
-        expected = u'https://8.8.8.8:1234/0.1/acme/user_service/fwdall?user_uuid=12-345&enabled=False&destination=1234'
+        expected = u'https://8.8.8.8:1234/0.1/acme/user_service/fwdall?user_uuid=12-345&enabled=False'
         assert_that(self.raw_config[u'XX_wazo_phoned_user_service_fwdall_disabled_url'], equal_to(expected))
 
     def test_no_user_uuid_no_url(self):
