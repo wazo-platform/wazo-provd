@@ -19,7 +19,7 @@ from xivo_fetchfw.storage import DefaultRemoteFileBuilder, DefaultFilterBuilder,
     DefaultInstallablePkgStorage, DefaultInstallMgrFactoryBuilder, \
     DefaultPkgBuilder, DefaultInstalledPkgStorage
 from provd import phonebook
-from provd import phoned_user_service
+from provd import phoned_users
 from provd.download import async_download_with_oip, OperationInProgressHook
 from provd.loaders import ProvdFileSystemLoader
 from provd.localization import get_locale_and_language
@@ -50,7 +50,7 @@ _PLUGIN_INFO_INSTALLED_KEYS = _PLUGIN_INFO_KEYS
 add_xivo_phonebook_url = phonebook.add_xivo_phonebook_url
 add_xivo_phonebook_url_from_format = phonebook.add_xivo_phonebook_url_from_format
 
-add_wazo_phoned_user_service_url = phoned_user_service.add_wazo_phoned_user_service_url
+add_wazo_phoned_user_service_url = phoned_users.add_wazo_phoned_user_service_url
 
 
 def _check_raw_plugin_info(raw_plugin_info, id, keys):

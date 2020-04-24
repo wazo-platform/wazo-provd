@@ -5,7 +5,7 @@
 import unittest
 
 from hamcrest import assert_that, equal_to, has_key, not_
-from provd.phoned_user_service import add_wazo_phoned_user_service_url
+from provd.phoned_users import add_wazo_phoned_user_service_url
 
 
 class TestAddWazoPhonedUserServiceURL(unittest.TestCase):

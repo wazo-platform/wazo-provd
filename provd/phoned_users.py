@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-URL_FORMAT = u'{scheme}://{hostname}:{port}/0.1/{vendor}/user_service/{service}?user_uuid={user_uuid}&enabled={enabled}'
+URL_FORMAT = u'{scheme}://{hostname}:{port}/0.1/{vendor}/users/{user_uuid}/services/{service}/{enabled}'
 
 
 def add_wazo_phoned_user_service_url(
@@ -37,7 +37,7 @@ def add_wazo_phoned_user_service_url(
         vendor=vendor,
         service=service_name,
         user_uuid=user_uuid,
-        enabled=True,
+        enabled=_enable_string(True),
     )
 
     formatted_disabled_url = URL_FORMAT.format(
@@ -47,11 +47,8 @@ def add_wazo_phoned_user_service_url(
         vendor=vendor,
         service=service_name,
         user_uuid=user_uuid,
-        enabled=False,
+        enabled=_enable_string(False),
     )
-    if destination:
-        formatted_enabled_url = u'{}&destination={}'.format(formatted_enabled_url, destination)
-
     raw_config[
         u'XX_wazo_phoned_user_service_{}_enabled_url'.format(service_name)
     ] = formatted_enabled_url
@@ -59,3 +56,7 @@ def add_wazo_phoned_user_service_url(
     raw_config[
         u'XX_wazo_phoned_user_service_{}_disabled_url'.format(service_name)
     ] = formatted_disabled_url
+
+
+def _enable_string(enabled):
+    return 'enable' if enabled else 'disabled'
