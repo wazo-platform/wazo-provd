@@ -51,7 +51,6 @@ add_xivo_phonebook_url = phonebook.add_xivo_phonebook_url
 add_xivo_phonebook_url_from_format = phonebook.add_xivo_phonebook_url_from_format
 
 add_wazo_phoned_user_service_url = phoned_users.add_wazo_phoned_user_service_url
-add_wazo_phoned_user_forward_url = phoned_users.add_wazo_phoned_user_forward_url
 
 
 def _check_raw_plugin_info(raw_plugin_info, id, keys):

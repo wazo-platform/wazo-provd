@@ -5,7 +5,7 @@
 import unittest
 
 from hamcrest import assert_that, equal_to, has_key, not_
-from provd.phoned_users import add_wazo_phoned_user_service_url, add_wazo_phoned_user_forward_url
+from provd.phoned_users import add_wazo_phoned_user_service_url
 
 
 class TestAddWazoPhonedUserServiceURL(unittest.TestCase):
@@ -36,42 +36,3 @@ class TestAddWazoPhonedUserServiceURL(unittest.TestCase):
         add_wazo_phoned_user_service_url(self.raw_config, u'acme', u'dnd')
         assert_that(self.raw_config, not_(has_key(u'XX_wazo_phoned_user_service_dnd_enabled_url')))
         assert_that(self.raw_config, not_(has_key(u'XX_wazo_phoned_user_service_dnd_disabled_url')))
-
-
-class TestAddWazoPhonedUserForwardURL(unittest.TestCase):
-
-    def setUp(self):
-        self.raw_config = {
-            u'X_xivo_phonebook_ip': u'8.8.8.8',
-            u'X_xivo_user_uuid': u'12-345',
-        }
-
-    def test_add_wazo_phoned_user_forward_url_no_destination(self):
-        add_wazo_phoned_user_forward_url(self.raw_config, u'acme', u'busy')
-
-        expected = u'http://8.8.8.8:9498/0.1/acme/users/12-345/forwards/busy/enable'
-        assert_that(self.raw_config[u'XX_wazo_phoned_user_forward_busy_enabled_url'], equal_to(expected))
-
-        expected = u'http://8.8.8.8:9498/0.1/acme/users/12-345/forwards/busy/disable'
-        assert_that(self.raw_config[u'XX_wazo_phoned_user_forward_busy_disabled_url'], equal_to(expected))
-
-    def test_add_wazo_phoned_user_forward_url(self):
-        add_wazo_phoned_user_forward_url(self.raw_config, u'acme', u'busy', destination='1234')
-
-        expected = u'http://8.8.8.8:9498/0.1/acme/users/12-345/forwards/busy/enable?destination=1234'
-        assert_that(self.raw_config[u'XX_wazo_phoned_user_forward_busy_enabled_url'], equal_to(expected))
-
-        expected = u'http://8.8.8.8:9498/0.1/acme/users/12-345/forwards/busy/disable'
-        assert_that(self.raw_config[u'XX_wazo_phoned_user_forward_busy_disabled_url'], equal_to(expected))
-
-    def test_no_user_uuid_no_url(self):
-        del self.raw_config[u'X_xivo_user_uuid']
-        add_wazo_phoned_user_forward_url(self.raw_config, u'acme', u'busy')
-        assert_that(self.raw_config, not_(has_key(u'XX_wazo_phoned_user_forward_busy_enabled_url')))
-        assert_that(self.raw_config, not_(has_key(u'XX_wazo_phoned_user_forward_busy_disabled_url')))
-
-    def test_no_hostname_no_url(self):
-        del self.raw_config[u'X_xivo_phonebook_ip']
-        add_wazo_phoned_user_forward_url(self.raw_config, u'acme', u'busy')
-        assert_that(self.raw_config, not_(has_key(u'XX_wazo_phoned_user_forward_busy_enabled_url')))
-        assert_that(self.raw_config, not_(has_key(u'XX_wazo_phoned_user_forward_busy_disabled_url')))
