@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import contextlib
@@ -19,6 +19,7 @@ from xivo_fetchfw.storage import DefaultRemoteFileBuilder, DefaultFilterBuilder,
     DefaultInstallablePkgStorage, DefaultInstallMgrFactoryBuilder, \
     DefaultPkgBuilder, DefaultInstalledPkgStorage
 from provd import phonebook
+from provd import phoned_users
 from provd.download import async_download_with_oip, OperationInProgressHook
 from provd.loaders import ProvdFileSystemLoader
 from provd.localization import get_locale_and_language
@@ -48,6 +49,8 @@ _PLUGIN_INFO_INSTALLED_KEYS = _PLUGIN_INFO_KEYS
 # Export some name/objects to be used by plugins
 add_xivo_phonebook_url = phonebook.add_xivo_phonebook_url
 add_xivo_phonebook_url_from_format = phonebook.add_xivo_phonebook_url_from_format
+
+add_wazo_phoned_user_service_url = phoned_users.add_wazo_phoned_user_service_url
 
 
 def _check_raw_plugin_info(raw_plugin_info, id, keys):
@@ -96,16 +99,16 @@ def _new_localize_fun():
 
 class Plugin(object):
     """Base class and entry point of every plugin.
-    
+
     Here's some guideline every plugin should follow:
-    
+
     When you have the choice, you SHOULD configure device to use HTTP instead
     of TFTP. HTTP requests have usually more information that can be used
     to identify device. HTTP is also faster (because of TFTP
     lock-step) and not limited in file size transfer. Since HTTP is based
     on TCP, it also usually play nicer with NAT, and in general, integrates
     better in complex network architecture.
-    
+
     Keep in mind how new devices will interact with the
     plugin for the first time. For example, even if your plugin configure
     its device to use HTTP instead of TFTP, new device might have been
@@ -113,13 +116,13 @@ class Plugin(object):
     and TFTP identification even if you don't plan to make explicit use of
     it. That said, if your device support protocol selection from the DHCP
     server responses, this becomes less important.
-    
+
     Similarly, keep in mind that you might interact with devices that are
     in a different version then what your plugin is targeting. Your plugin
     should try to recognize and accept these devices, at least the ones
     that are closely related. The plugin should then upgrade them in the
     targeted version of your plugin.
-    
+
     Attributes:
     id -- the ID of the plugin. This attribute is set after the plugin
           instantiation time by the plugin manager
@@ -128,67 +131,67 @@ class Plugin(object):
     http_service
     tftp_dev_info_extractor
     tftp_service
-    
+
     Plugin class that are made to be instantiated (i.e. the one doing the
     real job, and not superclass that helps it) must have an attribute
     'IS_PLUGIN' that evaluates to true in a boolean context or it won't be
     loaded. This is necessary to distinguish real plugin class from
     'helper' plugin superclasses.
-    
+
     At load time, the 'execfile_' name is available in the global namespace
     of the entry file. It can be used to 'import' other files in the same or
     sub directory of the entry plugin file. This methods is similar to
     execfile, except that the working directory is changed to the plugin
     directory.
-    
+
     """
     id = None
 
     def __init__(self, app, plugin_dir, gen_cfg, spec_cfg):
         """Create a new plugin instance.
-        
+
         This method is the first method called in the plugin loading process.
-        
+
         The application guarantees that there will never be more than 1 'active'
         plugin instance at the same time for a same plugin. An instance is
         active between the time of its creation and the time its close method
         is called.
-        
+
         app -- the application object
         plugin_dir -- the root directory where the plugin lies
         gen_cfg -- a dictionary with generic configuration key-values
             XXX should specify better
         spec_cfg --  a dictionary with plugin-specific configuration key-values
             XXX should specify better
-        
+
         """
         self._plugin_dir = plugin_dir
 
     def close(self):
         """Close the plugin.
-        
+
         This method is the last method called in the plugin unloading process.
-        
+
         In normal situation, this method is guaranteed to be the last one
         called in the life-cycle of a plugin instance, and may not be called
         more than once.
-        
+
         """
         pass
 
     def info(self):
         """Return a dictionary containing information about this plugin.
-        
+
         The dictionary MUST contains at least the following keys:
           version -- the version of the plugin
           description -- the description of the plugin
           capabilities -- a dictionary where keys are string in format
             "vendor, model, version" and values are capabilities dictionary.
-        
+
         Note that the returned dictionary contains unicode strings.
-        
+
         Raise an Exception if the plugin information is missing or invalid.
-        
+
         """
         plugin_info_path = os.path.join(self._plugin_dir, _PLUGIN_INFO_FILENAME)
         with open(plugin_info_path) as fobj:
@@ -203,16 +206,16 @@ class Plugin(object):
     services = {}
     """Return a dictionary where keys are service name and values are
     service object.
-    
+
     This is used so that plugins can offer additional services in a
     standard way.
-    
+
     If the service name is 'configure', the associated service object must
     provide the IConfigureService interface.
-    
+
     If the service name is 'install', the associated service object must
     provide the IInstallService interface.
-    
+
     """
 
     # Methods for TFTP/HTTP services
@@ -221,45 +224,45 @@ class Plugin(object):
     dhcp_dev_info_extractor = None
     """An object providing the IDeviceInfoExtractor interface for DHCP
     requests or None if there's no such object.
-    
+
     """
 
     http_dev_info_extractor = None
     """An object providing the IDeviceInfoExtractor interface for HTTP
     requests or None if there's no such object.
-    
+
     """
 
     http_service = None
     """The HTTP service of this plugin, or None if the plugin doesn't offer
     an HTTP service.
-    
+
     Note that the request objects passed to the render method of this service
     have a 'prov_dev' attribute set to the device object representing the
     device which is doing the request, or None if the device is unknown.
-    
+
     """
 
     tftp_dev_info_extractor = None
     """An object providing the IDeviceInfoExtractor interface for TFTP
     request or None if there's no such object.
-    
+
     """
 
     tftp_service = None
     """The TFTP service of this plugin, or None if the plugin
     doesn't offer a TFTP service.
-    
+
     Note that the request objects passed to the handle_read_request method of
     this service have a 'prov_dev' key set to the device object representing
     the device which is doing the request, or None if the device is unknown.
-    
+
     """
 
     pg_associator = None
     """Return an object providing the IPluginAssociator interface, or None if
     the plugin doesn't have a plugin associator.
-    
+
     """
 
     # Methods for device configuration
@@ -267,18 +270,18 @@ class Plugin(object):
     def configure_common(self, raw_config):
         """Apply a non-device specific configuration to the plugin. In typical
         case, this will configure the 'common files' shared by all the devices.
-        
+
         This method is called automatically the first time an installed plugin
         is loaded, and also called when there's a change to the common config.
         Note that this method might also be called more often than
         technically needed.
-        
+
         raw_config is a raw config object with all the common configurations
         parameters. An 'ip', 'http_port' and 'tftp_port' parameters are
         guaranteed to be present. Plugin class can modify this object.
-        
+
         This method is synchronous/blocking.
-        
+
         """
         pass
 
@@ -287,21 +290,21 @@ class Plugin(object):
         device. This method MUST not synchronize the configuration between
         the phone and the provisioning server. This method is called only to
         synchronize the config between the config manager and the plugin. See
-        the synchronize method for more info on the device configuration life cycle. 
-        
+        the synchronize method for more info on the device configuration life cycle.
+
         This method is called in these cases:
         - a device object with a config associated to it has been assigned
           to this plugin
         - the config object used by a device has been updated
         - one of the mac, ip, vendor, model or version key of a device object
           managed by this plugin has been updated
-        
+
         This method is mostly useful for 'pull type' plugins, especially static
         pull type plugin. For these plugin, this is the right time to write the
         device specific configuration file to the filesystem. This makes sure
         the config inside the device specific configuration file is in sync
         with the config object from the config manager.
-        
+
         Pre:  device is a device object (can't be None)
               raw_config is a raw config object (can't be None). The plugin
                 is free to modify this object (it won't affect anything).
@@ -310,36 +313,36 @@ class Plugin(object):
         Post: after a call to this method, if the device does a request for
                 its configuration file, its configuration will be as the
                 config object
-        
+
         Plugin class can modify the raw_config object.
-        
+
         This method is synchronous/blocking.
-        
+
         """
         pass
 
     def deconfigure(self, device):
         """Deconfigure the plugin so that the plugin won't configure the
         device.
-        
+
         This method is called when:
         - a device is changed from this plugin to another plugin
         - a device is going to be deleted
         - the config has been deleted from a device (i.e. no more 'config' key)
-        
+
         This method is mostly useful for 'pull type' plugins, especially
         static pull type plugins. This is the right time to delete any device
         specific configuration related to the device. This is to prevent
         unexpected configuration for a device and to keep the plugins
         clean, without out of sync cache file in their directories.
-        
+
         Note that deconfigure doesn't mean you should try resetting the
         device to its default value. In fact, you SHOULD NOT do this.
-        
+
         In some rare circumstances, this method might be called more than
         once for the same device object, so plugin should be prepared to
         such eventuality.
-        
+
         Pre:  device is a device object
               the method 'configure' has been called at least once with the
                 same device object since the last call to deconfigure with
@@ -350,18 +353,18 @@ class Plugin(object):
                 its configuration file, it won't be configured with an old
                 config (it's ok if the device is configured with the common
                 configuration though)
-        
+
         This method is synchronous/blocking.
-        
+
         """
         pass
 
     def synchronize(self, device, raw_config):
         """Force the device to synchronize its configuration so that its the
         same as the one in the raw config object.
-        
+
         Note that an offline device can't be synchronized...
-        
+
         Pre:  device is a device object (can't be None)
               raw_config is a raw config object (can't be None)
               there has been no change to the config object since the last
@@ -372,18 +375,18 @@ class Plugin(object):
                 these calls and no other call to configure with the same dev
                 object.
         Post: its config has been reloaded
-        
+
         Plugin class can modify the raw_config object.
-        
+
         Return a Deferred that fire with None if the resync seems to have
         been successful.
-        
+
         The deferred will fire its errback with an Exception in the following
         case:
           - resynchronization is not supported by this plugin.
           - not enough information to resynchronize the device.
           - the resync operation seems to have failed for another reason.
-        
+
         """
         return defer.fail(Exception("Resynchronization not supported"))
 
@@ -412,10 +415,10 @@ class Plugin(object):
 
 class StandardPlugin(Plugin):
     """Abstract base class for plugin classes.
-    
+
     Altough this class doesn't do much at the time of writing this, you'll
     still want to inherit from it, unless you have good reason.
-    
+
     """
     _TFTPBOOT_DIR = os.path.join('var', 'tftpboot')
 
@@ -511,7 +514,7 @@ def _new_handlers(proxies=None):
 class FetchfwPluginHelper(object):
     """Helper for plugins that needs to download files to really
     be able to support a certain kind of device.
-    
+
     """
 
     implements(IInstallService)
@@ -565,9 +568,9 @@ class FetchfwPluginHelper(object):
 
     def install(self, pkg_id):
         """Install a package.
-        
+
         See IInstallService.install.
-        
+
         """
         logger.info('Installing plugin-package %s', pkg_id)
         if pkg_id in self._in_install_set:
@@ -599,9 +602,9 @@ class FetchfwPluginHelper(object):
 
     def uninstall(self, pkg_id):
         """Uninstall a package.
-        
+
         See IInstallService.uninstall.
-        
+
         """
         logger.info('Uninstalling plugin-package %s', pkg_id)
         ctrl_factory = UninstallerController.new_factory()
@@ -639,9 +642,9 @@ class FetchfwPluginHelper(object):
 
     def list_installable(self):
         """Return a dictionary of installable packages.
-        
+
         See IInstallService.list_installable.
-        
+
         """
         localize_desc_fun = self._new_localize_description_fun()
         installable_pkg_sto = self._pkg_mgr.installable_pkg_sto
@@ -652,9 +655,9 @@ class FetchfwPluginHelper(object):
 
     def list_installed(self):
         """Return a dictionary of installed packages.
-        
+
         See IInstallService.list_installed.
-        
+
         """
         localize_desc_fun = self._new_localize_description_fun()
         installed_pkg_sto = self._pkg_mgr.installed_pkg_sto
@@ -670,7 +673,7 @@ class FetchfwPluginHelper(object):
 class IPluginManagerObserver(Interface):
     """Interface that objects which want to be notified of plugin
     loading/unloading MUST provide.
-    
+
     """
     def pg_load(pg_id):
         pass
@@ -699,11 +702,11 @@ class BasePluginManagerObserver(object):
 
 class PluginManager(object):
     """Manage the life cycle of plugins in the plugin ecosystem.
-    
+
     Plugin manager objects have a 'server' attribute which represent the base
     address of the plugins repository (ex.: http://www.example.com/provd/stable).
     It can be set to None if no server is specified.
-    
+
     """
 
     PLUGIN_IFACE_VERSION = 0.2
@@ -742,9 +745,9 @@ class PluginManager(object):
 
     def close(self):
         """Close the plugin manager.
-        
+
         This will unload any loaded plugin.
-        
+
         """
         logger.info('Closing plugin manager...')
         # important not to use an iterator over self._plugins since it is
@@ -774,21 +777,21 @@ class PluginManager(object):
 
     def install(self, id):
         """Install a plugin.
-        
+
         This does not check if the plugin is already installed and does not
         load the newly installed plugin.
 
         Return a tuple (deferred, operation in progress).
-        
+
         Raise an Exception if there's already an install/upgrade operation
         in progress for the plugin.
-        
+
         Raise an Exception if there's no installable plugin with the
         specified id.
-        
+
         Raise an InvalidParameterError if the plugin package is not in cache
         and no 'server' param has been set.
-        
+
         """
         logger.info('Installing plugin %s', id)
         if id in self._in_install:
@@ -850,22 +853,22 @@ class PluginManager(object):
 
     def upgrade(self, id):
         """Upgrade a plugin.
-        
+
         Right now, there's is absolutely no difference between calling this
         method and calling the install method.
-        
+
         """
         logger.info('Upgrading plugin %s', id)
         return self.install(id)
 
     def uninstall(self, id):
         """Uninstall a plugin.
-        
+
         This does not unload the installed plugin.
-        
+
         Raise an Exception if there's no installed plugin with the
         specified id.
-        
+
         """
         logger.info('Uninstalling plugin %s', id)
         if not self.is_installed(id):
@@ -876,21 +879,21 @@ class PluginManager(object):
 
     def update(self):
         """Download a fresh copy of the plugin definition file from the server.
-        
+
         Return a tuple (deferred, operation in progress)..
-        
+
         Raise an Exception if there's already an update operation in progress.
-        
+
         Raise an InvalidParameterError if no 'server' param has been set,
         or has an invalid value.
-        
+
         Note:
         - if the downloaded plugin definition file is invalid/corrupted, no
           error will be raised in this method.
         - if the operation fail, for example because of an incomplete
           download, the local copy of the plugin definition file won't be
           changed
-        
+
         """
         logger.info('Updating plugin definition file')
         if self._in_update:
@@ -925,7 +928,7 @@ class PluginManager(object):
     def list_installable(self):
         """Return a dictionary of installable plugins, where keys are
         plugin identifier and values are dictionary of plugin information.
-        
+
         The plugin information dictionary contains the following keys:
           filename -- the name of the package in which the plugin is packaged
           version -- the version of the package
@@ -934,14 +937,14 @@ class PluginManager(object):
           sha1sum -- an hex representation of the sha1sum of the package
           capabilities -- a dictionary where keys are string in format
             "vendor, model, version" and values are capabilities dictionary.
-        
+
         Raise an Exception if the plugin definition file is invalid/corrupted.
         If this file is absent, no error is raised, and an empty dictionary
         is returned.
-        
+
         Note that the returned dictionary contains unicode strings instead
         of 'normal' string.
-        
+
         """
         try:
             with open(self._db_pathname()) as fobj:
@@ -959,7 +962,7 @@ class PluginManager(object):
     def is_installed(self, id):
         """Return true if the plugin <id> is currently installed, else
         false.
-        
+
         """
         return id in self.list_installed()
 
@@ -971,10 +974,10 @@ class PluginManager(object):
     def list_installed(self):
         """Return a dictionary of installed plugins, where keys are plugin
         identifier and value are dictionary of plugin information.
-        
+
         See Plugin.info() method for more information on the returned
         dictionary.
-        
+
         """
         # we can't iterate over loaded plugins (i.e. self._plugins) here
         # because a plugin could be installed but not loaded (most common
@@ -1020,11 +1023,11 @@ class PluginManager(object):
 
     def attach(self, observer):
         """Attach an IPluginManagerObserver object to this plugin manager.
-        
+
         Note that since observers are weakly referenced, you MUST keep a
         reference to each one somewhere in the application if you want them
         not to be immediatly garbage collected.
-        
+
         """
         logger.debug('Attaching plugin manager observer %s', observer)
         if observer in self._observers:
@@ -1077,20 +1080,20 @@ class PluginManager(object):
 
     def load(self, id, gen_cfg={}, spec_cfg={}):
         """Load a plugin.
-        
+
         Raise an Exception if the plugin is already loaded, since we offer
         a guarantee to plugin that no more then one instance is active at any
         time.
-        
+
         Also raise an Exception if the plugin could not be loaded, either
         because there's no plugin with such a id or because of an error
         at plugin load time.
-        
+
         gen_cfg -- a mapping object with general configuration parameters.
           These parameters are the same for every plugins.
         spec_cfg -- a mapping object with plugin-specific configuration
           parameters. These parameters are specific to every plugins.
-        
+
         """
         logger.info('Loading plugin %s', id)
         if id in self._plugins:
@@ -1125,9 +1128,9 @@ class PluginManager(object):
 
     def unload(self, id):
         """Unload a plugin.
-        
+
         Raise a PluginNotLoadedError if the plugin is not loaded.
-        
+
         """
         logger.info('Unloading plugin %s', id)
         self._unload_and_notify(id)
