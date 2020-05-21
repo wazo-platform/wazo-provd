@@ -1,5 +1,12 @@
-FROM python:2.7.16-buster
-MAINTAINER Wazo Maintainers <dev@wazo.community>
+FROM python:2.7-slim-buster AS compile-image
+LABEL maintainer="Wazo Maintainers <dev@wazo.community>"
+
+RUN apt-get -q update
+RUN apt-get -yq install gcc
+RUN pip install virtualenv
+RUN python -m virtualenv /opt/venv
+# Activate virtual env
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Install
 ADD . /usr/src/wazo-provd
@@ -7,19 +14,19 @@ WORKDIR /usr/src/wazo-provd
 RUN pip install -r requirements.txt
 RUN python setup.py install
 
-# Configure environment
-RUN mkdir /var/cache/wazo-provd/
-RUN mkdir -p /etc/wazo-provd/
-RUN cp -r etc/wazo-provd/* /etc/wazo-provd/
+FROM python:2.7-slim-buster AS build-image
+COPY --from=compile-image /opt/venv /opt/venv
 
-# Add certificates
+COPY ./etc/wazo-provd /etc/wazo-provd
 ADD ./contribs/docker/certs /usr/share/xivo-certs
-WORKDIR /usr/share/xivo-certs
-RUN openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -nodes -config openssl.cfg -days 3650
-
+RUN true \
+    && mkdir -p /var/cache/wazo-provd \
+    && openssl req -x509 -newkey rsa:4096 -keyout /usr/share/xivo-certs/server.key -out /usr/share/xivo-certs/server.crt -nodes -config /usr/share/xivo-certs/openssl.cfg -days 3650
 
 EXPOSE 8667
 EXPOSE 8666
 EXPOSE 69/udp
 
+# Activate virtual env
+ENV PATH="/opt/venv/bin:$PATH"
 CMD ["twistd", "--nodaemon", "--no_save", "--pidfile=", "wazo-provd", "--stderr", "--verbose"]
