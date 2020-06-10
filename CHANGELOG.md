@@ -1,5 +1,9 @@
 # Changelog
 
+## 20.09
+
+* Deprecate SSL configuration
+
 ## 20.02
 
 * The `/0.2/status` resource has been added

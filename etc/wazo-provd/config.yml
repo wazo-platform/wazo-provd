@@ -4,7 +4,7 @@ general:
   tftp_port: 69
   sync_service_type: 'asterisk_ami'
 rest_api:
-  ip: 0.0.0.0
+  ip: 127.0.0.1
   port: 8666
 auth:
   host: localhost

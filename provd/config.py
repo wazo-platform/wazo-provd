@@ -100,9 +100,9 @@ _DEFAULT_CONFIG = {
     'rest_api': {
         'ip': '127.0.0.1',
         'port': 8666,
-        'ssl': True,
-        'ssl_certfile': '/usr/share/xivo-certs/server.crt',
-        'ssl_keyfile': '/usr/share/xivo-certs/server.key',
+        'ssl': False,
+        'ssl_certfile': None,
+        'ssl_keyfile': None,
     },
     'auth': {
         'host': 'localhost',

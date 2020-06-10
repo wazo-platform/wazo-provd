@@ -1,4 +1,4 @@
-# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -21,6 +21,6 @@ class TestDocumentation(BaseIntegrationTest):
 
     def test_documentation_errors(self):
         port = self.service_port(8666, 'provd')
-        api_url = 'https://localhost:{port}/0.2/api/api.yml'.format(port=port)
-        api = requests.get(api_url, verify=False)
+        api_url = 'http://localhost:{port}/0.2/api/api.yml'.format(port=port)
+        api = requests.get(api_url)
         validate_v2_spec(yaml.safe_load(api.text))
