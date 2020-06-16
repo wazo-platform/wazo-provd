@@ -5,7 +5,7 @@ info:
   version: '0.2'
 schemes:
 - https
-basePath: /0.2
+basePath: /api/provd/0.2
 consumes:
   - "application/vnd.proformatique.provd+json"
 produces:
