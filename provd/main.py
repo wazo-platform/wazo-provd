@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -237,7 +237,9 @@ class RemoteConfigurationService(Service):
             interface = ''
         logger.info('Binding HTTP REST API service to "%s:%s"', interface, port)
         if self._config['rest_api']['ssl']:
-            logger.info('SSL enabled for REST API')
+            logger.warning(
+                'Using service SSL configuration is deprecated. Please use NGINX instead.'
+            )
             context_factory = ssl.DefaultOpenSSLContextFactory(self._config['rest_api']['ssl_keyfile'],
                                                                self._config['rest_api']['ssl_certfile'])
             self._tcp_server = internet.SSLServer(port, rest_site, context_factory, interface=interface)

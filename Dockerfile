@@ -18,10 +18,7 @@ FROM python:2.7-slim-buster AS build-image
 COPY --from=compile-image /opt/venv /opt/venv
 
 COPY ./etc/wazo-provd /etc/wazo-provd
-ADD ./contribs/docker/certs /usr/share/xivo-certs
-RUN true \
-    && mkdir -p /var/cache/wazo-provd \
-    && openssl req -x509 -newkey rsa:4096 -keyout /usr/share/xivo-certs/server.key -out /usr/share/xivo-certs/server.crt -nodes -config /usr/share/xivo-certs/openssl.cfg -days 3650
+RUN mkdir -p /var/cache/wazo-provd
 
 EXPOSE 8667
 EXPOSE 8666
