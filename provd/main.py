@@ -329,7 +329,7 @@ class ProvisioningServiceMaker(object):
     options = provd.config.Options
 
     def _configure_logging(self, options):
-        setup_logging(LOG_FILE_NAME, options['stderr'], options['verbose'])
+        setup_logging(LOG_FILE_NAME, debug=options['verbose'])
         security.setup_logging()
 
     def _read_config(self, options):
