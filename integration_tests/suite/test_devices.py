@@ -1,4 +1,4 @@
-# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import (
@@ -148,7 +148,7 @@ class TestDevices(BaseIntegrationTest):
         with fixtures.Device(self._client) as device:
             assert_that(
                 calling(provd.devices.update).with_args(device, tenant_uuid=MAIN_TENANT),
-                raises(ProvdError).matching(has_properties('status_code', 404))
+                raises(ProvdError).matching(has_properties('status_code', 401))
             )
 
     def test_synchronize(self):
@@ -200,7 +200,7 @@ class TestDevices(BaseIntegrationTest):
         with fixtures.Device(self._client) as device:
             assert_that(
                 calling(provd.devices.synchronize).with_args(device['id'], tenant_uuid=SUB_TENANT_1),
-                raises(ProvdError).matching(has_properties('status_code', 404))
+                raises(ProvdError).matching(has_properties('status_code', 401))
             )
 
     def test_get(self):
