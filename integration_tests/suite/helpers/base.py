@@ -1,4 +1,4 @@
-# Copyright 2017-2020 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2017-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
@@ -32,7 +32,7 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
     @classmethod
     def make_provd(cls, token):
         return Client(
-            'localhost',
+            '127.0.0.1',
             port=cls.service_port(8666, 'provd'),
             version=API_VERSION,
             prefix=None,
