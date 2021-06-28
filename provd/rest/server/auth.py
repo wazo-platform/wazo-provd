@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -55,5 +55,5 @@ class AuthVerifier(auth_verifier.AuthVerifier):
             if token_is_valid:
                 return func(*args, **kwargs)
 
-            return self.handle_unauthorized(token_id)
+            return self.handle_unauthorized(token_id, required_access=required_acl)
         return wrapper
