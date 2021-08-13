@@ -80,6 +80,126 @@ paths:
         '415':
           $ref: '#/responses/UnsupportedMediaError'
 
+  /configure/plugin_server:
+    put:
+      summary: Update the configuration's plugin_server
+      description: '**Required ACL:** `provd.configure.plugin_server.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/PluginServer'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+  
+  /configure/http_proxy:
+    put:
+      summary: Update the configuration's http_proxy
+      description: '**Required ACL:** `provd.configure.http_proxy.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/HttpProxy'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /configure/https_proxy:
+    put:
+      summary: Update the configuration's https_proxy
+      description: '**Required ACL:** `provd.configure.https_proxy.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/HttpsProxy'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+    
+  /configure/ftp_proxy:
+    put:
+      summary: Update the configuration's ftp_proxy
+      description: '**Required ACL:** `provd.configure.ftp_proxy.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/FtpProxy'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+  
+  /configure/locale:
+    put:
+      summary: Update the configuration's locale
+      description: '**Required ACL:** `provd.configure.locale.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/Locale'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+
+  /configure/NAT:
+    put:
+      summary: Update the configuration's NAT
+      description: '**Required ACL:** `provd.configure.nat.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/Nat'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+
   /dev_mgr:
     get:
       summary: Get the Device Manager resource
@@ -1109,6 +1229,60 @@ responses:
 
 
 definitions:
+  PluginServer:
+    title: Plugin server configuration
+    properties:
+      param:
+        type: string
+        description: The plugins repository URL
+    example:
+      param:
+        value: "http://provd.wazo.community/plugins/1/stable/"
+  HttpProxy:
+    title: HTTP proxy configuration
+    properties:
+      param:
+        type: string
+        description: The proxy for HTTP requests. Format is `http://[user:password@]host:port`
+    example:
+      param:
+        value: "http://[user:password@]host:port"
+  HttpsProxy:
+    title: HTTPS proxy configuration
+    properties:
+      param:
+        type: string
+        description: The proxy for HTTPS requests. Format is `host:port`
+    example:
+      param:
+        value: "host:port"
+  FtpProxy:
+    title: FTP proxy configuration
+    properties:
+      param:
+        type: string
+        description: The proxy for FTP requests. Format is `http://[user:password@]host:port`
+    example:
+      param:
+        value: "http://[user:password@]host:port"
+  Locale:
+    title: Locale configuration
+    properties:
+      param:
+        type: string
+        description: 'The current locale. For example: `en_US`'
+    example:
+      param:
+        value: "en_US"
+  Nat:
+    title: NAT configuration
+    properties:
+      param:
+        type: string
+        description: Set to `1` if all the devices are behind a NAT
+    example:
+      param:
+        value: "1"
   ComponentWithStatus:
     type: object
     properties:
