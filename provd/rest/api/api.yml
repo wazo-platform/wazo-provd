@@ -1246,7 +1246,7 @@ definitions:
         description: The proxy for HTTP requests. Format is `http://[user:password@]host:port`
     example:
       param:
-        value: "http://[user:password@]host:port"
+        value: "http://root:secret@wazo.io:8080"
   HttpsProxy:
     title: HTTPS proxy configuration
     properties:
@@ -1255,7 +1255,7 @@ definitions:
         description: The proxy for HTTPS requests. Format is `host:port`
     example:
       param:
-        value: "host:port"
+        value: "wazo.io:8081"
   FtpProxy:
     title: FTP proxy configuration
     properties:
@@ -1264,7 +1264,7 @@ definitions:
         description: The proxy for FTP requests. Format is `http://[user:password@]host:port`
     example:
       param:
-        value: "http://[user:password@]host:port"
+        value: "http://root:secret@wazo.io:8082"
   Locale:
     title: Locale configuration
     properties:
