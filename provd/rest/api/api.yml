@@ -25,6 +25,7 @@ paths:
       summary: Get the Provd Manager resource
       description: |
         **Required ACL:** `provd.read`
+
         The provd manager resource represents the main entry point to the wazo-provd REST API
       tags:
         - provd
@@ -37,8 +38,7 @@ paths:
   /configure:
     get:
       summary: Get the general provd configuration
-      description: |
-        **Required ACL:** `provd.configure.read`
+      description: '**Required ACL:** `provd.configure.read`'
       tags:
         - provd
       responses:
@@ -50,8 +50,7 @@ paths:
   /configure/{param_id}:
     get:
       summary: Get the configuration parameter value
-      description: |
-        **Required ACL:** `provd.configure.{param_id}.read`
+      description: '**Required ACL:** `provd.configure.{param_id}.read`'
       tags:
         - provd
       parameters:
@@ -65,8 +64,7 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
-      description: |
-        **Required ACL:** `provd.configure.{param_id}.update`
+      description: '**Required ACL:** `provd.configure.{param_id}.update`'
       tags:
         - provd
       parameters:
@@ -205,6 +203,7 @@ paths:
       summary: Get the Device Manager resource
       description: |
         **Required ACL:** `provd.dev_mgr.read`
+
         The device manager resource represents the entry point to the wazo-provd device REST API
       tags:
       - devices
@@ -227,8 +226,7 @@ paths:
   /dev_mgr/devices:
     get:
       summary: List and find devices
-      description: |
-        **Required ACL:** `provd.dev_mgr.devices.read`
+      description: '**Required ACL:** `provd.dev_mgr.devices.read`'
       tags:
         - devices
       parameters:
@@ -244,8 +242,7 @@ paths:
           $ref: '#/responses/DevicesResponse'
     post:
       summary: Create a device
-      description: |
-        **Required ACL:** `provd.dev_mgr.devices.create`
+      description: '**Required ACL:** `provd.dev_mgr.devices.create`'
       tags:
       - devices
       parameters:
@@ -268,6 +265,7 @@ paths:
       summary: Get a device by ID
       description: |
         **Required ACL:** `provd.dev_mgr.devices.{device_id}.read`
+
         Get a device using its ID
       tags:
         - devices
@@ -283,6 +281,7 @@ paths:
       summary: Update a device
       description: |
         **Required ACL:** `provd.dev_mgr.devices.{device_id}.update`
+
         Every field must be specified, otherwise they will be omitted
       tags:
        - devices
@@ -305,8 +304,7 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a device
-      description: |
-        **Required ACL:** `provd.dev_mgr.devices.{device_id}.delete`
+      description: '**Required ACL:** `provd.dev_mgr.devices.{device_id}.delete`'
       tags:
         - devices
       parameters:
@@ -321,8 +319,7 @@ paths:
   /dev_mgr/synchronize:
     post:
       summary: Synchronize a device
-      description: |
-        **Required ACL:** `provd.dev_mgr.synchronize.create`
+      description: '**Required ACL:** `provd.dev_mgr.synchronize.create`'
       tags:
         - devices
       parameters:
@@ -341,8 +338,7 @@ paths:
   /dev_mgr/synchronize/{operation_id}:
     get:
       summary: Get the status of a synchronize Operation In Progress
-      description: |
-        **Required ACL:** `provd.operation.read`
+      description: '**Required ACL:** `provd.operation.read`'
       tags:
         - devices
       parameters:
@@ -358,7 +354,9 @@ paths:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
+
         This does not cancel the underlying operation; it only deletes the monitor
+
         Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - devices
@@ -375,6 +373,7 @@ paths:
       summary: Reconfigure a device
       description: |
         **Required ACL:** `provd.dev_mgr.reconfigure.create`
+
         Regenerate the configuration file for the specified device
       tags:
         - devices
@@ -392,6 +391,7 @@ paths:
       summary: Push DHCP request information
       description: |
         **Required ACL:** `provd.dev_mgr.dhcpinfo.create`
+
         The provisioning server either creates a new device or changes the information of the device with the same MAC address
       tags:
         - devices
@@ -408,6 +408,7 @@ paths:
       summary: Get the Config Manager resource
       description: |
         **Required ACL:** `provd.cfg_mgr.read`
+
         The configuration manager resource represents the entry point to the wazo-provd configuration REST API
       tags:
         - configs
@@ -426,8 +427,7 @@ paths:
   /cfg_mgr/configs:
     get:
       summary: List and find configurations
-      description: |
-        **Required ACL:** `provd.cfg_mgr.configs.read`
+      description: '**Required ACL:** `provd.cfg_mgr.configs.read`'
       tags:
         - configs
       parameters:
@@ -441,8 +441,7 @@ paths:
           $ref: '#/responses/ConfigsResponse'
     post:
       summary: Create a configuration
-      description: |
-        **Required ACL:** `provd.cfg_mgr.configs.create`
+      description: '**Required ACL:** `provd.cfg_mgr.configs.create`'
       tags:
         - configs
       parameters:
@@ -454,8 +453,7 @@ paths:
   /cfg_mgr/configs/{config_id}:
     get:
       summary: Get a configuration
-      description: |
-        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.read`
+      description: '**Required ACL:** `provd.cfg_mgr.configs.{config_id}.read`'
       tags:
         - configs
       parameters:
@@ -467,8 +465,7 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Update a configuration
-      description: |
-        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.update`
+      description: '**Required ACL:** `provd.cfg_mgr.configs.{config_id}.update`'
       tags:
         - configs
       parameters:
@@ -483,8 +480,7 @@ paths:
           $ref: '#/responses/InternalServerError'
     delete:
       summary: Delete a configuration
-      description: |
-        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.delete`
+      description: '**Required ACL:** `provd.cfg_mgr.configs.{config_id}.delete`'
       tags:
         - configs
       parameters:
@@ -500,8 +496,7 @@ paths:
   /cfg_mgr/configs/{config_id}/raw:
     get:
       summary: Get a raw configuration
-      description: |
-        **Required ACL:** `provd.cfg_mgr.configs.{config_id}.raw.read`
+      description: '**Required ACL:** `provd.cfg_mgr.configs.{config_id}.raw.read`'
       tags:
         - configs
       parameters:
@@ -519,6 +514,7 @@ paths:
       summary: Create an autocreate configuration
       description: |
         **Required ACL:** `provd.cfg_mgr.autocreate.create`
+
         Create a new config based on the config that has the autocreate role
       tags:
         - configs
@@ -534,6 +530,7 @@ paths:
       summary: Get the Plugin Manager resource
       description: |
         **Required ACL:** `provd.pg_mgr.read`
+
         The plugin manager resource represents the entry point to the wazo-provd plugin REST API
       tags:
         - plugins
@@ -554,8 +551,7 @@ paths:
   /pg_mgr/plugins:
     get:
       summary: List the installed plugins
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.read`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.read`'
       tags:
         - plugins
       responses:
@@ -577,8 +573,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}:
     get:
       summary: Get the resources of a specific plugin
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.read`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.read`'
       tags:
         - plugins
       parameters:
@@ -598,8 +593,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/info:
     get:
       summary: Get the information of a plugin
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.info.read`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.info.read`'
       tags:
         - plugins
       parameters:
@@ -625,8 +619,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install:
     get:
       summary: Get the package installation service resources
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.read`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.read`'
       tags:
         - plugins
       parameters:
@@ -652,8 +645,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install/install:
     post:
       summary: Install a package
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.install.create`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.install.create`'
       tags:
         - plugins
       parameters:
@@ -672,8 +664,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install/install/{operation_id}:
     get:
       summary: Get the status of a package installation Operation In Progress
-      description: |
-        **Required ACL:** `provd.operation.read`
+      description: '**Required ACL:** `provd.operation.read`'
       tags:
         - plugins
       parameters:
@@ -690,7 +681,9 @@ paths:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
+
         This does not cancel the underlying operation; it only deletes the monitor
+
         Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
@@ -706,8 +699,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install/uninstall:
     post:
       summary: Uninstall a package
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create`'
       tags:
         - plugins
       parameters:
@@ -726,8 +718,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a package upgrade Operation In Progress
-      description: |
-        **Required ACL:** `provd.operation.read`
+      description: '**Required ACL:** `provd.operation.read`'
       tags:
         - plugins
       parameters:
@@ -744,7 +735,9 @@ paths:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
+
         This does not cancel the underlying operation; it only deletes the monitor
+
         Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
@@ -760,8 +753,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install/installable:
     get:
       summary: Get the installable packages list
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installable.read`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installable.read`'
       tags:
         - plugins
       parameters:
@@ -777,8 +769,7 @@ paths:
   /pg_mgr/plugins/{plugin_id}/install/installed:
     get:
       summary: Get the installed packages list
-      description: |
-        **Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installed.read`
+      description: '**Required ACL:** `provd.pg_mgr.plugins.{plugin_id}.install.installed.read`'
       tags:
         - plugins
       parameters:
@@ -794,8 +785,7 @@ paths:
   /pg_mgr/install:
     get:
       summary: Get the installation service resources
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.read`
+      description: '**Required ACL:** `provd.pg_mgr.install.read`'
       tags:
         - plugins
       responses:
@@ -821,8 +811,7 @@ paths:
   /pg_mgr/install/install:
     post:
       summary: Install a plugin
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.install.create`
+      description: '**Required ACL:** `provd.pg_mgr.install.install.create`'
       tags:
         - plugins
       parameters:
@@ -838,8 +827,7 @@ paths:
   /pg_mgr/install/install/{operation_id}:
     get:
       summary: Get the status of a plugin installation Operation In Progress
-      description: |
-        **Required ACL:** `provd.operation.read`
+      description: '**Required ACL:** `provd.operation.read`'
       tags:
         - plugins
       parameters:
@@ -855,7 +843,9 @@ paths:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
+
         This does not cancel the underlying operation; it only deletes the monitor
+
         Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
@@ -870,8 +860,7 @@ paths:
   /pg_mgr/install/uninstall:
     post:
       summary: Uninstall a plugin
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.uninstall.create`
+      description: '**Required ACL:** `provd.pg_mgr.install.uninstall.create`'
       tags:
         - plugins
       parameters:
@@ -887,8 +876,7 @@ paths:
   /pg_mgr/install/upgrade:
     post:
       summary: Upgrade a plugin
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.upgrade.create`
+      description: '**Required ACL:** `provd.pg_mgr.install.upgrade.create`'
       tags:
         - plugins
       parameters:
@@ -904,8 +892,7 @@ paths:
   /pg_mgr/install/upgrade/{operation_id}:
     get:
       summary: Get the status of a plugin upgrade Operation In Progress
-      description: |
-        **Required ACL:** `provd.operation.read`
+      description: '**Required ACL:** `provd.operation.read`'
       tags:
         - plugins
       parameters:
@@ -921,7 +908,9 @@ paths:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
+
         This does not cancel the underlying operation; it only deletes the monitor
+
         Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
@@ -936,8 +925,7 @@ paths:
   /pg_mgr/install/update:
     post:
       summary: Update the List of installable plugins
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.update.create`
+      description: '**Required ACL:** `provd.pg_mgr.install.update.create`'
       tags:
         - plugins
       parameters:
@@ -951,8 +939,7 @@ paths:
   /pg_mgr/install/update/{operation_id}:
     get:
       summary: Get the status of a plugin database update Operation In Progress
-      description: |
-        **Required ACL:** `provd.operation.read`
+      description: '**Required ACL:** `provd.operation.read`'
       tags:
         - plugins
       parameters:
@@ -968,7 +955,9 @@ paths:
       summary: Delete the Operation In Progress
       description: |
         **Required ACL:** `provd.operation.delete`
+
         This does not cancel the underlying operation; it only deletes the monitor
+
         Every monitor that is created should be deleted, else they won't be freed by the process and they will accumulate, taking memory
       tags:
         - plugins
@@ -983,8 +972,7 @@ paths:
   /pg_mgr/install/installable:
     get:
       summary: Get the installable plugins list
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.installable.read`
+      description: '**Required ACL:** `provd.pg_mgr.install.installable.read`'
       tags:
         - plugins
       responses:
@@ -996,8 +984,7 @@ paths:
   /pg_mgr/install/installed:
     get:
       summary: Get the installed plugins list
-      description: |
-        **Required ACL:** `provd.pg_mgr.install.installed.read`
+      description: '**Required ACL:** `provd.pg_mgr.install.installed.read`'
       tags:
         - plugins
       responses:
@@ -1011,6 +998,7 @@ paths:
       summary: Reload a plugin
       description: |
         **Required ACL:** `provd.pg_mgr.reload.create`
+
         This is mostly useful during plugin development, after changing the code of the plugin, instead of restarting the wazo-provd application
       tags:
         - plugins
