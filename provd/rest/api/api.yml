@@ -99,7 +99,7 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
         '415':
           $ref: '#/responses/UnsupportedMediaError'
-  
+
   /configure/http_proxy:
     put:
       summary: Update the configuration's http_proxy
@@ -139,7 +139,7 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
         '415':
           $ref: '#/responses/UnsupportedMediaError'
-    
+
   /configure/ftp_proxy:
     put:
       summary: Update the configuration's ftp_proxy
@@ -159,7 +159,7 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
         '415':
           $ref: '#/responses/UnsupportedMediaError'
-  
+
   /configure/locale:
     put:
       summary: Update the configuration's locale
@@ -1246,7 +1246,7 @@ definitions:
         description: The proxy for HTTP requests. Format is `http://[user:password@]host:port`
     example:
       param:
-        value: "http://root:secret@wazo.io:8080"
+        value: "http://root:secret@example.com:8080"
   HttpsProxy:
     title: HTTPS proxy configuration
     properties:
@@ -1255,7 +1255,7 @@ definitions:
         description: The proxy for HTTPS requests. Format is `host:port`
     example:
       param:
-        value: "wazo.io:8081"
+        value: "example.com:8081"
   FtpProxy:
     title: FTP proxy configuration
     properties:
@@ -1264,7 +1264,7 @@ definitions:
         description: The proxy for FTP requests. Format is `http://[user:password@]host:port`
     example:
       param:
-        value: "http://root:secret@wazo.io:8082"
+        value: "http://root:secret@example.com:8082"
   Locale:
     title: Locale configuration
     properties:
