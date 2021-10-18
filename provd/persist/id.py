@@ -1,28 +1,30 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import binascii
 import uuid
+import six
 
 
 def numeric_id_generator(prefix=u'', start=0):
     n = start
     while True:
-        yield prefix + unicode(n)
+        yield prefix + six.text_type(n)
         n += 1
 
 
 def uuid_id_generator():
     while True:
-        yield unicode(uuid.uuid4().hex)
+        yield six.text_type(uuid.uuid4().hex)
 
 
 def urandom_id_generator(length=12):
     while True:
         f = open('/dev/urandom')
         try:
-            id = unicode(binascii.hexlify(f.read(length)))
+            id = six.text_type(binascii.hexlify(f.read(length)))
         finally:
             f.close()
         yield id

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import json
 import logging
 import os
 from copy import deepcopy
 from provd.persist.id import get_id_generator_factory
 from provd.persist.util import new_backend_based_collection
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class JsonSimpleBackend(object):
             abs_filename = os.path.join(self._directory, rel_filename)
             try:
                 fobj = open(abs_filename)
-            except EnvironmentError, e:
+            except EnvironmentError as e:
                 logger.warning('Could not open file %s: %s', abs_filename, e)
             else:
                 try:
@@ -62,14 +64,14 @@ class JsonSimpleBackend(object):
         abs_filename = os.path.join(self._directory, id.encode('ascii'))
         try:
             os.remove(abs_filename)
-        except EnvironmentError, e:
+        except EnvironmentError as e:
             logger.info('Error while removing JSON document %s: %s', e)
 
     def __contains__(self, id):
         return id in self._dict
 
     def itervalues(self):
-        for document in self._dict.itervalues():
+        for document in six.itervalues(self._dict):
             yield deepcopy(document)
 
 
@@ -90,7 +92,7 @@ class JsonDatabase(object):
             os.makedirs(self._base_directory)
 
     def close(self):
-        for collection in self._collections.itervalues():
+        for collection in six.itervalues(self._collections):
             collection.close()
         self._collections = {}
 
@@ -99,7 +101,7 @@ class JsonDatabase(object):
         directory = os.path.join(self._base_directory, id)
         try:
             return new_json_collection(directory, generator)
-        except Exception, e:
+        except Exception as e:
             # could not create collection
             raise ValueError(e)
 

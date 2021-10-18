@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2016 Avencall
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import re
 import socket
+from six.moves import map
+from six.moves import range
 
 
 def to_ip(ip_string):
@@ -55,7 +58,7 @@ def is_normed_ip(ip_string):
     
     """
     try:
-        digits = map(int, ip_string.split('.'))
+        digits = list(map(int, ip_string.split('.')))
     except ValueError:
         # probably a non integer in the string
         return False
@@ -63,7 +66,7 @@ def is_normed_ip(ip_string):
         if len(digits) != 4:
             return False
         else:
-            return all(map(lambda n: 0 <= n <= 255, digits))
+            return all([0 <= n <= 255 for n in digits])
 
 
 _MAC_ADDR = re.compile(ur'^[\da-fA-F]{1,2}([:-]?)(?:[\da-fA-F]{1,2}\1){4}[\da-fA-F]{1,2}$')
@@ -93,7 +96,7 @@ def to_mac(mac_string):
         # no separator - length must be equal to 12 in this case
         if len(mac_string) != 12:
             raise ValueError('invalid MAC string')
-        return ''.join(chr(int(mac_string[i:i + 2], 16)) for i in xrange(0, 12, 2))
+        return ''.join(chr(int(mac_string[i:i + 2], 16)) for i in range(0, 12, 2))
     else:
         tokens = mac_string.split(sep)
         return ''.join(chr(int(token, 16)) for token in tokens)

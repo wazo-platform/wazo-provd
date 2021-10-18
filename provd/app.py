@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import copy
 import logging
 import functools
 import os.path
-import urlparse
+import six.moves.urllib.parse
 from provd.devices.config import RawConfigError, DefaultConfigFactory
 from provd.devices.device import needs_reconfiguration
 from provd.localization import get_localization_service
@@ -23,6 +24,7 @@ from provd.synchro import DeferredRWLock
 from twisted.internet import defer
 from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +115,7 @@ def _check_raw_config_validity(raw_config):
         if u'syslog_ip' not in raw_config:
             raise RawConfigError('missing syslog_ip parameter')
     if u'sip_lines' in raw_config:
-        for line_no, line in raw_config[u'sip_lines'].iteritems():
+        for line_no, line in six.iteritems(raw_config[u'sip_lines']):
             if u'proxy_ip' not in line and u'sip_proxy_ip' not in raw_config:
                 raise RawConfigError('missing proxy_ip parameter for line %s' %
                                      line_no)
@@ -123,13 +125,13 @@ def _check_raw_config_validity(raw_config):
                         raise RawConfigError('missing %s parameter for line %s' %
                                              (param, line_no))
     if u'sccp_call_managers' in raw_config:
-        for priority, call_manager in raw_config[u'sccp_call_managers'].iteritems():
+        for priority, call_manager in six.iteritems(raw_config[u'sccp_call_managers']):
             if u'ip' not in call_manager:
                 raise RawConfigError('missing ip parameter for call manager %s' %
                                      priority)
     if u'funckeys' in raw_config:
         funckeys = raw_config[u'funckeys']
-        for funckey_no, funckey in funckeys.iteritems():
+        for funckey_no, funckey in six.iteritems(funckeys):
             try:
                 type_ = funckey[u'type']
             except KeyError:
@@ -152,7 +154,7 @@ def _set_defaults_raw_config(raw_config):
     if u'sip_lines' not in raw_config:
         raw_config[u'sip_lines'] = {}
     else:
-        for line in raw_config[u'sip_lines'].itervalues():
+        for line in six.itervalues(raw_config[u'sip_lines']):
             if u'proxy_ip' in line:
                 line.setdefault(u'registrar_ip', line[u'proxy_ip'])
             if u'username' in line:
@@ -380,7 +382,7 @@ class ProvisioningApplication(object):
 
             try:
                 id = yield self._dev_collection.insert(device)
-            except PersistInvalidIdError, e:
+            except PersistInvalidIdError as e:
                 raise InvalidIdError(e)
             else:
                 configured = yield self._dev_configure_if_possible(device)
@@ -589,7 +591,7 @@ class ProvisioningApplication(object):
         try:
             try:
                 id = yield self._cfg_collection.insert(config)
-            except PersistInvalidIdError, e:
+            except PersistInvalidIdError as e:
                 raise InvalidIdError(e)
             else:
                 # configure each device that depend on the newly inserted config
@@ -699,9 +701,9 @@ class ProvisioningApplication(object):
         try:
             try:
                 yield self._cfg_collection.delete(id)
-            except PersistInvalidIdError, e:
+            except PersistInvalidIdError as e:
                 raise InvalidIdError(e)
-            except PersistNonDeletableError, e:
+            except PersistNonDeletableError as e:
                 raise NonDeletableError(e)
             else:
                 # 1. get the set of affected configs
@@ -1011,8 +1013,8 @@ def _check_is_server_url(value):
         return
 
     try:
-        parse_result = urlparse.urlparse(value)
-    except Exception, e:
+        parse_result = six.moves.urllib.parse.urlparse(value)
+    except Exception as e:
         raise InvalidParameterError(e)
     else:
         if not parse_result.scheme:
@@ -1026,8 +1028,8 @@ def _check_is_proxy(value):
         return
 
     try:
-        parse_result = urlparse.urlparse(value)
-    except Exception, e:
+        parse_result = six.moves.urllib.parse.urlparse(value)
+    except Exception as e:
         raise InvalidParameterError(e)
     else:
         if not parse_result.scheme:
@@ -1045,8 +1047,8 @@ def _check_is_https_proxy(value):
     if not value:
         raise InvalidParameterError('zero-length value')
     try:
-        parse_result = urlparse.urlparse(value)
-    except Exception, e:
+        parse_result = six.moves.urllib.parse.urlparse(value)
+    except Exception as e:
         raise InvalidParameterError(e)
     else:
         if parse_result.scheme and parse_result.hostname:
@@ -1081,7 +1083,7 @@ class ApplicationConfigureService(object):
             else:
                 try:
                     l10n_service.set_locale(value.encode('ascii'))
-                except (UnicodeError, ValueError), e:
+                except (UnicodeError, ValueError) as e:
                     raise InvalidParameterError(e)
 
     def _generic_set_proxy(self, key, value):

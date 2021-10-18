@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Return the current UTC offset and DST rules of arbitrary timezones.
@@ -7,7 +7,9 @@
 """
 
 
+from __future__ import absolute_import
 import os.path
+from six.moves import range
 
 
 class TimezoneNotFoundError(Exception):
@@ -46,7 +48,7 @@ class Time(object):
         """
         if self._raw_seconds < 0:
             result = self._compute_positive_hms()
-            for i in xrange(len(result)):
+            for i in range(len(result)):
                 if result[i]:
                     result[i] = -result[i]
                     break

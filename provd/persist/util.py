@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import logging
-from itertools import ifilter, imap
+
 from provd.persist.common import ID_KEY, InvalidIdError, NonDeletableError
 from twisted.internet import defer
+import six
+from six.moves import filter
+from six.moves import map
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +43,7 @@ def _contains_operator(selector_value):
     # Return true if the value associated with a key of a selector
     # is an operator value, i.e. has an operator semantic.
     if isinstance(selector_value, dict):
-        for k in selector_value.iterkeys():
+        for k in six.iterkeys(selector_value):
             if k.startswith(u'$'):
                 return True
     return False
@@ -133,7 +137,7 @@ def _new_exists_matcher(s_value):
     def aux(s_key, doc):
         it = iter(_retrieve_doc_values(s_key, doc))
         try:
-            it.next()
+            next(it)
         except StopIteration:
             return not s_value
         else:
@@ -176,7 +180,7 @@ def _new_matcher(s_value):
     # Return a predicate taking a select key and a document that returns true
     # if the document value matches it, else false.
     if _contains_operator(s_value):
-        matchers = [_new_operator_matcher(k, v) for k, v in s_value.iteritems()]
+        matchers = [_new_operator_matcher(k, v) for k, v in six.iteritems(s_value)]
         if len(matchers) == 1:
             matcher = matchers[0]
         else:
@@ -189,7 +193,7 @@ def _new_matcher(s_value):
 def _create_pred_from_selector(selector):
     # Return a predicate taking a document as argument and returning
     # true if the selector matches it, else false.
-    selector_matchers = [(k, _new_matcher(v)) for k, v in selector.iteritems()]
+    selector_matchers = [(k, _new_matcher(v)) for k, v in six.iteritems(selector)]
     def aux(document):
         for s_key, matcher in selector_matchers:
             if not matcher(s_key, document):
@@ -211,7 +215,7 @@ class SimpleBackendDocumentCollection(object):
 
     def _generate_new_id(self):
         while True:
-            id = self._generator.next()
+            id = next(self._generator)
             if id not in self._backend:
                 return id
 
@@ -328,7 +332,7 @@ class SimpleBackendDocumentCollection(object):
             documents = iter(documents)
             while skip > 0:
                 skip -= 1
-                documents.next()
+                next(documents)
         except StopIteration:
             # skip is larger than the number of elements -- do nothing
             pass
@@ -344,7 +348,7 @@ class SimpleBackendDocumentCollection(object):
                 try:
                     while limit > 0:
                         limit -= 1
-                        yield documents.next()
+                        yield next(documents)
                 except StopIteration:
                     # limit is larger than the number of elements -- do nothing
                     pass
@@ -354,7 +358,7 @@ class SimpleBackendDocumentCollection(object):
         # Return an iterator that will return every documents matching
         # the given "regular" selector
         pred = _create_pred_from_selector(selector)
-        return ifilter(pred, documents)
+        return filter(pred, documents)
 
     def _new_indexes_iterator(self, indexes_selector):
         # Return an iterator that will return every documents in the backend
@@ -362,7 +366,7 @@ class SimpleBackendDocumentCollection(object):
         # can't be empty.
         ids = set()
         first_loop = True
-        for selector_key, selector_value in indexes_selector.iteritems():
+        for selector_key, selector_value in six.iteritems(indexes_selector):
             index = self._indexes[selector_key]
             index_entry = index.get(selector_value, [])
             if first_loop:
@@ -380,7 +384,7 @@ class SimpleBackendDocumentCollection(object):
         #    indexes
         indexes_selector = {}
         regular_selector = {}
-        for selector_key, selector_value in selector.iteritems():
+        for selector_key, selector_value in six.iteritems(selector):
             if (selector_key in self._indexes and
                 not _contains_operator(selector_value)):
                 indexes_selector[selector_key] = selector_value
@@ -390,7 +394,7 @@ class SimpleBackendDocumentCollection(object):
         if indexes_selector:
             documents = self._new_indexes_iterator(indexes_selector)
         else:
-            documents = self._backend.itervalues()
+            documents = six.itervalues(self._backend)
         # 3. use regular selector if possible
         if regular_selector:
             documents = self._new_iterator(regular_selector, documents)
@@ -407,7 +411,7 @@ class SimpleBackendDocumentCollection(object):
             documents = self._new_iterator_over_matching_documents(selector)
         documents = self._new_skip_iterator(skip, documents)
         documents = self._new_limit_iterator(limit, documents)
-        documents = imap(self._new_fields_map_function(fields), documents)
+        documents = map(self._new_fields_map_function(fields), documents)
         return documents
 
     def _do_find(self, selector, fields, skip, limit, sort):
@@ -430,7 +434,7 @@ class SimpleBackendDocumentCollection(object):
     def find_one(self, selector):
         it = self._do_find(selector, None, 0, 1, None)
         try:
-            result = it.next()
+            result = next(it)
         except StopIteration:
             result = None
         return defer.succeed(result)
@@ -438,7 +442,7 @@ class SimpleBackendDocumentCollection(object):
     def _add_document_update_indexes(self, document):
         # Update the indexes after adding a document to the backend.
         id = document[ID_KEY]
-        for complex_key, index in self._indexes.iteritems():
+        for complex_key, index in six.iteritems(self._indexes):
             has_key, value = self._get_value_from_complex_key(complex_key, document)
             if has_key:
                 self._new_value_for_index(index, id, value)
@@ -451,7 +455,7 @@ class SimpleBackendDocumentCollection(object):
     def _del_document_update_indexes(self, old_document):
         # Update the indexes after removing document from the backend.
         id = old_document[ID_KEY]
-        for complex_key, index in self._indexes.iteritems():
+        for complex_key, index in six.iteritems(self._indexes):
             has_key, value = self._get_value_from_complex_key(complex_key, old_document)
             if has_key:
                 self._del_value_for_index(index, id, value)
@@ -514,7 +518,7 @@ class SimpleBackendDocumentCollection(object):
         # Return an iterator that yield (id, value) tuple for each document
         # in the backend that has the given complex key.
         get_value_fun = self._new_get_value_fun_from_complex_key(complex_key)
-        for document in self._backend.itervalues():
+        for document in six.itervalues(self._backend):
             has_key, value = get_value_fun(document)
             if has_key:
                 yield document[ID_KEY], value

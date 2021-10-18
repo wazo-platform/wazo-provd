@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
 
 
+from __future__ import absolute_import
 import logging
 from collections import defaultdict
 from operator import itemgetter
@@ -19,6 +20,7 @@ from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
 from twisted.web import rewrite
 from zope.interface import Interface, implements
+import six
 
 REQUEST_TYPE_HTTP = 'http'
 REQUEST_TYPE_TFTP = 'tftp'
@@ -132,17 +134,17 @@ class VotingUpdater(object):
         # Pre: key_pool is non-empty
         # XXX we are not doing any conflict resolution if key_pool has
         #     a tie. What's worst is that it's not totally deterministic.
-        return max(key_pool.iteritems(), key=itemgetter(1))[0]
+        return max(six.iteritems(key_pool), key=itemgetter(1))[0]
 
     @property
     def dev_info(self):
         dev_info = {}
-        for key, key_pool in self._votes.iteritems():
+        for key, key_pool in six.iteritems(self._votes):
             dev_info[key] = self._get_winner(key_pool)
         return dev_info
 
     def update(self, dev_info):
-        for key, value in dev_info.iteritems():
+        for key, value in six.iteritems(dev_info):
             self._vote(key, value)
 
 
@@ -208,7 +210,7 @@ class AllPluginsDeviceInfoExtractor(object):
         logger.debug('Updating extractors for %s', self)
         for request_type in REQUEST_TYPES:
             pg_extractors = []
-            for pg in self._pg_mgr.itervalues():
+            for pg in six.itervalues(self._pg_mgr):
                 pg_extractor = getattr(pg, request_type + '_dev_info_extractor')
                 if pg_extractor is not None:
                     logger.debug('Adding %s extractor from %s', request_type, pg)
@@ -286,7 +288,7 @@ class IpDeviceRetriever(object):
         self._filter_devices_by_key(devices_by_id, dev_info, u'mac')
         self._filter_devices_by_key(devices_by_id, dev_info, u'vendor')
         self._filter_devices_by_key(devices_by_id, dev_info, u'model')
-        return devices_by_id.values()
+        return list(devices_by_id.values())
 
     def _filter_devices_by_key(self, devices_by_id, dev_info, key):
         if key in dev_info:
@@ -417,7 +419,7 @@ class DynamicDeviceUpdater(object):
     def __init__(self, keys, force_update=False):
         # keys can either be a string (i.e. u'ip') or a list of string
         #   (i.e. [u'ip', u'version'])
-        if isinstance(keys, basestring):
+        if isinstance(keys, six.string_types):
             keys = [keys]
         self._keys = list(keys)
         self._force_update = force_update
@@ -766,8 +768,9 @@ class TFTPRequestProcessingService(object):
     def handle_read_request(self, request, response):
         logger.info('Processing TFTP request: %s', request['packet']['filename'])
         logger.debug('TFTP request: %s', request)
-        def callback((device, pg_id)):
+        def callback(xxx_todo_changeme):
             # Here we 'inject' the device object into the request object
+            (device, pg_id) = xxx_todo_changeme
             request['prov_dev'] = device
 
             service = self.default_service

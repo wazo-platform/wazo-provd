@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2014 Avencall
+# Copyright 2014-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
+from __future__ import print_function
 import argparse
 import os
 import socket
@@ -78,9 +80,9 @@ class Statistics(object):
             rrq_failure_pct = '%.1f%%' % (self._rrq_failure / float(rrq_total) * 100)
         else:
             rrq_failure_pct = 'N/A'
-        print 'Time: %.3f' % duration
-        print 'Total number of RRQ: %s' % rrq_total
-        print 'Total number of failed RRQ: %s (%s)' % (self._rrq_failure, rrq_failure_pct)
+        print('Time: %.3f' % duration)
+        print('Total number of RRQ: %s' % rrq_total)
+        print('Total number of failed RRQ: %s (%s)' % (self._rrq_failure, rrq_failure_pct))
 
 
 def run_tftp_bench(hostname, loop, simult, stats):
