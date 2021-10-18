@@ -8,6 +8,7 @@ import os.path
 import provd.config
 import provd.localization
 import provd.synchronize
+from io import open
 from provd import security
 from provd.app import ProvisioningApplication
 from provd.devices.config import ConfigCollection
@@ -129,7 +130,8 @@ class ProcessService(Service):
         pathname = os.path.join(dirname, filename)
         conffile_globals = self._get_conffile_globals()
         try:
-            exec(compile(open(pathname, "rb").read(), pathname, 'exec'), conffile_globals)
+            with open(pathname, 'rb') as f:
+                six.exec_(compile(f.read(), pathname, 'exec'), conffile_globals)
         except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
