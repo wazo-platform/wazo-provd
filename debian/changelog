@@ -1,3 +1,9 @@
+wazo-provd (21.14~20211018.112050) wazo-dev-buster; urgency=medium
+
+  * Refactor syntax to be python2.7 and python3 compatible
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 18 Oct 2021 11:20:50 -0400
+
 wazo-provd (19.12~20190806.160550) wazo-dev-stretch; urgency=medium
 
   * Rename xivo-provisioning to wazo-provd
