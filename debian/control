@@ -18,6 +18,7 @@ Depends:
     adduser,
     python-jinja2,
     python-openssl,
+    python-six,
     python-twisted-core,
     python-twisted-web,
     rename,
