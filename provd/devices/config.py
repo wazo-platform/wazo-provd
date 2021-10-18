@@ -2,6 +2,8 @@
 # Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
+
 """Config and config collection module.
 
 Config objects are dictionaries, with the usual restrictions associated with
@@ -420,8 +422,6 @@ specific values to a template.
 
 """
 
-
-from __future__ import absolute_import
 import logging
 import uuid
 from copy import deepcopy

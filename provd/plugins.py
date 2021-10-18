@@ -9,9 +9,11 @@ import logging
 import operator
 import os
 import shutil
+import six
 import tarfile
 import weakref
 from binascii import a2b_hex
+from io import open
 from xivo_fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
     new_downloaders_from_handlers
 from xivo_fetchfw.package import PackageManager, InstallerController, \
@@ -32,7 +34,6 @@ from jinja2.environment import Environment
 from jinja2.exceptions import TemplateNotFound
 from twisted.internet import defer, threads
 from zope.interface import implements, Interface
-import six
 
 logger = logging.getLogger(__name__)
 
@@ -1014,14 +1015,16 @@ class PluginManager(object):
             # if filename is relative, then it must be relative to the plugin dir
             if not os.path.isabs(filename):
                 filename = os.path.join(plugin_dir, filename)
-            exec(compile(open(filename, globals, *args, **kwargs, "rb").read(), filename, globals, *args, **kwargs, 'exec'))
+            with open(filename, 'rb') as f:
+                six.exec_(compile(f.read(), filename, 'exec'), globals, *args, **kwargs)
         pg_globals['execfile_'] = aux
 
     def _execplugin(self, plugin_dir, pg_globals):
         entry_file = os.path.join(plugin_dir, self._ENTRY_FILENAME)
         self._add_execfile(pg_globals, plugin_dir)
         logger.debug('Executing plugin entry file "%s"', entry_file)
-        exec(compile(open(entry_file, "rb").read(), entry_file, 'exec'), pg_globals)
+        with open(entry_file, 'rb') as f:
+            six.exec_(compile(f.read(), entry_file, 'exec'), pg_globals)
 
     def attach(self, observer):
         """Attach an IPluginManagerObserver object to this plugin manager.
