@@ -768,9 +768,9 @@ class TFTPRequestProcessingService(object):
     def handle_read_request(self, request, response):
         logger.info('Processing TFTP request: %s', request['packet']['filename'])
         logger.debug('TFTP request: %s', request)
-        def callback(xxx_todo_changeme):
+        def callback(plugin_for_device):
             # Here we 'inject' the device object into the request object
-            (device, pg_id) = xxx_todo_changeme
+            (device, pg_id) = plugin_for_device
             request['prov_dev'] = device
 
             service = self.default_service
