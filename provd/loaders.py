@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the jinja2.loaders module.
@@ -7,18 +7,20 @@
 """
 
 
+from __future__ import absolute_import
 from os import walk
 from os.path import join, getmtime, sep
 from itertools import chain
 from jinja2.exceptions import TemplateNotFound
 from jinja2.loaders import split_template_path, BaseLoader
 from jinja2.utils import open_if_exists
+import six
 
 
 def _new_mtime_map(directories):
     # Return a dictionary where keys are pathname and values are last
     # modification times
-    if isinstance(directories, basestring):
+    if isinstance(directories, six.string_types):
         directories = [directories]
     mtime_map = {}
     for directory in directories:
@@ -40,7 +42,7 @@ class ProvdFileSystemLoader(BaseLoader):
     """
 
     def __init__(self, searchpath, encoding='utf-8'):
-        if isinstance(searchpath, basestring):
+        if isinstance(searchpath, six.string_types):
             searchpath = [searchpath]
         self._searchpath = list(searchpath)
         self._encoding = encoding

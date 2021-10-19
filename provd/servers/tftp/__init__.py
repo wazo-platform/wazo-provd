@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """A TFTP server implementation with twisted.
@@ -25,5 +25,6 @@ Things to note:
 """
 
 
+from __future__ import absolute_import
 from provd.servers.tftp.proto import TFTPProtocol
 from provd.servers.tftp.service import *

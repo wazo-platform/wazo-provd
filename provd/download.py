@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the fetchfw.download module so that it's usable in an
@@ -8,6 +8,7 @@ asynchronous application.
 """
 
 
+from __future__ import absolute_import
 from xivo_fetchfw import download
 from provd.operation import OperationInProgress, OIP_SUCCESS, OIP_FAIL, \
     OIP_PROGRESS

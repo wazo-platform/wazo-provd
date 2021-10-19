@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
@@ -8,6 +8,7 @@ Only thing you need to do is to use this Site class instead of twisted.web.serve
 """
 
 
+from __future__ import absolute_import
 import copy
 import string
 import logging
@@ -24,6 +25,7 @@ from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
 from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from requests.exceptions import HTTPError
+from six.moves import map
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ class Request(server.Request):
 
         # Resource Identification
         self.prepath = []
-        self.postpath = map(server.unquote, string.split(self.path[1:], '/'))
+        self.postpath = list(map(server.unquote, string.split(self.path[1:], '/')))
 
         # We do not really care about the content if the request is a CORS preflight
         if self.method == 'OPTIONS':

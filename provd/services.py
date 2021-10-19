@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Standardized service definition and helper."""
 
 
+from __future__ import absolute_import
 import json
 import logging
 from zope.interface import Attribute, Interface, implements
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -235,14 +237,14 @@ class BaseConfigureService(object):
 
     @property
     def description(self):
-        return [(k, v.description) for k, v in self._params.iteritems()]
+        return [(k, v.description) for k, v in six.iteritems(self._params)]
 
     def __getattr__(self, name):
         # used to implement the localized description
         if not name.startswith('description_'):
             raise AttributeError(name)
         description_dict = [(k, getattr(v, name)) for k, v in
-                            self._params.iteritems() if hasattr(v, name)]
+                            six.iteritems(self._params) if hasattr(v, name)]
         if not description_dict:
             raise AttributeError(name)
         else:
@@ -261,13 +263,13 @@ class PersistentConfigureServiceDecorator(object):
 
     def _load_params(self):
         params = self._persister.params()
-        for name, value in params.iteritems():
+        for name, value in six.iteritems(params):
             logger.debug('Setting configure param %s to %s', name, value)
             try:
                 self._cfg_service.set(name, value)
-            except KeyError, e:
+            except KeyError as e:
                 logger.info('Could not set unknown parameter "%s"', name)
-            except InvalidParameterError, e:
+            except InvalidParameterError as e:
                 logger.warning('Invalid value "%s" for parameter "%s": %s',
                                value, name, e)
 
@@ -293,9 +295,9 @@ class JsonConfigPersister(object):
         try:
             with open(self._filename) as fobj:
                 self._cache = json.load(fobj)
-        except IOError, e:
+        except IOError as e:
             logger.debug('Could not load file %s: %s', self._filename, e)
-        except ValueError, e:
+        except ValueError as e:
             logger.warning('Invalid content in file %s: %s', self._filename, e)
 
     def _save(self):

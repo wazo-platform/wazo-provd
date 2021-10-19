@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization primitives for event driven systems."""
 
 
+from __future__ import absolute_import
 import logging
 from collections import deque
 from twisted.internet import defer

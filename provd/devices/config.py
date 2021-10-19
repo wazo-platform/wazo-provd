@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+
+from __future__ import absolute_import
 
 """Config and config collection module.
 
@@ -420,7 +422,6 @@ specific values to a template.
 
 """
 
-
 import logging
 import uuid
 from copy import deepcopy
@@ -428,6 +429,7 @@ from functools import wraps
 from provd.persist.common import ID_KEY
 from provd.persist.util import ForwardingDocumentCollection
 from twisted.internet import defer
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -444,7 +446,7 @@ class RawConfigParamError(RawConfigError):
 
 def _rec_update_dict(base_dict, overlay_dict):
     # update a base dictionary from another dictionary
-    for k, v in overlay_dict.iteritems():
+    for k, v in six.iteritems(overlay_dict):
         if isinstance(v, dict):
             old_v = base_dict.get(k)
             if isinstance(old_v, dict):
@@ -463,7 +465,7 @@ def _check_config_validity(config):
         raise ValueError('"parent_ids" field must be a list; is %s' %
                          type(config[u'parent_ids']))
     for id_ in config[u'parent_ids']:
-        if not isinstance(id_, basestring):
+        if not isinstance(id_, six.string_types):
             raise ValueError('parent id must be a string; is %s' % type(id_))
 
     if u'raw_config' not in config:
@@ -508,7 +510,7 @@ def _remove_none_values(config):
     if isinstance(config, list):
         return [_remove_none_values(x) for x in config]
     elif isinstance(config, dict):
-        return {k: _remove_none_values(v) for k, v in config.iteritems() if v is not None}
+        return {k: _remove_none_values(v) for k, v in six.iteritems(config) if v is not None}
     else:
         return config
 
@@ -684,7 +686,7 @@ class DefaultConfigFactory(object):
     """
 
     def _new_config(self, id_, sip_line_1_username):
-        new_suffix = unicode(uuid.uuid4())
+        new_suffix = six.text_type(uuid.uuid4())
         new_config = {
             u'id': id_ + new_suffix,
             u'parent_ids': [id_],

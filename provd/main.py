@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2020 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import logging
 import os.path
 import provd.config
 import provd.localization
 import provd.synchronize
+from io import open
 from provd import security
 from provd.app import ProvisioningApplication
 from provd.devices.config import ConfigCollection
@@ -29,6 +31,7 @@ from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
 from zope.interface.declarations import implements
 from xivo.token_renewer import TokenRenewer
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,7 @@ class ProvisioningService(Service):
 
     def _extract_database_specific_config(self):
         db_config = {}
-        for k, v in self._config['database'].iteritems():
+        for k, v in six.iteritems(self._config['database']):
             if k not in ['type', 'generator']:
                 db_config[k] = v
         return db_config
@@ -127,7 +130,8 @@ class ProcessService(Service):
         pathname = os.path.join(dirname, filename)
         conffile_globals = self._get_conffile_globals()
         try:
-            execfile(pathname, conffile_globals)
+            with open(pathname, 'rb') as f:
+                six.exec_(compile(f.read(), pathname, 'exec'), conffile_globals)
         except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise

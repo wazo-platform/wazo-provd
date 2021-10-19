@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2020 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from __future__ import absolute_import
 import contextlib
 import json
 import logging
 import operator
 import os
 import shutil
+import six
 import tarfile
 import weakref
 from binascii import a2b_hex
+from io import open
 from xivo_fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
     new_downloaders_from_handlers
 from xivo_fetchfw.package import PackageManager, InstallerController, \
@@ -651,7 +654,7 @@ class FetchfwPluginHelper(object):
         return dict((pkg_id, {'version': pkg.pkg_info['version'],
                               'description': localize_desc_fun(pkg.pkg_info),
                               'dsize': sum(rfile.size for rfile in pkg.remote_files)})
-                    for pkg_id, pkg in installable_pkg_sto.iteritems())
+                    for pkg_id, pkg in six.iteritems(installable_pkg_sto))
 
     def list_installed(self):
         """Return a dictionary of installed packages.
@@ -663,7 +666,7 @@ class FetchfwPluginHelper(object):
         installed_pkg_sto = self._pkg_mgr.installed_pkg_sto
         return dict((pkg_id, {'version': pkg.pkg_info['version'],
                               'description': localize_desc_fun(pkg.pkg_info)})
-                    for pkg_id, pkg in installed_pkg_sto.iteritems())
+                    for pkg_id, pkg in six.iteritems(installed_pkg_sto))
 
     def services(self):
         """Return the following dictionary: {'install': self}."""
@@ -808,7 +811,7 @@ class PluginManager(object):
         if os.path.isfile(cache_filename):
             try:
                 self._extract_plugin(cache_filename)
-            except Exception, e:
+            except Exception as e:
                 top_deferred = defer.fail(e)
                 top_oip = OperationInProgress(self._INSTALL_LABEL, OIP_FAIL)
             else:
@@ -827,7 +830,7 @@ class PluginManager(object):
                 self._in_install.remove(id)
                 try:
                     self._extract_plugin(cache_filename)
-                except Exception, e:
+                except Exception as e:
                     top_oip.state = OIP_FAIL
                     top_deferred.errback(e)
                 else:
@@ -953,7 +956,7 @@ class PluginManager(object):
             return {}
         else:
             localize_fun = _new_localize_fun()
-            for plugin_id, raw_plugin_info in raw_plugin_infos.iteritems():
+            for plugin_id, raw_plugin_info in six.iteritems(raw_plugin_infos):
                 _check_raw_plugin_info(raw_plugin_info, plugin_id,
                                        _PLUGIN_INFO_INSTALLABLE_KEYS)
                 localize_fun(raw_plugin_info)
@@ -1012,14 +1015,16 @@ class PluginManager(object):
             # if filename is relative, then it must be relative to the plugin dir
             if not os.path.isabs(filename):
                 filename = os.path.join(plugin_dir, filename)
-            execfile(filename, globals, *args, **kwargs)
+            with open(filename, 'rb') as f:
+                six.exec_(compile(f.read(), filename, 'exec'), globals, *args, **kwargs)
         pg_globals['execfile_'] = aux
 
     def _execplugin(self, plugin_dir, pg_globals):
         entry_file = os.path.join(plugin_dir, self._ENTRY_FILENAME)
         self._add_execfile(pg_globals, plugin_dir)
         logger.debug('Executing plugin entry file "%s"', entry_file)
-        execfile(entry_file, pg_globals)
+        with open(entry_file, 'rb') as f:
+            six.exec_(compile(f.read(), entry_file, 'exec'), pg_globals)
 
     def attach(self, observer):
         """Attach an IPluginManagerObserver object to this plugin manager.
@@ -1116,7 +1121,7 @@ class PluginManager(object):
                     raise Exception('plugin max compat not satisfied')
         plugin_globals = {}
         self._execplugin(plugin_dir, plugin_globals)
-        for obj in plugin_globals.itervalues():
+        for obj in six.itervalues(plugin_globals):
             if self._is_plugin_class(obj):
                 break
         else:
@@ -1153,19 +1158,19 @@ class PluginManager(object):
         return self._plugins.get(key, default)
 
     def iterkeys(self):
-        return self._plugins.iterkeys()
+        return six.iterkeys(self._plugins)
 
     def iteritems(self):
-        return self._plugins.iteritems()
+        return six.iteritems(self._plugins)
 
     def itervalues(self):
-        return self._plugins.itervalues()
+        return six.itervalues(self._plugins)
 
     def keys(self):
-        return self._plugins.keys()
+        return list(self._plugins.keys())
 
     def items(self):
-        return self._plugins.items()
+        return list(self._plugins.items())
 
     def values(self):
-        return self._plugins.values()
+        return list(self._plugins.values())

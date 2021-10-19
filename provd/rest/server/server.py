@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2020 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -14,6 +14,7 @@ configuration.
 #     good and we might want to create an additional indirection level so that
 #     it's a bit cleaner
 
+from __future__ import absolute_import
 import functools
 import json
 import logging
@@ -38,6 +39,7 @@ from twisted.web.server import NOT_DONE_YET
 from .auth import required_acl
 from .auth import get_auth_verifier
 from xivo.tenant_helpers import UnauthorizedTenant
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -481,7 +483,7 @@ class _OipInstallResource(AuthResource):
     def _add_new_oip(self, oip, request):
         # add a new child to this resource, and return the location
         # of the child
-        path = self._id_gen.next()
+        path = next(self._id_gen)
 
         def on_delete():
             try:
@@ -506,7 +508,7 @@ class InstallResource(_OipInstallResource):
         else:
             try:
                 deferred, oip = self._install_srv.install(pkg_id)
-            except Exception, e:
+            except Exception as e:
                 # XXX should handle the exception differently if it was
                 #     because there's already an install in progress
                 return respond_error(request, e)
@@ -550,7 +552,7 @@ class PackageUninstallResource(AuthResource):
         else:
             try:
                 self._install_srv.uninstall(pkg_id)
-            except Exception, e:
+            except Exception as e:
                 return respond_error(request, e)
             else:
                 return respond_no_content(request)
@@ -571,7 +573,7 @@ class PluginUpgradeResource(_OipInstallResource):
         else:
             try:
                 deferred, oip = self._install_srv.upgrade(pkg_id)
-            except Exception, e:
+            except Exception as e:
                 # XXX should handle the exception differently if it was
                 #     because there's already an upgrade in progress
                 return respond_error(request, e)
@@ -1156,12 +1158,12 @@ class _PluginManagerInstallServiceAdapter(object):
 
     @staticmethod
     def _clean_info(pkg_info):
-        return dict((k, v) for (k, v) in pkg_info.iteritems() if k != 'filename')
+        return dict((k, v) for (k, v) in six.iteritems(pkg_info) if k != 'filename')
 
     @staticmethod
     def _clean_installable_pkgs(pkg_infos):
         clean_info = _PluginManagerInstallServiceAdapter._clean_info
-        return dict((k, clean_info(v)) for (k, v) in pkg_infos.iteritems())
+        return dict((k, clean_info(v)) for (k, v) in six.iteritems(pkg_infos))
 
     def list_installable(self):
         return self._clean_installable_pkgs(self._app.pg_mgr.list_installable())
@@ -1202,7 +1204,7 @@ class PluginsResource(AuthResource):
         AuthResource.__init__(self)
         self._pg_mgr = pg_mgr
         self._childs = dict((pg_id, PluginResource(pg)) for
-                            (pg_id, pg) in self._pg_mgr.iteritems())
+                            (pg_id, pg) in six.iteritems(self._pg_mgr))
         # observe plugin loading/unloading and keep a reference to the weakly
         # referenced observer
         self._obs = BasePluginManagerObserver(self._on_plugin_load,

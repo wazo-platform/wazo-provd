@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2010-2014 Avencall
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """HTTP service definition module.
@@ -11,6 +11,7 @@ implementing twisted.web.resource.IResource.
 """
 
 
+from __future__ import absolute_import
 from twisted.internet import defer
 from twisted.web import http
 from twisted.web import resource

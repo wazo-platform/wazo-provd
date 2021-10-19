@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Device and device collection module.
@@ -38,6 +38,7 @@ Finally, device collection objects are used as a storage for device objects.
 
 """
 
+from __future__ import absolute_import
 import logging
 from copy import deepcopy
 from provd.util import is_normed_mac, is_normed_ip

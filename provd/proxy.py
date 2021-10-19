@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the urllib2 module that adds a proxy handler that can
@@ -8,10 +8,11 @@ be modified after its creation.
 """
 
 
-import urllib2
+from __future__ import absolute_import
+import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
 
 
-class DynProxyHandler(urllib2.ProxyHandler):
+class DynProxyHandler(six.moves.urllib.request.ProxyHandler):
     # - this targets cpython 2.6, it might not work on a different version.
     # - this only supports proxy for http, ftp and https. I did not try to
     #   find the exact reason why, but it looks like the list of '*_open'

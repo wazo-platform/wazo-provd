@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization services for devices."""
 
 
+from __future__ import absolute_import
 import logging
 from twisted.internet import defer, threads
 from wazo_amid_client import Client as AmidClient

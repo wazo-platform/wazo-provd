@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Automatic plugin association."""
 
 
+from __future__ import absolute_import
 import logging
 from collections import defaultdict
 from operator import itemgetter
 from provd.devices.ident import IDeviceUpdater
 from twisted.internet import defer
 from zope.interface import Interface, implements
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +101,7 @@ class PluginAssociatorDeviceUpdater(object):
     def _do_update(self, dev_info):
         pg_scores = self._get_scores(dev_info)
         if pg_scores:
-            max_score, pg_ids = max(pg_scores.iteritems(), key=itemgetter(0))
+            max_score, pg_ids = max(six.iteritems(pg_scores), key=itemgetter(0))
             if max_score >= self.min_level:
                 assert pg_ids
                 if len(pg_ids) == 1:
@@ -115,7 +117,7 @@ class PluginAssociatorDeviceUpdater(object):
 
     def _get_scores(self, dev_info):
         pg_scores = defaultdict(list)
-        for pg_id, pg in self._pg_mgr.iteritems():
+        for pg_id, pg in six.iteritems(self._pg_mgr):
             sstor = pg.pg_associator
             if sstor is not None:
                 try:
