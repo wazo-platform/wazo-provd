@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import os
 
 from wazo_provd_client import Client
-from xivo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
+from wazo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
 
 from .wait_strategy import WaitStrategy
 

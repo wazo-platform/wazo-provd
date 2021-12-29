@@ -14,8 +14,8 @@ from hamcrest import (
     is_not,
     has_properties,
 )
-from xivo_test_helpers import until
-from xivo_test_helpers.hamcrest.raises import raises
+from wazo_test_helpers import until
+from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
