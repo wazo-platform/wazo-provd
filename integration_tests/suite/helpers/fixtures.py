@@ -3,7 +3,7 @@
 
 
 from __future__ import absolute_import
-from xivo_test_helpers import until
+from wazo_test_helpers import until
 from .operation import operation_successful
 
 PLUGIN_TO_INSTALL = 'test-plugin'
