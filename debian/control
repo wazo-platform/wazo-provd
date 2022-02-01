@@ -27,7 +27,7 @@ Depends:
     unzip,
     wazo-amid-client,
     wazo-auth-client,
-    xivo-fetchfw,
+    xivo-lib-fetchfw,
     xivo-lib-python
 Description: Wazo provisioning daemon
  Wazo is a system based on a powerful IPBX, to bring an easy to

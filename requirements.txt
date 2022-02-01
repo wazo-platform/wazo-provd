@@ -3,7 +3,6 @@ https://github.com/wazo-platform/wazo-amid-client/archive/master.zip
 https://github.com/wazo-platform/wazo-auth-client/archive/master.zip
 https://github.com/wazo-platform/xivo-fetchfw/archive/master.zip
 https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
-beautifulsoup4==4.7.1  # from xivo-fetchfw
 jinja2==2.10
 pyopenssl==19.0.0
 pyyaml==3.13
