@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -913,6 +913,7 @@ class DeviceResource(AuthResource):
             if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
+                logger.error('Unknown error: %s', failure)
                 deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
         d = self._verify_tenant(request)
