@@ -50,7 +50,7 @@ class AuthVerifier(auth_verifier.AuthVerifier):
             kwargs_for_required_acl.update(obj.__dict__)
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
             try:
-                token_is_valid = self.client().token.is_valid(token_id, required_acl, tenant=tenant_uuid)
+                token_is_valid = self.client().token.check(token_id, required_acl, tenant=tenant_uuid)
             except InvalidTokenException:
                 return self._handle_invalid_token_exception(token_id, required_access=required_acl)
             except MissingPermissionsTokenException:
