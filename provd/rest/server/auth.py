@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
@@ -7,6 +7,7 @@ import logging
 import requests
 from functools import wraps
 from wazo_auth_client import Client as AuthClient
+from wazo_auth_client.exceptions import InvalidTokenException, MissingPermissionsTokenException
 from xivo import auth_verifier
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,10 @@ class AuthVerifier(auth_verifier.AuthVerifier):
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
             try:
                 token_is_valid = self.client().token.is_valid(token_id, required_acl, tenant=tenant_uuid)
+            except InvalidTokenException:
+                return self._handle_invalid_token_exception(token_id, required_access=required_acl)
+            except MissingPermissionsTokenException:
+                return self._handle_missing_permissions_token_exception(token_id, required_access=required_acl)
             except requests.RequestException as e:
                 return self.handle_unreachable(e)
 

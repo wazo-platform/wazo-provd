@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
@@ -66,7 +66,11 @@ class AuthResource(resource.Resource):
         decorated_render_method = auth_verifier.verify_token(self, request, render_method)
         try:
             return decorated_render_method(request)
-        except auth.auth_verifier.Unauthorized:
+        except (
+            auth.auth_verifier.Unauthorized,
+            auth.auth_verifier.InvalidTokenAPIException,
+            auth.auth_verifier.MissingPermissionsTokenAPIException,
+        ):
             request.setResponseCode(http.UNAUTHORIZED)
             return 'Unauthorized'
 
