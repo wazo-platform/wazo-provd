@@ -41,7 +41,7 @@ Architecture: all
 Provides: xivo-dhcpd-update
 Conflicts: xivo-dhcpd-update
 Replaces: xivo-dhcpd-update
-Pre-Depends: wazo-provd, ${misc:Pre-Depends}
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${python:Depends}, ${misc:Depends}
 Description: Wazo dhcpd configuration file for Wazo
  Wazo is a system based on a powerful IPBX, to bring an easy to
