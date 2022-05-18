@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 import os
-import StringIO
+from six import StringIO
 from provd.servers.tftp.packet import ERR_FNF
 from zope.interface import Interface
 
@@ -57,19 +57,19 @@ class TFTPStringService(object):
         self._msg = msg
 
     def handle_read_request(self, request, response):
-        response.accept(StringIO.StringIO(self._msg))
+        response.accept(StringIO(self._msg))
 
 
 class TFTPFileService(object):
     """A read service that serve files under a path.
-    
+
     It strips any leading path separator of the requested filename. For
     example, filename '/foo.txt' is the same as 'foo.txt'.
-    
+
     It also rejects any request that makes reference to the parent directory
     once normalized. For example, a request for filename 'bar/../../foo.txt'
     will be rejected even if 'foo.txt' exist in the parent directory.
-      
+
     """
     def __init__(self, path):
         self._path = os.path.abspath(path)
