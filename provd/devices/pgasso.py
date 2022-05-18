@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Automatic plugin association."""
@@ -11,7 +11,7 @@ from collections import defaultdict
 from operator import itemgetter
 from provd.devices.ident import IDeviceUpdater
 from twisted.internet import defer
-from zope.interface import Interface, implements
+from zope.interface import implementer, Interface
 import six
 
 logger = logging.getLogger(__name__)
@@ -46,9 +46,8 @@ class IPluginAssociator(Interface):
         """Return a 'support score' from a device info object."""
 
 
+@implementer(IPluginAssociator)
 class BasePgAssociator(object):
-    implements(IPluginAssociator)
-
     def associate(self, dev_info):
         vendor = dev_info.get(u'vendor')
         if vendor is None:
@@ -69,21 +68,19 @@ class IConflictSolver(Interface):
     def solve(pg_ids):
         """
         Return a pg_id or None if not able to solve the conflict.
-        
+
         Pre: len(pg_ids) > 1
         """
 
 
+@implementer(IConflictSolver)
 class ReverseAlphabeticConflictSolver(object):
-    implements(IConflictSolver)
-
     def solve(self, pg_ids):
         return max(pg_ids)
 
 
+@implementer(IDeviceUpdater)
 class PluginAssociatorDeviceUpdater(object):
-    implements(IDeviceUpdater)
-
     force_update = False
     min_level = PROBABLE_SUPPORT
 
