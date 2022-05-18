@@ -6,6 +6,7 @@ https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
 automat==0.6.0  # from twisted
 incremental==16.10.1  # from twisted
 jinja2==2.10
+markupsafe==1.1.0  # from jinja2
 pyopenssl==19.0.0
 pyyaml==3.13
 requests==2.21.0
