@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
@@ -33,7 +33,7 @@ from provd.services import IInstallService, InvalidParameterError
 from jinja2.environment import Environment
 from jinja2.exceptions import TemplateNotFound
 from twisted.internet import defer, threads
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 logger = logging.getLogger(__name__)
 
@@ -514,14 +514,12 @@ def _new_handlers(proxies=None):
     return handlers
 
 
+@implementer(IInstallService)
 class FetchfwPluginHelper(object):
     """Helper for plugins that needs to download files to really
     be able to support a certain kind of device.
 
     """
-
-    implements(IInstallService)
-
     PKG_DIR = 'pkgs'
     """Directory where the package definitions are stored."""
     CACHE_DIR = os.path.join('var', 'cache')

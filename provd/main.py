@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
@@ -29,7 +29,7 @@ from twisted.python import log
 from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
-from zope.interface.declarations import implements
+from zope.interface import implementer
 from xivo.token_renewer import TokenRenewer
 import six
 
@@ -325,9 +325,8 @@ class TokenRenewerService(Service):
         Service.stopService(self)
 
 
+@implementer(IServiceMaker, IPlugin)
 class ProvisioningServiceMaker(object):
-    implements(IServiceMaker, IPlugin)
-
     tapname = 'wazo-provd'
     description = 'A provisioning server.'
     options = provd.config.Options

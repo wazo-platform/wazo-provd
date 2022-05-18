@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Standardized service definition and helper."""
@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 import json
 import logging
-from zope.interface import Attribute, Interface, implements
+from zope.interface import Attribute, Interface, implementer
 import six
 
 logger = logging.getLogger(__name__)
@@ -20,137 +20,137 @@ class InvalidParameterError(Exception):
 
 class IConfigureService(Interface):
     """Interface for a "configuration service".
-    
+
     This service offers an easy way to discover a certain number of "parameters"
     exposed by an underlying object, get the values of these parameters and
     set these parameters to new values, without previous knowledge of the
     underlying object. With this, it's possible to parameterize objects in a
     generic way.
-    
+
     Note that when the word string is used here, it means unicode strings,
     not "raw" strings.
-    
+
     To keep it as simple as possible, parameter names must match [\w.-]+. and
     parameters values must not contain any newline characters.
-    
+
     """
 
     def get(name):
         """Return the value associated with a parameter.
-        
+
         The object returned MUST be a string, or None if there's no value
         associated with the parameter. This means the None value can't be a
         valid value for a parameter.
-        
+
         Raise a KeyError if name is not a known valid parameter name.
-        
+
         """
 
     def set(name, value):
         """Associate a value with a parameter.
-        
+
         The value MUST be a string, or None if there's no value to associate
         with the parameter.
-        
+
         Raise a KeyError if name is not a known valid parameter.
-        
+
         Raise an InvalidParameterError if the value for this parameter is not
         valid/acceptable. This means None has a special meaning and can't
         be used as a value.
-        
+
         """
 
     description = Attribute(
         """A read-only list of tuple where the first element is the name of
         the parameter that can be set and the second element is a short
         description of the parameter.
-        
+
         If a parameter has no description, the second element MUST be None.
-        
+
         Localized description can also be given, which has the same structure
         as this attribute but with the name 'description_<locale>', i.e.
         'description_fr' for example.
-        
+
         """)
 
 
 class IInstallService(Interface):
     """Interface for an install service.
-    
+
     It offers a download/install/uninstall service, where files can be
     downloaded and manipulated in a way they can be used by the plugin to
     offer extra functionalities.
-    
+
     This service is useful/necessary if some files that a plugin use
     can't be bundled with it because it doesn't have the right to distribute
     these files, or because they are optional and the plugin want to
     let the choice to the user.
-    
+
     """
     def install(pkg_id):
         """Install a package.
-        
+
         The package SHOULD be reinstalled even if it seemed to be installed.
-        
+
         Return a tuple (deferred, operation in progress).
-        
+
         Raise an Exception if there's already an install operation in progress
         for the package.
-        
+
         Raise an Exception if pkg_id is unknown.
-        
+
         """
 
     def uninstall(pkg_id):
         """Uninstall a package.
-        
+
         Raise an Exception if pkg_id is unknown.
-        
+
         """
 
     # XXX should probably rename list_installable, list_installed (remove list_)
     def list_installable():
         """Return a dictionary of installable packages, where keys are
         package identifier and values are dictionary of package information.
-        
+
         The package information dictionary can contains the following keys,
         which are all optional:
           dsize -- the download size of the package, in bytes
           isize -- the installed size of the package, in bytes
           version -- the version of the package
           description -- the description of the package
-        
+
         """
 
     def list_installed():
         """Return a dictionary of installed packages, where keys are package
         identifier and value are dictionary of package information.
-        
+
         The package information dictionary can contains the following keys,
         which are all optional:
           version -- the version of the package
           description -- the description of the package
-        
+
         """
 
     def upgrade(pkg_id):
         """Upgrade a package (optional operation).
-        
+
         Interface similar to the one for the 'install' method.
-        
+
         If the operation is not available, the method should not be defined.
-        
+
         """
 
     def update():
         """Update the list of installable package (optional operation).
-        
+
         Return a tuple (deferred, operation in progress).
-        
+
         Raise an Exception if there's already an update operation in progress.
-        
+
         If the operation is not available, the method should not be defined.
-        
+
         """
 
 
@@ -166,9 +166,8 @@ class IConfigureServiceParam(Interface):
         """Set the value of this parameter."""
 
 
+@implementer(IConfigureServiceParam)
 class AttrConfigureServiceParam(object):
-    implements(IConfigureServiceParam)
-
     def __init__(self, obj, name, description=None, check_fun=None, **kwargs):
         # kwargs is used to set localized description for example "description_fr='bonjour'"
         self._obj = obj
@@ -186,8 +185,8 @@ class AttrConfigureServiceParam(object):
         setattr(self._obj, self._name, value)
 
 
+# @implementer(IConfigureServiceParam)
 class DictConfigureServiceParam(object):
-    # implements(IConfigureServiceParam)
 
     # Note that this delete the key from the dict when setting a None value
 
@@ -212,18 +211,17 @@ class DictConfigureServiceParam(object):
             self._dict[self._key] = value
 
 
+@implementer(IConfigureService)
 class BaseConfigureService(object):
-    implements(IConfigureService)
-
     def __init__(self, params):
         """
         params -- a dictionary object where keys are parameter names and
           values are IConfigureServiceParam objects. After a call to this
           method, the params object belong to this object.
-        
+
         Note that right now if you want a specific order in the description,
         you need to pass an ordered dict...
-        
+
         """
         self._params = params
 
@@ -281,7 +279,7 @@ class PersistentConfigureServiceDecorator(object):
         self._persister.update(name, value)
 
     def __getattr__(self, name):
-        # used for description and localized description 
+        # used for description and localized description
         return getattr(self._cfg_service, name)
 
 
