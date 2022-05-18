@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def _get_ip_from_request(request, request_type):
     if request_type == REQUEST_TYPE_HTTP:
-        return request.getClientIP().decode('ascii')
+        return request.getClientIP()
     elif request_type == REQUEST_TYPE_TFTP:
         return request['address'][0].decode('ascii')
     elif request_type == REQUEST_TYPE_DHCP:
