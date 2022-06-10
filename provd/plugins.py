@@ -441,6 +441,8 @@ class TemplatePluginHelper(object):
         default_dir = os.path.join(plugin_dir, self.DEFAULT_TPL_DIR)
         loader = ProvdFileSystemLoader([custom_dir, default_dir])
         self._env = Environment(loader=loader)
+        # Allow to use for example os.path.exists from templates
+        self._env.globals.update(os=os)
 
     def get_dev_template(self, filename, dev):
         tpl_filenames = []
