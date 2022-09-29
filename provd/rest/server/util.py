@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import functools
 from twisted.web import http
 
@@ -55,7 +56,7 @@ def accept(mime_types):
             else:
                 request.setResponseCode(http.NOT_ACCEPTABLE)
                 request.setHeader('Content-Type', 'text/plain; charset=UTF-8')
-                return (u"You must accept one of the following MIME type '%s'."
+                return ("You must accept one of the following MIME type '%s'."
                         % mime_types).encode('UTF-8')
         return aux
     return in_accept
@@ -69,7 +70,7 @@ def content_type(mime_type):
             if not content_type or content_type not in mime_type:
                 request.setResponseCode(http.UNSUPPORTED_MEDIA_TYPE)
                 request.setHeader('Content-Type', 'text/plain; charset=UTF-8')
-                return (u"Entity must be in one of these media types '%s'."
+                return ("Entity must be in one of these media types '%s'."
                         % mime_type).encode('UTF-8')
             else:
                 return fun(self, request)

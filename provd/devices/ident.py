@@ -6,6 +6,8 @@
 
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 from collections import defaultdict
 from operator import itemgetter
@@ -36,7 +38,7 @@ def _get_ip_from_request(request, request_type):
     elif request_type == REQUEST_TYPE_TFTP:
         return request['address'][0].decode('ascii')
     elif request_type == REQUEST_TYPE_DHCP:
-        return request[u'ip']
+        return request['ip']
     else:
         raise RuntimeError('invalid request_type: {}'.format(request_type))
 
@@ -95,9 +97,9 @@ class StandardDeviceInfoExtractor(object):
 
     """
     def extract(self, request, request_type):
-        dev_info = {u'ip': _get_ip_from_request(request, request_type)}
+        dev_info = {'ip': _get_ip_from_request(request, request_type)}
         if request_type == REQUEST_TYPE_DHCP:
-            dev_info[u'mac'] = request[u'mac']
+            dev_info['mac'] = request['mac']
         return defer.succeed(dev_info)
 
 
@@ -259,8 +261,8 @@ class IpDeviceRetriever(object):
 
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
-        if u'ip' in dev_info:
-            devices = yield self._app.dev_find({u'ip': dev_info[u'ip']})
+        if 'ip' in dev_info:
+            devices = yield self._app.dev_find({'ip': dev_info['ip']})
             matching_device = self._get_matching_device(devices, dev_info)
             defer.returnValue(matching_device)
         defer.returnValue(None)
@@ -275,19 +277,19 @@ class IpDeviceRetriever(object):
         return None
 
     def _get_candidate_devices(self, devices, dev_info):
-        devices_by_id = dict((device[u'id'], device) for device in devices)
-        self._filter_devices_by_key(devices_by_id, dev_info, u'mac')
-        self._filter_devices_by_key(devices_by_id, dev_info, u'vendor')
-        self._filter_devices_by_key(devices_by_id, dev_info, u'model')
+        devices_by_id = dict((device['id'], device) for device in devices)
+        self._filter_devices_by_key(devices_by_id, dev_info, 'mac')
+        self._filter_devices_by_key(devices_by_id, dev_info, 'vendor')
+        self._filter_devices_by_key(devices_by_id, dev_info, 'model')
         return list(devices_by_id.values())
 
     def _filter_devices_by_key(self, devices_by_id, dev_info, key):
         if key in dev_info:
             key_value = dev_info[key]
-            for device in devices_by_id.values():
+            for device in list(devices_by_id.values()):
                 if key in device:
                     if device[key] != key_value:
-                        device_id = device[u'id']
+                        device_id = device['id']
                         del devices_by_id[device_id]
 
 
@@ -296,7 +298,7 @@ def MacDeviceRetriever(app):
     object which MAC is the same as the device info object.
 
     """
-    return SearchDeviceRetriever(app, u'mac')
+    return SearchDeviceRetriever(app, 'mac')
 
 
 def SerialNumberDeviceRetriever(app):
@@ -304,7 +306,7 @@ def SerialNumberDeviceRetriever(app):
     object which serial number is the same as the device info object.
 
     """
-    return SearchDeviceRetriever(app, u'sn')
+    return SearchDeviceRetriever(app, 'sn')
 
 
 def UUIDDeviceRetriever(app):
@@ -312,7 +314,7 @@ def UUIDDeviceRetriever(app):
     object which UUID is the same as the device info object.
 
     """
-    return SearchDeviceRetriever(app, u'uuid')
+    return SearchDeviceRetriever(app, 'uuid')
 
 
 @implementer(IDeviceRetriever)
@@ -331,13 +333,13 @@ class AddDeviceRetriever(object):
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
         device = dict(dev_info)
-        device[u'added'] = u'auto'
+        device['added'] = 'auto'
         try:
             device_id = yield self._app.dev_insert(device)
         except Exception:
             defer.returnValue(None)
         else:
-            device_ip = dev_info.get(u'ip')
+            device_ip = dev_info.get('ip')
             if device_ip:
                 log_security_msg('New device created automatically from %s: %s', device_ip, device_id)
             defer.returnValue(device)
@@ -441,10 +443,10 @@ class AutocreateConfigDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        if u'config' not in device:
+        if 'config' not in device:
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
-                device[u'config'] = new_config_id
+                device['config'] = new_config_id
         defer.returnValue(None)
 
 
@@ -454,11 +456,11 @@ class RemoveOutdatedIpDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        if not self._app.nat and u'ip' in dev_info:
-            selector = {u'ip': dev_info[u'ip'], u'id': {'$ne': device[u'id']}}
+        if not self._app.nat and 'ip' in dev_info:
+            selector = {'ip': dev_info['ip'], 'id': {'$ne': device['id']}}
             outdated_devices = yield self._app.dev_find(selector)
             for outdated_device in outdated_devices:
-                del outdated_device[u'ip']
+                del outdated_device['ip']
                 self._app.dev_update(outdated_device)
 
 
@@ -537,7 +539,7 @@ class _RequestHelper(object):
         if device is None:
             logger.info('<%s> No device retrieved', self._request_id)
         else:
-            logger.info('<%s> Retrieved device id: %s', self._request_id, device[u'id'])
+            logger.info('<%s> Retrieved device id: %s', self._request_id, device['id'])
 
         defer.returnValue(device)
 
@@ -556,13 +558,13 @@ class _RequestHelper(object):
 
     @defer.inlineCallbacks
     def _update_device_on_no_change(self, device):
-        if not device.get(u'configured'):
+        if not device.get('configured'):
             defer.returnValue(None)
 
         if not self._should_update_remote_state(device):
             defer.returnValue(None)
 
-        config = yield self._app.cfg_retrieve(device[u'config'])
+        config = yield self._app.cfg_retrieve(device['config'])
         if not config:
             defer.returnValue(None)
 
@@ -582,7 +584,7 @@ class _RequestHelper(object):
         if not filename:
             return False
 
-        plugin_id = device.get(u'plugin')
+        plugin_id = device.get('plugin')
         if not plugin_id:
             return False
 
@@ -601,7 +603,7 @@ class _RequestHelper(object):
         if trigger_filename != filename:
             return False
 
-        config_id = device.get(u'config')
+        config_id = device.get('config')
         if not config_id:
             return False
 
@@ -611,7 +613,7 @@ class _RequestHelper(object):
         if not config:
             return
 
-        if not device[u'configured']:
+        if not device['configured']:
             return
 
         self._update_remote_state_sip_username(device, config)
@@ -621,24 +623,24 @@ class _RequestHelper(object):
         if not sip_username:
             return False
 
-        if sip_username == device.get(u'remote_state_sip_username'):
+        if sip_username == device.get('remote_state_sip_username'):
             return False
 
-        device[u'remote_state_sip_username'] = sip_username
+        device['remote_state_sip_username'] = sip_username
         logger.debug('Remote state SIP username updated')
 
         return True
 
     def _get_sip_username(self, config):
-        sip_lines = config[u'raw_config'].get(u'sip_lines')
+        sip_lines = config['raw_config'].get('sip_lines')
         if not sip_lines:
             return None
 
-        sip_line = sip_lines.get(u'1')
+        sip_line = sip_lines.get('1')
         if not sip_line:
             return None
 
-        return sip_line.get(u'username')
+        return sip_line.get('username')
 
     def get_plugin_id(self, device):
         pg_id = self._get_plugin_id(device)
@@ -652,7 +654,7 @@ class _RequestHelper(object):
     def _get_plugin_id(self, device):
         if device is None:
             return None
-        return device.get(u'plugin')
+        return device.get('plugin')
 
 
 def _null_service_factory(pg_id, pg_service):
@@ -792,7 +794,7 @@ class DHCPRequestProcessingService(Resource):
             representing the option code, and values are byte string
             representing the raw value of the option
         """
-        logger.info('Processing DHCP request: %s', request[u'ip'])
+        logger.info('Processing DHCP request: %s', request['ip'])
         logger.debug('DHCP request: %s', request)
         def errback(failure):
             logger.error('Error while processing DHCP request: %s', failure)

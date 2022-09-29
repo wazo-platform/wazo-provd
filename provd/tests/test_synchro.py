@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # NOTE: these tests are not automated (yet). You need to manually check
@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
+
 import time
 from provd.synchro import DeferredRWLock
 from twisted.internet import defer
@@ -20,11 +22,11 @@ def _time_since_load():
 class TracingDeferred(defer.Deferred):
     def __init__(self, id):
         self._id = id
-        print(u'%.4f <%2s> Constructing' % (_time_since_load(), self._id))
+        print('%.4f <%2s> Constructing' % (_time_since_load(), self._id))
         defer.Deferred.__init__(self)
 
     def callback(self, result):
-        print(u'%.4f <%2s> Before callback' % (_time_since_load(), self._id))
+        print('%.4f <%2s> Before callback' % (_time_since_load(), self._id))
         defer.Deferred.callback(self, result)
 
 

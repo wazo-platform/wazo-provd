@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from hamcrest import assert_that, equal_to, has_entry
 from mock import Mock, patch
 from provd.devices import ident
@@ -21,10 +23,10 @@ class TestAddDeviceRetriever(unittest.TestCase):
     @patch('provd.devices.ident.log_security_msg')
     @defer.inlineCallbacks
     def test_retrieve_log_security_event(self, mock_log_security_msg):
-        device_id = u'some-id'
-        device_ip = u'169.254.1.1'
+        device_id = 'some-id'
+        device_ip = '169.254.1.1'
         dev_info = {
-            u'ip': device_ip,
+            'ip': device_ip,
         }
         self.app.dev_insert.return_value = defer.succeed(device_id)
 
@@ -32,7 +34,7 @@ class TestAddDeviceRetriever(unittest.TestCase):
 
         mock_log_security_msg.assert_called_once_with('New device created automatically from %s: %s', device_ip, device_id)
         expected_device = dict(dev_info)
-        expected_device[u'added'] = u'auto'
+        expected_device['added'] = 'auto'
         assert_that(device, equal_to(expected_device))
 
 
@@ -114,24 +116,24 @@ class TestRemoveOutdatedIpDeviceUpdater(unittest.TestCase):
     @defer.inlineCallbacks
     def test_nat_disabled(self):
         device = {
-            u'id': u'abc',
+            'id': 'abc',
         }
         dev_info = {
-            u'ip': u'1.1.1.1',
+            'ip': '1.1.1.1',
         }
         self.app.dev_find.return_value = defer.succeed([])
 
         yield self.dev_updater.update(device, dev_info, 'http', Mock())
 
-        self.app.dev_find.assert_called_once_with({u'ip': u'1.1.1.1', u'id': {'$ne': u'abc'}})
+        self.app.dev_find.assert_called_once_with({'ip': '1.1.1.1', 'id': {'$ne': 'abc'}})
 
     @defer.inlineCallbacks
     def test_nat_enabled(self):
         device = {
-            u'id': u'abc',
+            'id': 'abc',
         }
         dev_info = {
-            u'ip': u'1.1.1.1',
+            'ip': '1.1.1.1',
         }
         self.app.nat = 1
 
@@ -179,7 +181,7 @@ class TestRequestHelper(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_retrieve_device_with_device(self):
-        expected = {u'id': u'a'}
+        expected = {'id': 'a'}
         retriever = self._new_dev_retriever_mock(expected)
         dev_info = Mock()
 
@@ -201,7 +203,7 @@ class TestRequestHelper(unittest.TestCase):
     @defer.inlineCallbacks
     def test_update_device_on_no_device_change_and_no_remote_state_update(self):
         dev_updater = self._new_dev_updater_mock()
-        device = {u'id': u'a'}
+        device = {'id': 'a'}
         dev_info = {}
 
         yield self.helper.update_device(dev_updater, device, dev_info)
@@ -214,10 +216,10 @@ class TestRequestHelper(unittest.TestCase):
     def test_update_device_on_no_device_change_and_remote_state_update(self):
         dev_updater = self._new_dev_updater_mock()
         device = {
-            u'id': u'a',
-            u'configured': True,
-            u'plugin': u'foo',
-            u'config': u'a',
+            'id': 'a',
+            'configured': True,
+            'plugin': 'foo',
+            'config': 'a',
         }
         dev_info = {}
         self.request = Mock()
@@ -227,10 +229,10 @@ class TestRequestHelper(unittest.TestCase):
         plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
         self.app.pg_mgr.get.return_value = plugin
         self.app.cfg_retrieve.return_value = {
-            u'raw_config': {
-                u'sip_lines': {
-                    u'1': {
-                        u'username': 'foobar',
+            'raw_config': {
+                'sip_lines': {
+                    '1': {
+                        'username': 'foobar',
                     }
                 }
             }
@@ -240,18 +242,18 @@ class TestRequestHelper(unittest.TestCase):
         yield self.helper.update_device(dev_updater, device, dev_info)
 
         dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
-        self.app.cfg_retrieve.assert_called_once_with(device[u'config'])
+        self.app.cfg_retrieve.assert_called_once_with(device['config'])
         self.app.dev_update.assert_called_once_with(device)
-        assert_that(device, has_entry(u'remote_state_sip_username', u'foobar'))
+        assert_that(device, has_entry('remote_state_sip_username', 'foobar'))
 
     @defer.inlineCallbacks
     def test_update_device_on_device_change_and_remote_state_update(self):
-        dev_updater = self._new_dev_updater_mock({u'vendor': u'xivo'})
+        dev_updater = self._new_dev_updater_mock({'vendor': 'xivo'})
         device = {
-            u'id': u'a',
-            u'configured': True,
-            u'plugin': u'foo',
-            u'config': u'a',
+            'id': 'a',
+            'configured': True,
+            'plugin': 'foo',
+            'config': 'a',
         }
         dev_info = {}
         self.request = Mock()
@@ -261,10 +263,10 @@ class TestRequestHelper(unittest.TestCase):
         plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
         self.app.pg_mgr.get.return_value = plugin
         self.app.cfg_retrieve.return_value = {
-            u'raw_config': {
-                u'sip_lines': {
-                    u'1': {
-                        u'username': 'foobar',
+            'raw_config': {
+                'sip_lines': {
+                    '1': {
+                        'username': 'foobar',
                     }
                 }
             }
@@ -284,18 +286,18 @@ class TestRequestHelper(unittest.TestCase):
         assert_that(pg_id, equal_to(None))
 
     def test_get_plugin_id_no_plugin_key(self):
-        device = {u'id': u'a'}
+        device = {'id': 'a'}
 
         pg_id = self.helper.get_plugin_id(device)
 
         assert_that(pg_id, equal_to(None))
 
     def test_get_plugin_id_ok(self):
-        device = {u'id': u'a', u'plugin': u'xivo-foo'}
+        device = {'id': 'a', 'plugin': 'xivo-foo'}
 
         pg_id = self.helper.get_plugin_id(device)
 
-        assert_that(pg_id, equal_to(u'xivo-foo'))
+        assert_that(pg_id, equal_to('xivo-foo'))
 
     def _new_dev_info_extractor_mock(self, return_value):
         dev_info_extractor = Mock()

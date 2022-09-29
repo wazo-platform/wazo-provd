@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization services for devices."""
 
 
-from __future__ import absolute_import
 import logging
 from twisted.internet import defer, threads
 from wazo_amid_client import Client as AmidClient
@@ -109,7 +108,7 @@ def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
 
 
 def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
-    peer = device.get(u'remote_state_sip_username')
+    peer = device.get('remote_state_sip_username')
     if not peer:
         return
 
@@ -122,7 +121,7 @@ def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
 
 
 def _synchronize_by_ip(device, event, ami_sync_service, extra_vars=None):
-    ip = device.get(u'ip')
+    ip = device.get('ip')
     if not ip:
         return None
 

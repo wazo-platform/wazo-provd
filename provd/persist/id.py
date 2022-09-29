@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 import binascii
 import uuid
 import six
 
 
-def numeric_id_generator(prefix=u'', start=0):
+def numeric_id_generator(prefix='', start=0):
     n = start
     while True:
         yield prefix + six.text_type(n)

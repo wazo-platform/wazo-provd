@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 import re
 import socket
 from six.moves import map
@@ -102,7 +101,7 @@ def to_mac(mac_string):
         return ''.join(chr(int(token, 16)) for token in tokens)
 
 
-def from_mac(packed_mac, separator=u':', uppercase=False):
+def from_mac(packed_mac, separator=':', uppercase=False):
     """Takes a 6-bytes string representation of a MAC address and return the
     human readable representation.
 
@@ -113,9 +112,9 @@ def from_mac(packed_mac, separator=u':', uppercase=False):
     if len(packed_mac) != 6:
         raise ValueError('invalid packed MAC')
     if uppercase:
-        fmt = u'%02X'
+        fmt = '%02X'
     else:
-        fmt = u'%02x'
+        fmt = '%02x'
     return separator.join(fmt % ord(e) for e in packed_mac)
 
 
@@ -148,7 +147,7 @@ def is_normed_mac(mac_string):
     return bool(_NORMED_MAC.match(mac_string))
 
 
-def format_mac(mac_string, separator=u':', uppercase=False):
+def format_mac(mac_string, separator=':', uppercase=False):
     """Return a freely formatted representation of a MAC address string."""
     return from_mac(to_mac(mac_string), separator, uppercase)
 

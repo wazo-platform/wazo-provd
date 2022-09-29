@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 import os.path
 import provd.config
@@ -86,9 +88,9 @@ class ProvisioningService(Service):
             if self._config['database']['ensure_common_indexes']:
                 logger.debug('Ensuring index existence on collections')
                 try:
-                    dev_collection.ensure_index(u'mac')
-                    dev_collection.ensure_index(u'ip')
-                    dev_collection.ensure_index(u'sn')
+                    dev_collection.ensure_index('mac')
+                    dev_collection.ensure_index('ip')
+                    dev_collection.ensure_index('sn')
                 except AttributeError as e:
                     logger.warning('This type of database doesn\'t seem to support index: %s', e)
             self.app = ProvisioningApplication(cfg_collection, dev_collection, self._config)

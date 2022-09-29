@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+
 import copy
 import logging
 import functools
@@ -97,7 +98,7 @@ def _wlock(fun):
 
 
 def _check_common_raw_config_validity(raw_config):
-    for param in [u'ip', u'http_port', u'tftp_port']:
+    for param in ['ip', 'http_port', 'tftp_port']:
         if param not in raw_config:
             raise RawConfigError('missing %s parameter' % param)
 
@@ -105,62 +106,62 @@ def _check_common_raw_config_validity(raw_config):
 def _check_raw_config_validity(raw_config):
     # XXX this is bit repetitive...
     _check_common_raw_config_validity(raw_config)
-    if raw_config.get(u'ntp_enabled'):
-        if u'ntp_ip' not in raw_config:
+    if raw_config.get('ntp_enabled'):
+        if 'ntp_ip' not in raw_config:
             raise RawConfigError('missing ntp_ip parameter')
-    if raw_config.get(u'vlan_enabled'):
-        if u'vlan_id' not in raw_config:
+    if raw_config.get('vlan_enabled'):
+        if 'vlan_id' not in raw_config:
             raise RawConfigError('missing vlan_id parameter')
-    if raw_config.get(u'syslog_enabled'):
-        if u'syslog_ip' not in raw_config:
+    if raw_config.get('syslog_enabled'):
+        if 'syslog_ip' not in raw_config:
             raise RawConfigError('missing syslog_ip parameter')
-    if u'sip_lines' in raw_config:
-        for line_no, line in six.iteritems(raw_config[u'sip_lines']):
-            if u'proxy_ip' not in line and u'sip_proxy_ip' not in raw_config:
+    if 'sip_lines' in raw_config:
+        for line_no, line in six.iteritems(raw_config['sip_lines']):
+            if 'proxy_ip' not in line and 'sip_proxy_ip' not in raw_config:
                 raise RawConfigError('missing proxy_ip parameter for line %s' %
                                      line_no)
-            if u'protocol' in raw_config and raw_config[u'protocol'] == 'SIP':
-                for param in [u'username', u'password', u'display_name']:
+            if 'protocol' in raw_config and raw_config['protocol'] == 'SIP':
+                for param in ['username', 'password', 'display_name']:
                     if param not in line:
                         raise RawConfigError('missing %s parameter for line %s' %
                                              (param, line_no))
-    if u'sccp_call_managers' in raw_config:
-        for priority, call_manager in six.iteritems(raw_config[u'sccp_call_managers']):
-            if u'ip' not in call_manager:
+    if 'sccp_call_managers' in raw_config:
+        for priority, call_manager in six.iteritems(raw_config['sccp_call_managers']):
+            if 'ip' not in call_manager:
                 raise RawConfigError('missing ip parameter for call manager %s' %
                                      priority)
-    if u'funckeys' in raw_config:
-        funckeys = raw_config[u'funckeys']
+    if 'funckeys' in raw_config:
+        funckeys = raw_config['funckeys']
         for funckey_no, funckey in six.iteritems(funckeys):
             try:
-                type_ = funckey[u'type']
+                type_ = funckey['type']
             except KeyError:
                 raise RawConfigError('missing type parameter for funckey %s' %
                                      funckey_no)
             else:
-                if (type_ == u'speeddial' or type_ == u'blf') and u'value' not in funckey:
+                if (type_ == 'speeddial' or type_ == 'blf') and 'value' not in funckey:
                     raise RawConfigError('missing value parameter for funckey %s' %
                                          funckey_no)
 
 
 def _set_defaults_raw_config(raw_config):
-    if raw_config.get(u'syslog_enabled'):
-        raw_config.setdefault(u'syslog_port', 514)
-        raw_config.setdefault(u'level', u'warning')
-    if u'sip_proxy_ip' in raw_config:
-        raw_config.setdefault(u'sip_registrar_ip', raw_config[u'sip_proxy_ip'])
-    raw_config.setdefault(u'sip_srtp_mode', u'disabled')
-    raw_config.setdefault(u'sip_transport', u'udp')
-    if u'sip_lines' not in raw_config:
-        raw_config[u'sip_lines'] = {}
+    if raw_config.get('syslog_enabled'):
+        raw_config.setdefault('syslog_port', 514)
+        raw_config.setdefault('level', 'warning')
+    if 'sip_proxy_ip' in raw_config:
+        raw_config.setdefault('sip_registrar_ip', raw_config['sip_proxy_ip'])
+    raw_config.setdefault('sip_srtp_mode', 'disabled')
+    raw_config.setdefault('sip_transport', 'udp')
+    if 'sip_lines' not in raw_config:
+        raw_config['sip_lines'] = {}
     else:
-        for line in six.itervalues(raw_config[u'sip_lines']):
-            if u'proxy_ip' in line:
-                line.setdefault(u'registrar_ip', line[u'proxy_ip'])
-            if u'username' in line:
-                line.setdefault(u'auth_username', line[u'username'])
-    raw_config.setdefault(u'sccp_call_managers', {})
-    raw_config.setdefault(u'funckeys', {})
+        for line in six.itervalues(raw_config['sip_lines']):
+            if 'proxy_ip' in line:
+                line.setdefault('registrar_ip', line['proxy_ip'])
+            if 'username' in line:
+                line.setdefault('auth_username', line['username'])
+    raw_config.setdefault('sccp_call_managers', {})
+    raw_config.setdefault('funckeys', {})
 
 
 class ProvisioningApplication(object):
@@ -237,16 +238,16 @@ class ProvisioningApplication(object):
     # device methods
 
     def _dev_get_plugin(self, device):
-        if u'plugin' in device:
-            return self.pg_mgr.get(device[u'plugin'])
+        if 'plugin' in device:
+            return self.pg_mgr.get(device['plugin'])
         else:
             return None
 
     def _dev_get_raw_config(self, device):
         # Return a deferred that will fire with a raw config associated
         # with the device, or fire with None if there's no such raw config
-        if u'config' in device:
-            cfg_id = device[u'config']
+        if 'config' in device:
+            cfg_id = device['config']
             return self._cfg_collection.get_raw_config(cfg_id, self._base_raw_config)
         else:
             return defer.succeed(None)
@@ -331,7 +332,7 @@ class ProvisioningApplication(object):
             # somewhat rare case were the device is marked as configured but
             # the plugin used by the device is not installed/loaded. This
             # is often caused by a manual plugin uninstallation
-            raise Exception('Plugin %s is not installed/loaded' % device.get(u'plugin'))
+            raise Exception('Plugin %s is not installed/loaded' % device.get('plugin'))
         else:
             yield self._dev_synchronize(device, plugin, raw_config)
 
@@ -373,7 +374,7 @@ class ProvisioningApplication(object):
         logger.info('Inserting new device')
         try:
             # new device are never configured
-            device[u'configured'] = False
+            device['configured'] = False
 
             if not device.get('tenant_uuid'):
                 device['tenant_uuid'] = self._tenant_uuid
@@ -387,7 +388,7 @@ class ProvisioningApplication(object):
             else:
                 configured = yield self._dev_configure_if_possible(device)
                 if configured:
-                    device[u'configured'] = True
+                    device['configured'] = True
                     yield self._dev_collection.update(device)
                 defer.returnValue(id)
         except Exception:
@@ -425,15 +426,15 @@ class ProvisioningApplication(object):
                 old_device = yield self._dev_get_or_raise(id)
                 if needs_reconfiguration(old_device, device):
                     # Deconfigure old device it was configured
-                    if old_device[u'configured']:
+                    if old_device['configured']:
                         self._dev_deconfigure_if_possible(old_device)
                     # Configure new device if possible
                     configured = yield self._dev_configure_if_possible(device)
-                    device[u'configured'] = configured
+                    device['configured'] = configured
                 else:
-                    device[u'configured'] = old_device[u'configured']
+                    device['configured'] = old_device['configured']
                 if pre_update_hook is not None:
-                    config = yield self._cfg_collection.retrieve(device.get(u'config'))
+                    config = yield self._cfg_collection.retrieve(device.get('config'))
                     pre_update_hook(device, config)
                 # Update device collection if the device is different from
                 # the old device
@@ -442,12 +443,12 @@ class ProvisioningApplication(object):
                     yield self._dev_collection.update(device)
                     # check if old device was using a transient config that is
                     # no more in use
-                    if u'config' in old_device and old_device[u'config'] != device.get(u'config'):
-                        old_device_cfg_id = old_device[u'config']
+                    if 'config' in old_device and old_device['config'] != device.get('config'):
+                        old_device_cfg_id = old_device['config']
                         old_device_cfg = yield self._cfg_collection.retrieve(old_device_cfg_id)
-                        if old_device_cfg and old_device_cfg.get(u'transient'):
+                        if old_device_cfg and old_device_cfg.get('transient'):
                             # if no devices are using this transient config, delete it
-                            if not (yield self._dev_collection.find_one({u'config': old_device_cfg_id})):
+                            if not (yield self._dev_collection.find_one({'config': old_device_cfg_id})):
                                 self._cfg_collection.delete(old_device_cfg_id)
                 else:
                     logger.info('Not updating device %s: not changed', id)
@@ -477,14 +478,14 @@ class ProvisioningApplication(object):
             # using the write lock
             yield self._dev_collection.delete(id)
             # check if device was using a transient config that is no more in use
-            if u'config' in device:
-                device_cfg_id = device[u'config']
+            if 'config' in device:
+                device_cfg_id = device['config']
                 device_cfg = yield self._cfg_collection.retrieve(device_cfg_id)
-                if device_cfg and device_cfg.get(u'transient'):
+                if device_cfg and device_cfg.get('transient'):
                     # if no devices are using this transient config, delete it
-                    if not (yield self._dev_collection.find_one({u'config': device_cfg_id})):
+                    if not (yield self._dev_collection.find_one({'config': device_cfg_id})):
                         self._cfg_collection.delete(device_cfg_id)
-            if device[u'configured']:
+            if device['configured']:
                 self._dev_deconfigure_if_possible(device)
         except Exception:
             logger.error('Error while deleting device', exc_info=True)
@@ -520,11 +521,11 @@ class ProvisioningApplication(object):
         logger.info('Reconfiguring device %s', id)
         try:
             device = yield self._dev_get_or_raise(id)
-            if device[u'configured']:
+            if device['configured']:
                 self._dev_deconfigure_if_possible(device)
             configured = yield self._dev_configure_if_possible(device)
-            if device[u'configured'] != configured:
-                device[u'configured'] = configured
+            if device['configured'] != configured:
+                device['configured'] = configured
                 yield self._dev_collection.update(device)
             defer.returnValue(configured)
         except Exception:
@@ -551,7 +552,7 @@ class ProvisioningApplication(object):
         logger.info('Synchronizing device %s', id)
         try:
             device = yield self._dev_get_or_raise(id)
-            if not device[u'configured']:
+            if not device['configured']:
                 raise Exception('can\'t synchronize not configured device %s' % id)
             else:
                 yield self._dev_synchronize_if_possible(device)
@@ -604,20 +605,20 @@ class ProvisioningApplication(object):
                     raw_configs[affected_cfg_id] = yield self._cfg_collection.get_raw_config(
                                                              affected_cfg_id, self._base_raw_config)
                 # 3. reconfigure/deconfigure each affected devices
-                affected_devices = yield self._dev_collection.find({u'config': {u'$in': list(affected_cfg_ids)}})
+                affected_devices = yield self._dev_collection.find({'config': {'$in': list(affected_cfg_ids)}})
                 for device in affected_devices:
                     plugin = self._dev_get_plugin(device)
                     if plugin is not None:
-                        raw_config = raw_configs[device[u'config']]
+                        raw_config = raw_configs[device['config']]
                         assert raw_config is not None
                         # deconfigure
-                        if device[u'configured']:
+                        if device['configured']:
                             self._dev_deconfigure(device, plugin)
                         # configure
                         configured = self._dev_configure(device, plugin, raw_config)
                         # update device if it has changed
-                        if device[u'configured'] != configured:
-                            device[u'configured'] = configured
+                        if device['configured'] != configured:
+                            device['configured'] = configured
                             yield self._dev_collection.update(device)
                 # 4. return the device id
                 defer.returnValue(id)
@@ -662,20 +663,20 @@ class ProvisioningApplication(object):
                                                                  affected_cfg_id, self._base_raw_config)
                     # 3. reconfigure each device having a direct dependency on
                     #    one of the affected cfg id
-                    affected_devices = yield self._dev_collection.find({u'config': {u'$in': list(affected_cfg_ids)}})
+                    affected_devices = yield self._dev_collection.find({'config': {'$in': list(affected_cfg_ids)}})
                     for device in affected_devices:
                         plugin = self._dev_get_plugin(device)
                         if plugin is not None:
-                            raw_config = raw_configs[device[u'config']]
+                            raw_config = raw_configs[device['config']]
                             assert raw_config is not None
                             # deconfigure
-                            if device[u'configured']:
+                            if device['configured']:
                                 self._dev_deconfigure(device, plugin)
                             # configure
                             configured = self._dev_configure(device, plugin, raw_config)
                             # update device if it has changed
-                            if device[u'configured'] != configured:
-                                device[u'configured'] = configured
+                            if device['configured'] != configured:
+                                device['configured'] = configured
                                 yield self._dev_collection.update(device)
         except Exception:
             logger.error('Error while updating config', exc_info=True)
@@ -715,26 +716,26 @@ class ProvisioningApplication(object):
                     raw_configs[affected_cfg_id] = yield self._cfg_collection.get_raw_config(
                                                              affected_cfg_id, self._base_raw_config)
                 # 3. reconfigure/deconfigure each affected devices
-                affected_devices = yield self._dev_collection.find({u'config': {u'$in': list(affected_cfg_ids)}})
+                affected_devices = yield self._dev_collection.find({'config': {'$in': list(affected_cfg_ids)}})
                 for device in affected_devices:
                     plugin = self._dev_get_plugin(device)
                     if plugin is not None:
-                        raw_config = raw_configs[device[u'config']]
+                        raw_config = raw_configs[device['config']]
                         # deconfigure
-                        if device[u'configured']:
+                        if device['configured']:
                             self._dev_deconfigure(device, plugin)
                         # configure if device config is not the deleted config
-                        if device[u'config'] == id:
+                        if device['config'] == id:
                             assert raw_config is None
                             # update device if it has changed
-                            if device[u'configured']:
-                                device[u'configured'] = False
+                            if device['configured']:
+                                device['configured'] = False
                                 yield self._dev_collection.update(device)
                         else:
                             assert raw_config is not None
                             configured = yield self._dev_configure(device, plugin, raw_config)
                             # update device if it has changed
-                            if device[u'configured'] != configured:
+                            if device['configured'] != configured:
                                 yield self._dev_collection.update(device)
         except Exception:
             logger.error('Error while deleting config', exc_info=True)
@@ -769,11 +770,11 @@ class ProvisioningApplication(object):
         logger.info('Creating new config')
         try:
             new_config_id = None
-            config = yield self._cfg_collection.find_one({u'role': u'autocreate'})
+            config = yield self._cfg_collection.find_one({'role': 'autocreate'})
             if config:
                 # remove the role of the config so we don't create new config
                 # with the autocreate role
-                del config[u'role']
+                del config['role']
                 new_config = self._cfg_factory(config)
                 if new_config:
                     new_config_id = yield self._cfg_collection.insert(new_config)
@@ -839,15 +840,15 @@ class ProvisioningApplication(object):
     @defer.inlineCallbacks
     def _pg_configure_all_devices(self, plugin_id):
         logger.info('Reconfiguring all devices using plugin %s', plugin_id)
-        devices = yield self._dev_collection.find({u'plugin': plugin_id})
+        devices = yield self._dev_collection.find({'plugin': plugin_id})
         for device in devices:
             # deconfigure
-            if device[u'configured']:
+            if device['configured']:
                 self._dev_deconfigure_if_possible(device)
             # configure
             configured = yield self._dev_configure_if_possible(device)
-            if device[u'configured'] != configured:
-                device[u'configured'] = configured
+            if device['configured'] != configured:
+                device['configured'] = configured
                 yield self._dev_collection.update(device)
 
     def pg_install(self, id):
@@ -951,10 +952,10 @@ class ProvisioningApplication(object):
         # soft deconfigure all the device that were configured by this device
         # note that there is no point in calling plugin.deconfigure for every
         # of these devices since the plugin is removed anyway
-        affected_devices = yield self._dev_collection.find({u'plugin': id,
-                                                            u'configured': True})
+        affected_devices = yield self._dev_collection.find({'plugin': id,
+                                                            'configured': True})
         for device in affected_devices:
-            device[u'configured'] = False
+            device['configured'] = False
             yield self._dev_collection.update(device)
 
     @_wlock
@@ -976,13 +977,13 @@ class ProvisioningApplication(object):
             logger.error('Can\'t reload plugin %s: not installed', id)
             raise Exception('plugin %s is not installed' % id)
 
-        devices = yield self._dev_collection.find({u'plugin': id})
+        devices = yield self._dev_collection.find({'plugin': id})
         devices = list(devices)
         # unload plugin
         if id in self.pg_mgr:
             plugin = self.pg_mgr[id]
             for device in devices:
-                if device[u'configured']:
+                if device['configured']:
                     self._dev_deconfigure(device, plugin)
             self._pg_unload(id)
         # load plugin
@@ -992,16 +993,16 @@ class ProvisioningApplication(object):
             # mark all the devices as not configured and reraise
             # the exception
             for device in devices:
-                if device[u'configured']:
-                    device[u'configured'] = False
+                if device['configured']:
+                    device['configured'] = False
                     yield self._dev_collection.update(device)
             raise
         else:
             # reconfigure every device
             for device in devices:
                 configured = yield self._dev_configure_if_possible(device)
-                if device[u'configured'] != configured:
-                    device[u'configured'] = configured
+                if device['configured'] != configured:
+                    device['configured'] = configured
                     yield self._dev_collection.update(device)
 
     def pg_retrieve(self, id):
@@ -1152,19 +1153,19 @@ class ApplicationConfigureService(object):
             set_fun(value)
 
     description = [
-        (u'plugin_server', u'The plugins repository URL'),
-        (u'http_proxy', u'The proxy for HTTP requests. Format is "http://[user:password@]host:port"'),
-        (u'ftp_proxy', u'The proxy for FTP requests. Format is "http://[user:password@]host:port"'),
-        (u'https_proxy', u'The proxy for HTTPS requests. Format is "host:port"'),
-        (u'locale', u'The current locale. Example: fr_FR'),
-        (u'NAT', u'Set to 1 if all the devices are behind a NAT.')
+        ('plugin_server', 'The plugins repository URL'),
+        ('http_proxy', 'The proxy for HTTP requests. Format is "http://[user:password@]host:port"'),
+        ('ftp_proxy', 'The proxy for FTP requests. Format is "http://[user:password@]host:port"'),
+        ('https_proxy', 'The proxy for HTTPS requests. Format is "host:port"'),
+        ('locale', 'The current locale. Example: fr_FR'),
+        ('NAT', 'Set to 1 if all the devices are behind a NAT.')
     ]
 
     description_fr = [
-        (u'plugin_server', u"L'addresse (URL) du dépôt de plugins"),
-        (u'http_proxy', u'Le proxy pour les requêtes HTTP. Le format est "http://[user:password@]host:port"'),
-        (u'ftp_proxy', u'Le proxy pour les requêtes FTP. Le format est "http://[user:password@]host:port"'),
-        (u'https_proxy', u'Le proxy pour les requêtes HTTPS. Le format est "host:port"'),
-        (u'locale', u'La locale courante. Exemple: en_CA'),
-        (u'NAT', u'Mettre à 1 si toutes les terminaisons sont derrière un NAT.')
+        ('plugin_server', "L'addresse (URL) du dépôt de plugins"),
+        ('http_proxy', 'Le proxy pour les requêtes HTTP. Le format est "http://[user:password@]host:port"'),
+        ('ftp_proxy', 'Le proxy pour les requêtes FTP. Le format est "http://[user:password@]host:port"'),
+        ('https_proxy', 'Le proxy pour les requêtes HTTPS. Le format est "host:port"'),
+        ('locale', 'La locale courante. Exemple: en_CA'),
+        ('NAT', 'Mettre à 1 si toutes les terminaisons sont derrière un NAT.')
     ]
