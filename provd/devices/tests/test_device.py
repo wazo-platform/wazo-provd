@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from hamcrest import assert_that, equal_to
 
 import unittest
@@ -12,33 +14,33 @@ from provd.devices.device import copy, needs_reconfiguration
 class TestDevice(unittest.TestCase):
 
     def test_copy_is_a_copy(self):
-        device_orig = {u'id': u'1', u'mac': u'00:11:22:33:44:55'}
+        device_orig = {'id': '1', 'mac': '00:11:22:33:44:55'}
 
         device_copy = copy(device_orig)
 
         assert_that(device_copy, equal_to(device_orig))
 
     def test_copy_has_no_reference_to_orig(self):
-        device_orig = {u'id': u'1', u'foo': [1]}
+        device_orig = {'id': '1', 'foo': [1]}
 
         device_copy = copy(device_orig)
-        device_copy[u'foo'].append(2)
+        device_copy['foo'].append(2)
 
-        assert_that(device_orig, equal_to({u'id': u'1', u'foo': [1]}))
+        assert_that(device_orig, equal_to({'id': '1', 'foo': [1]}))
 
     def test_is_reconfigured_needed_same_device(self):
-        device = {u'id': u'1', u'config': u'a'}
+        device = {'id': '1', 'config': 'a'}
 
         self.assertFalse(needs_reconfiguration(device, device))
 
     def test_is_reconfigured_needed_different_significant_key(self):
-        old_device = {u'id': u'1', u'config': u'a'}
-        new_device = {u'id': u'1', u'config': u'b'}
+        old_device = {'id': '1', 'config': 'a'}
+        new_device = {'id': '1', 'config': 'b'}
 
         self.assertTrue(needs_reconfiguration(old_device, new_device))
 
     def test_is_reconfigured_needed_different_unsignificant_key(self):
-        old_device = {u'id': u'1', u'foo': u'a'}
-        new_device = {u'id': u'1', u'foo': u'b'}
+        old_device = {'id': '1', 'foo': 'a'}
+        new_device = {'id': '1', 'foo': 'b'}
 
         self.assertFalse(needs_reconfiguration(old_device, new_device))

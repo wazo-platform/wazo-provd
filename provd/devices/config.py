@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 """Config and config collection module.
 
@@ -459,22 +460,22 @@ def _rec_update_dict(base_dict, overlay_dict):
 
 
 def _check_config_validity(config):
-    if u'parent_ids' not in config:
+    if 'parent_ids' not in config:
         raise ValueError('missing "parent_ids" field in config')
-    if not isinstance(config[u'parent_ids'], list):
+    if not isinstance(config['parent_ids'], list):
         raise ValueError('"parent_ids" field must be a list; is %s' %
-                         type(config[u'parent_ids']))
-    for id_ in config[u'parent_ids']:
+                         type(config['parent_ids']))
+    for id_ in config['parent_ids']:
         if not isinstance(id_, six.string_types):
             raise ValueError('parent id must be a string; is %s' % type(id_))
 
-    if u'raw_config' not in config:
+    if 'raw_config' not in config:
         raise ValueError('missing "raw_config" field in config')
 
-    raw_config = config[u'raw_config']
+    raw_config = config['raw_config']
     if not isinstance(raw_config, dict):
         raise ValueError('"raw_config" field must be a dict; is %s' %
-                         type(config[u'raw_config']))
+                         type(config['raw_config']))
 
 
 def _needs_childs_and_parents_indexes(fun):
@@ -529,7 +530,7 @@ class ConfigCollection(ForwardingDocumentCollection):
         configs = yield self._collection.find({})
         for config in configs:
             id = config[ID_KEY]
-            parent_ids = config[u'parent_ids']
+            parent_ids = config['parent_ids']
             # update childs_idx
             for parent_id in parent_ids:
                 if parent_id in childs_idx:
@@ -550,7 +551,7 @@ class ConfigCollection(ForwardingDocumentCollection):
         _check_config_validity(config)
 
         def callback(id):
-            parent_ids = config[u'parent_ids']
+            parent_ids = config['parent_ids']
             # update childs idx
             for parent_id in parent_ids:
                 if parent_id in self._childs_idx:
@@ -571,7 +572,7 @@ class ConfigCollection(ForwardingDocumentCollection):
 
         def callback(_):
             id = config[ID_KEY]
-            new_parent_ids = config[u'parent_ids']
+            new_parent_ids = config['parent_ids']
             old_parent_ids = self._parents_idx[id]
             if new_parent_ids != old_parent_ids:
                 # update childs idx
@@ -667,11 +668,11 @@ class ConfigCollection(ForwardingDocumentCollection):
             if config is not None:
                 if flattened_raw_config[0] is None:
                     flattened_raw_config[0] = deepcopy(base_raw_config)
-                for parent_id in config[u'parent_ids']:
+                for parent_id in config['parent_ids']:
                     if parent_id not in visited:
                         visited.add(parent_id)
                         yield aux(parent_id)
-                _rec_update_dict(flattened_raw_config[0], config[u'raw_config'])
+                _rec_update_dict(flattened_raw_config[0], config['raw_config'])
 
         d = aux(id)
         d.addCallback(lambda _: flattened_raw_config[0])
@@ -688,23 +689,23 @@ class DefaultConfigFactory(object):
     def _new_config(self, id_, sip_line_1_username):
         new_suffix = six.text_type(uuid.uuid4())
         new_config = {
-            u'id': id_ + new_suffix,
-            u'parent_ids': [id_],
-            u'raw_config': {
-                u'sip_lines': {
-                    u'1': {
-                       u'username': sip_line_1_username
+            'id': id_ + new_suffix,
+            'parent_ids': [id_],
+            'raw_config': {
+                'sip_lines': {
+                    '1': {
+                       'username': sip_line_1_username
                     }
                 }
             },
-            u'transient': True
+            'transient': True
         }
         return new_config
 
     def __call__(self, config):
         try:
-            sip_line_1 = config[u'raw_config'][u'sip_lines'][u'1']
+            sip_line_1 = config['raw_config']['sip_lines']['1']
         except KeyError:
             return None
         else:
-            return self._new_config(config[u'id'], sip_line_1['username'])
+            return self._new_config(config['id'], sip_line_1['username'])

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Persistent storage interface for 'documents'.
@@ -46,10 +46,9 @@ Here's examples of valid selector and the documents the selector will match:
 """
 
 
-from __future__ import absolute_import
 from zope.interface import Interface
 
-ID_KEY = u'id'
+ID_KEY = 'id'
 
 
 class InvalidIdError(Exception):

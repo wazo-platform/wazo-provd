@@ -7,7 +7,8 @@ automat==0.6.0  # from twisted
 incremental==16.10.1  # from twisted
 jinja2==2.10
 markupsafe==1.1.0  # from jinja2
-pyopenssl==19.0.0
+pyopenssl>=21.0.0,<23.0.0
+cryptography>=2.1.4 # for pyopenssl
 pyyaml==3.13
 requests==2.21.0
 six==1.12.0

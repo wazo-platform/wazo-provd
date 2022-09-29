@@ -15,6 +15,8 @@ configuration.
 #     it's a bit cleaner
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import functools
 import json
 import logging
@@ -45,15 +47,15 @@ logger = logging.getLogger(__name__)
 
 auth_verifier = get_auth_verifier()
 
-REL_INSTALL_SRV = u'srv.install'
-REL_INSTALL = u'srv.install.install'
-REL_UNINSTALL = u'srv.install.uninstall'
-REL_INSTALLED = u'srv.install.installed'
-REL_INSTALLABLE = u'srv.install.installable'
-REL_UPGRADE = u'srv.install.upgrade'
-REL_UPDATE = u'srv.install.update'
-REL_CONFIGURE_SRV = u'srv.configure'
-REL_CONFIGURE_PARAM = u'srv.configure.param'
+REL_INSTALL_SRV = 'srv.install'
+REL_INSTALL = 'srv.install.install'
+REL_UNINSTALL = 'srv.install.uninstall'
+REL_INSTALLED = 'srv.install.installed'
+REL_INSTALLABLE = 'srv.install.installable'
+REL_UPGRADE = 'srv.install.upgrade'
+REL_UPDATE = 'srv.install.update'
+REL_CONFIGURE_SRV = 'srv.configure'
+REL_CONFIGURE_PARAM = 'srv.configure.param'
 
 _PPRINT = False
 if _PPRINT:
@@ -84,7 +86,7 @@ def respond_created_no_content(request, location):
 def respond_error(request, err_msg, response_code=http.BAD_REQUEST):
     request.setResponseCode(response_code)
     request.setHeader('Content-Type', 'text/plain; charset=ascii')
-    return str(err_msg)
+    return str(err_msg).encode('utf8')
 
 
 def respond_bad_json_entity(request, err_msg=None):
@@ -96,12 +98,12 @@ def respond_bad_json_entity(request, err_msg=None):
 def respond_no_resource(request, response_code=http.NOT_FOUND):
     request.setResponseCode(response_code)
     request.setHeader('Content-Type', 'text/plain; charset=ascii')
-    return 'No such resource'
+    return b'No such resource'
 
 
 def deferred_respond_unauthorized(request):
     request.setResponseCode(401)
-    request.write('Unauthorized')
+    request.write(b'Unauthorized')
     request.finish()
 
 
@@ -114,12 +116,14 @@ def deferred_respond_no_content(request, response_code=http.NO_CONTENT):
 def deferred_respond_error(request, err_msg, response_code=http.BAD_REQUEST):
     request.setResponseCode(response_code)
     request.setHeader('Content-Type', 'text/plain; charset=ascii')
-    request.write(str(err_msg))
+    request.write(str(err_msg).encode('utf8'))
     request.finish()
 
 
 def deferred_respond_ok(request, data, response_code=http.OK):
     request.setResponseCode(response_code)
+    if isinstance(data, six.string_types):
+        data = data.encode('utf8')
     request.write(data)
     request.finish()
 
@@ -127,7 +131,7 @@ def deferred_respond_ok(request, data, response_code=http.OK):
 def deferred_respond_no_resource(request, response_code=http.NOT_FOUND):
     request.setResponseCode(response_code)
     request.setHeader('Content-Type', 'text/plain; charset=ascii')
-    request.write('No such resource')
+    request.write(b'No such resource')
     request.finish()
 
 
@@ -173,7 +177,7 @@ def json_request_entity(fun):
                 content = json.loads(request.content.getvalue())
             except ValueError as e:
                 logger.info('Received invalid JSON document: %s', e)
-                return respond_error(request, 'Invalid JSON document: %s' % e)
+                return respond_error(request, b'Invalid JSON document: %s' % e)
             else:
                 return fun(self, request, content)
     return aux
@@ -294,8 +298,8 @@ class IntermediaryResource(AuthResource):
         links -- a list of tuple (rel, path, resource)
 
         For example:
-        links = [(u'foo', 'foo_sub_uri', server.Data('text/plain', 'foo'),
-                 (u'bar', 'bar_sub_uri', server.Data('text/plain', 'bar')]
+        links = [('foo', 'foo_sub_uri', server.Data('text/plain', 'foo'),
+                 ('bar', 'bar_sub_uri', server.Data('text/plain', 'bar')]
         IntermediaryResource(links)
 
         The difference between this resource and a plain Resource is that a
@@ -314,22 +318,22 @@ class IntermediaryResource(AuthResource):
         links = []
         for rel, path, _ in self._links:
             href = uri_append_path(base_uri, path)
-            links.append({u'rel': rel, u'href': href})
+            links.append({'rel': rel, 'href': href})
         return links
 
     @json_response_entity
     def render_GET(self, request):
-        content = {u'links': self._build_links(request.path)}
-        return json_dumps(content)
+        content = {'links': self._build_links(request.path)}
+        return json_dumps(content).encode('utf8')
 
 
 class ServerResource(IntermediaryResource):
     def __init__(self, app, dhcp_request_processing_service):
         links = [
-            (u'dev', 'dev_mgr', DeviceManagerResource(app, dhcp_request_processing_service)),
-            (u'cfg', 'cfg_mgr', ConfigManagerResource(app)),
-            (u'pg', 'pg_mgr', PluginManagerResource(app)),
-            (u'status', 'status', StatusResource()),
+            ('dev', 'dev_mgr', DeviceManagerResource(app, dhcp_request_processing_service)),
+            ('cfg', 'cfg_mgr', ConfigManagerResource(app)),
+            ('pg', 'pg_mgr', PluginManagerResource(app)),
+            ('status', 'status', StatusResource()),
             (REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(app.configure_service)),
         ]
         IntermediaryResource.__init__(self, links)
@@ -354,8 +358,8 @@ class OperationInProgressResource(AuthResource):
     @required_acl('provd.operation.read')
     @json_response_entity
     def render_GET(self, request):
-        content = {u'status': format_oip(self._oip)}
-        return json_dumps(content)
+        content = {'status': format_oip(self._oip)}
+        return json_dumps(content).encode('utf8')
 
     @required_acl('provd.operation.delete')
     def render_DELETE(self, request):
@@ -400,13 +404,13 @@ class ConfigureServiceResource(AuthResource):
         for id_, description in description_list:
             value = self._cfg_srv.get(id_)
             href = uri_append_path(request.path, id_)
-            params.append({u'id': id_,
-                           u'description': description,
-                           u'value': value,
-                           u'links': [{u'rel': REL_CONFIGURE_PARAM,
-                                       u'href': href}]})
-        content = {u'params': params}
-        return json_dumps(content)
+            params.append({'id': id_,
+                           'description': description,
+                           'value': value,
+                           'links': [{'rel': REL_CONFIGURE_PARAM,
+                                       'href': href}]})
+        content = {'params': params}
+        return json_dumps(content).encode('utf8')
 
 
 class PluginConfigureServiceResource(ConfigureServiceResource):
@@ -436,14 +440,14 @@ class ConfigureParameterResource(AuthResource):
             logger.info('Invalid/unknown key: %s', self.param_id)
             return respond_no_resource(request)
         else:
-            content = {u'param': {u'value': value}}
-            return json_dumps(content)
+            content = {'param': {'value': value}}
+            return json_dumps(content).encode('utf8')
 
     @required_acl('provd.configure.{param_id}.update')
     @json_request_entity
     def render_PUT(self, request, content):
         try:
-            value = content[u'param'][u'value']
+            value = content['param']['value']
         except KeyError:
             return respond_error(request, 'Wrong information in entity')
         else:
@@ -619,8 +623,8 @@ class _ListInstallxxxxResource(AuthResource):
             logger.error('Error while listing install packages', exc_info=True)
             return respond_error(request, e, http.INTERNAL_SERVER_ERROR)
         else:
-            content = {u'pkgs': pkgs}
-            return json_dumps(content)
+            content = {'pkgs': pkgs}
+            return json_dumps(content).encode('utf8')
 
 
 class InstalledResource(_ListInstallxxxxResource):
@@ -675,10 +679,10 @@ class PackageInstallableResource(InstallableResource):
 class DeviceManagerResource(IntermediaryResource):
     def __init__(self, app, dhcp_request_processing_service):
         links = [
-            (u'dev.synchronize', 'synchronize', DeviceSynchronizeResource(app)),
-            (u'dev.reconfigure', 'reconfigure', DeviceReconfigureResource(app)),
-            (u'dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(app, dhcp_request_processing_service)),
-            (u'dev.devices', 'devices', DevicesResource(app)),
+            ('dev.synchronize', 'synchronize', DeviceSynchronizeResource(app)),
+            ('dev.reconfigure', 'reconfigure', DeviceReconfigureResource(app)),
+            ('dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(app, dhcp_request_processing_service)),
+            ('dev.devices', 'devices', DevicesResource(app)),
         ]
         IntermediaryResource.__init__(self, links)
 
@@ -732,7 +736,7 @@ class DeviceReconfigureResource(AuthResource):
     @required_acl('provd.dev_mgr.reconfigure.create')
     def render_POST(self, request, content):
         try:
-            id = content[u'id']
+            id = content['id']
         except KeyError:
             return respond_bad_json_entity(request, 'Missing "id" key')
         else:
@@ -775,21 +779,21 @@ class DeviceDHCPInfoResource(AuthResource):
     @required_acl('provd.dev_mgr.dhcpinfo.create')
     def render_POST(self, request, content):
         try:
-            raw_dhcp_info = content[u'dhcp_info']
-            op = raw_dhcp_info[u'op']
-            ip = norm_ip(raw_dhcp_info[u'ip'])
-            if op == u'commit':
-                mac = norm_mac(raw_dhcp_info[u'mac'])
-                options = self._transform_options(raw_dhcp_info[u'options'])
+            raw_dhcp_info = content['dhcp_info']
+            op = raw_dhcp_info['op']
+            ip = norm_ip(raw_dhcp_info['ip'])
+            if op == 'commit':
+                mac = norm_mac(raw_dhcp_info['mac'])
+                options = self._transform_options(raw_dhcp_info['options'])
         except (KeyError, TypeError, ValueError) as e:
             logger.warning('Invalid DHCP info content: %s', e)
             return respond_error(request, e)
         else:
-            if op == u'commit':
-                dhcp_request = {u'ip': ip, u'mac': mac, u'options': options}
+            if op == 'commit':
+                dhcp_request = {'ip': ip, 'mac': mac, 'options': options}
                 self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
                 return respond_no_content(request)
-            elif op == u'expiry' or op == u'release':
+            elif op == 'expiry' or op == 'release':
                 # we are keeping this only for compatibility -- release and
                 # expiry event doesn't interest us anymore
                 return respond_no_content(request)
@@ -817,7 +821,7 @@ class DevicesResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(devices):
-            data = json_dumps({u'devices': list(devices)})
+            data = json_dumps({'devices': list(devices)})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
@@ -834,7 +838,7 @@ class DevicesResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.create')
     def render_POST(self, request, content):
         # XXX praise KeyError
-        device = content[u'device']
+        device = content['device']
 
         def on_valid_tenant(tenant_uuid):
             device['tenant_uuid'] = tenant_uuid
@@ -844,7 +848,7 @@ class DevicesResource(AuthResource):
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
             request.setHeader('Location', location)
-            data = json_dumps({u'id': id})
+            data = json_dumps({'id': id})
             deferred_respond_ok(request, data, http.CREATED)
 
         def on_errback(failure):
@@ -872,7 +876,7 @@ class DeviceResource(AuthResource):
             if device is None:
                 deferred_respond_no_resource(request)
             else:
-                data = json_dumps({u'device': device})
+                data = json_dumps({'device': device})
                 deferred_respond_ok(request, data)
 
         def on_error(failure):
@@ -887,7 +891,7 @@ class DeviceResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.{device_id}.update')
     def render_PUT(self, request, content):
         # XXX praise KeyError
-        device = content[u'device']
+        device = content['device']
         # XXX praise TypeError if device not dict
         device[ID_KEY] = self.device_id
 
@@ -950,8 +954,8 @@ class DeviceResource(AuthResource):
 class ConfigManagerResource(IntermediaryResource):
     def __init__(self, app):
         links = [
-            (u'cfg.configs', 'configs', ConfigsResource(app)),
-            (u'cfg.autocreate', 'autocreate', AutocreateConfigResource(app)),
+            ('cfg.configs', 'configs', ConfigsResource(app)),
+            ('cfg.autocreate', 'autocreate', AutocreateConfigResource(app)),
         ]
         IntermediaryResource.__init__(self, links)
 
@@ -971,7 +975,7 @@ class AutocreateConfigResource(AuthResource):
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
             request.setHeader('Location', location)
-            data = json_dumps({u'id': id})
+            data = json_dumps({'id': id})
             deferred_respond_ok(request, data, http.CREATED)
 
         def on_errback(failure):
@@ -995,7 +999,7 @@ class ConfigsResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(configs):
-            data = json_dumps({u'configs': list(configs)})
+            data = json_dumps({'configs': list(configs)})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
@@ -1008,12 +1012,12 @@ class ConfigsResource(AuthResource):
     @required_acl('provd.cfg_mgr.configs.create')
     def render_POST(self, request, content):
         # XXX praise KeyError
-        config = content[u'config']
+        config = content['config']
 
         def on_callback(id):
             location = uri_append_path(request.path, str(id))
             request.setHeader('Location', location)
-            data = json_dumps({u'id': id})
+            data = json_dumps({'id': id})
             deferred_respond_ok(request, data, http.CREATED)
 
         def on_errback(failure):
@@ -1042,7 +1046,7 @@ class ConfigResource(AuthResource):
             if config is None:
                 deferred_respond_no_resource(request)
             else:
-                data = json_dumps({u'config': config})
+                data = json_dumps({'config': config})
                 deferred_respond_ok(request, data)
 
         def on_error(failure):
@@ -1056,7 +1060,7 @@ class ConfigResource(AuthResource):
     @required_acl('provd.cfg_mgr.configs.{config_id}.update')
     def render_PUT(self, request, content):
         # XXX praise KeyError
-        config = content[u'config']
+        config = content['config']
         # XXX praise TypeError if config not dict
         config[ID_KEY] = self.config_id
 
@@ -1101,7 +1105,7 @@ class RawConfigResource(AuthResource):
             if raw_config is None:
                 deferred_respond_no_resource(request)
             else:
-                data = json_dumps({u'raw_config': raw_config})
+                data = json_dumps({'raw_config': raw_config})
                 deferred_respond_ok(request, data)
 
         def on_errback(failure):
@@ -1117,8 +1121,8 @@ class PluginManagerResource(IntermediaryResource):
     def __init__(self, app):
         links = [
             (REL_INSTALL_SRV, 'install', PluginManagerInstallServiceResource(app)),
-            (u'pg.plugins', 'plugins', PluginsResource(app.pg_mgr)),
-            (u'pg.reload', 'reload', PluginReloadResource(app)),
+            ('pg.plugins', 'plugins', PluginsResource(app.pg_mgr)),
+            ('pg.reload', 'reload', PluginReloadResource(app)),
         ]
         IntermediaryResource.__init__(self, links)
 
@@ -1230,10 +1234,10 @@ class PluginsResource(AuthResource):
         plugins = {}
         for pg_id in self._pg_mgr:
             href = uri_append_path(request.path, pg_id)
-            links = [{u'rel': u'pg.plugin', 'href': href}]
-            plugins[pg_id] = {u'links': links}
-        content = {u'plugins': plugins}
-        return json_dumps(content)
+            links = [{'rel': 'pg.plugin', 'href': href}]
+            plugins[pg_id] = {'links': links}
+        content = {'plugins': plugins}
+        return json_dumps(content).encode('utf8')
 
 
 class PluginReloadResource(AuthResource):
@@ -1269,13 +1273,13 @@ class PluginInfoResource(AuthResource):
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.info.read')
     def render_GET(self, request):
-        return json_dumps({u'plugin_info': self._plugin.info()})
+        return json_dumps({'plugin_info': self._plugin.info()}).encode('utf8')
 
 
 class PluginResource(IntermediaryResource):
     def __init__(self, plugin):
         self.plugin_id = plugin.id
-        links = [(u'pg.info', 'info', PluginInfoResource(plugin))]
+        links = [('pg.info', 'info', PluginInfoResource(plugin))]
         if 'install' in plugin.services:
             install_srv = plugin.services['install']
             links.append((REL_INSTALL_SRV, 'install', PluginInstallServiceResource(install_srv, plugin.id)))
@@ -1294,7 +1298,7 @@ class StatusResource(AuthResource):
     @json_response_entity
     @required_acl('provd.status.read')
     def render_GET(self, request):
-        return json_dumps({u'rest_api': 'ok'})
+        return json_dumps({'rest_api': 'ok'}).encode('utf8')
 
 
 def new_authenticated_server_resource(app, dhcp_request_processing_service):

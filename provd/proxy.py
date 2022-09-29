@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the urllib2 module that adds a proxy handler that can
@@ -8,7 +8,6 @@ be modified after its creation.
 """
 
 
-from __future__ import absolute_import
 import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
 
 

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 
 from provd.persist.common import ID_KEY, InvalidIdError, NonDeletableError
@@ -18,7 +20,7 @@ def _retrieve_doc_values(s_key, doc):
     # Return an iterator of matched value, i.e. all the value in the
     # doc that matches the select key
     def aux(current_s_key, current_doc):
-        pre, sep, post = current_s_key.partition(u'.')
+        pre, sep, post = current_s_key.partition('.')
         if not sep:
             assert pre == current_s_key
             if isinstance(current_doc, dict):
@@ -44,7 +46,7 @@ def _contains_operator(selector_value):
     # is an operator value, i.e. has an operator semantic.
     if isinstance(selector_value, dict):
         for k in six.iterkeys(selector_value):
-            if k.startswith(u'$'):
+            if k.startswith('$'):
                 return True
     return False
 
@@ -156,15 +158,15 @@ def _new_and_matcher(matchers):
 
 
 _MATCHER_FACTORIES = {
-    u'$in': _new_in_matcher,
-    u'$nin': _new_nin_matcher,
-    u'$contains': _new_contains_matcher,
-    u'$gt': _new_gt_matcher,
-    u'$ge': _new_ge_matcher,
-    u'$lt': _new_lt_matcher,
-    u'$le': _new_le_matcher,
-    u'$ne': _new_ne_matcher,
-    u'$exists': _new_exists_matcher,
+    '$in': _new_in_matcher,
+    '$nin': _new_nin_matcher,
+    '$contains': _new_contains_matcher,
+    '$gt': _new_gt_matcher,
+    '$ge': _new_ge_matcher,
+    '$lt': _new_lt_matcher,
+    '$le': _new_le_matcher,
+    '$ne': _new_ne_matcher,
+    '$exists': _new_exists_matcher,
 }
 
 def _new_operator_matcher(operator_key, operator_value):
@@ -270,7 +272,7 @@ class SimpleBackendDocumentCollection(object):
     def _new_key_fun_from_key(self, key):
         # Return a function usable for the key parameter of the sorted function
         # from a [sort] key
-        splitted_key = key.split(u'.')
+        splitted_key = key.split('.')
         def aux(document):
             cur_elem = document
             try:
@@ -308,7 +310,7 @@ class SimpleBackendDocumentCollection(object):
         if not fields:
             return lambda x: x
         else:
-            splitted_keys = [field.split(u'.') for field in fields]
+            splitted_keys = [field.split('.') for field in fields]
             def aux(document):
                 result = {ID_KEY: document[ID_KEY]}
                 for splitted_key in splitted_keys:
@@ -358,7 +360,7 @@ class SimpleBackendDocumentCollection(object):
         # Return an iterator that will return every documents matching
         # the given "regular" selector
         pred = _create_pred_from_selector(selector)
-        return filter(pred, documents)
+        return list(filter(pred, documents))
 
     def _new_indexes_iterator(self, indexes_selector):
         # Return an iterator that will return every documents in the backend
@@ -411,7 +413,7 @@ class SimpleBackendDocumentCollection(object):
             documents = self._new_iterator_over_matching_documents(selector)
         documents = self._new_skip_iterator(skip, documents)
         documents = self._new_limit_iterator(limit, documents)
-        documents = map(self._new_fields_map_function(fields), documents)
+        documents = list(map(self._new_fields_map_function(fields), documents))
         return documents
 
     def _do_find(self, selector, fields, skip, limit, sort):
@@ -496,7 +498,7 @@ class SimpleBackendDocumentCollection(object):
         # Return a function that takes a document and return a tuple where
         # the first element is true if the document has the complex key, and
         # the second element is the value of the complex key for this document
-        key_tokens = complex_key.split(u'.')
+        key_tokens = complex_key.split('.')
         def aux(document):
             value = document
             for key_token in key_tokens:

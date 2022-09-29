@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import contextlib
 import json
 import logging
@@ -44,8 +46,8 @@ class PluginNotLoadedError(Exception):
 
 _PLUGIN_INFO_FILENAME = 'plugin-info'
 # plugin information filename in each plugin directory.
-_PLUGIN_INFO_KEYS = [u'capabilities', u'description', u'version']
-_PLUGIN_INFO_INSTALLABLE_KEYS = _PLUGIN_INFO_KEYS + [u'dsize', u'filename', u'sha1sum']
+_PLUGIN_INFO_KEYS = ['capabilities', 'description', 'version']
+_PLUGIN_INFO_INSTALLABLE_KEYS = _PLUGIN_INFO_KEYS + ['dsize', 'filename', 'sha1sum']
 _PLUGIN_INFO_INSTALLED_KEYS = _PLUGIN_INFO_KEYS
 
 
@@ -65,14 +67,13 @@ def _check_raw_plugin_info(raw_plugin_info, id, keys):
 
 
 def _clean_localized_description(raw_plugin_info):
-    for key in raw_plugin_info.keys():
+    for key in list(raw_plugin_info.keys()):
         if key.startswith('description_'):
             del raw_plugin_info[key]
 
 
 def _new_localize_fun():
-    # Return a function that receive a raw plugin info and update
-    # it so it becomes localized
+    # Return a function that receives raw plugin info and localizes it
     locale, lang = get_locale_and_language()
     if locale is None:
         return _clean_localized_description
@@ -81,7 +82,7 @@ def _new_localize_fun():
         if locale == lang:
             def aux(raw_plugin_info):
                 try:
-                    raw_plugin_info[u'description'] = raw_plugin_info[locale_name]
+                    raw_plugin_info['description'] = raw_plugin_info[locale_name]
                 except KeyError:
                     pass
                 _clean_localized_description(raw_plugin_info)
@@ -90,10 +91,10 @@ def _new_localize_fun():
             lang_name = 'description_%s' % lang
             def aux(raw_plugin_info):
                 try:
-                    raw_plugin_info[u'description'] = raw_plugin_info[locale_name]
+                    raw_plugin_info['description'] = raw_plugin_info[locale_name]
                 except KeyError:
                     try:
-                        raw_plugin_info[u'description'] = raw_plugin_info[lang_name]
+                        raw_plugin_info['description'] = raw_plugin_info[lang_name]
                     except KeyError:
                         pass
                 _clean_localized_description(raw_plugin_info)
@@ -446,8 +447,8 @@ class TemplatePluginHelper(object):
         tpl_filenames = []
         if filename:
             tpl_filenames.append(filename + '.tpl')
-        if u'model' in dev:
-            tpl_filenames.append(dev[u'model'] + '.tpl')
+        if 'model' in dev:
+            tpl_filenames.append(dev['model'] + '.tpl')
         tpl_filenames.append('base.tpl')
         return self._get_first_template_from_filenames(tpl_filenames)
 
@@ -753,7 +754,7 @@ class PluginManager(object):
         logger.info('Closing plugin manager...')
         # important not to use an iterator over self._plugins since it is
         # modified in the unload method
-        for id in self._plugins.keys():
+        for id in list(self._plugins.keys()):
             self._unload_and_notify(id)
         logger.info('Plugin manager closed')
 
@@ -1029,7 +1030,7 @@ class PluginManager(object):
 
         Note that since observers are weakly referenced, you MUST keep a
         reference to each one somewhere in the application if you want them
-        not to be immediatly garbage collected.
+        not to be immediately garbage collected.
 
         """
         logger.debug('Attaching plugin manager observer %s', observer)
@@ -1049,7 +1050,7 @@ class PluginManager(object):
     def _notify(self, id, action):
         # action is either 'load' or 'unload'
         logger.debug('Notifying plugin manager observers: %s %s', action, id)
-        for observer in self._observers.keys():
+        for observer in list(self._observers.keys()):
             try:
                 logger.info('Notifying plugin manager observer %s', observer)
                 fun = getattr(observer, 'pg_' + action)
@@ -1093,9 +1094,9 @@ class PluginManager(object):
         at plugin load time.
 
         gen_cfg -- a mapping object with general configuration parameters.
-          These parameters are the same for every plugins.
+          These parameters are the same for every plugin.
         spec_cfg -- a mapping object with plugin-specific configuration
-          parameters. These parameters are specific to every plugins.
+          parameters. These parameters are specific to every plugin.
 
         """
         logger.info('Loading plugin %s', id)
@@ -1104,14 +1105,14 @@ class PluginManager(object):
         plugin_dir = os.path.join(self._plugins_dir, id)
         plugin_info = self._get_installed_plugin_info(plugin_dir)
         if self._check_compat_min:
-            min_compat = plugin_info.get(u'plugin_iface_version_min')
+            min_compat = plugin_info.get('plugin_iface_version_min')
             if min_compat is not None:
                 if self.PLUGIN_IFACE_VERSION < min_compat:
                     logger.error('Plugin %s is not compatible: %s < %s',
                                  id, self.PLUGIN_IFACE_VERSION, min_compat)
                     raise Exception('plugin min compat not satisfied')
         if self._check_compat_max:
-            max_compat = plugin_info.get(u'plugin_iface_version_max')
+            max_compat = plugin_info.get('plugin_iface_version_max')
             if max_compat is not None:
                 if self.PLUGIN_IFACE_VERSION > max_compat:
                     logger.error('Plugin %s is not compatible: %s > %s',

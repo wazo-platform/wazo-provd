@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright 2014-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2014-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from mock import Mock
 from twisted.internet import defer
 from twisted.trial import unittest
@@ -24,7 +26,7 @@ class TestStandardSipSynchronize(unittest.TestCase):
     def test_no_sync_service(self):
         synchronize._SYNC_SERVICE = None
         device = {
-            u'id': u'a',
+            'id': 'a',
         }
 
         try:
@@ -37,7 +39,7 @@ class TestStandardSipSynchronize(unittest.TestCase):
     @defer.inlineCallbacks
     def test_empty_device(self):
         device = {
-            u'id': u'a',
+            'id': 'a',
         }
 
         try:
@@ -50,10 +52,10 @@ class TestStandardSipSynchronize(unittest.TestCase):
     @defer.inlineCallbacks
     def test_device_with_remote_state_sip_username(self):
         device = {
-            u'id': u'a',
-            u'remote_state_sip_username': u'foobar',
+            'id': 'a',
+            'remote_state_sip_username': 'foobar',
         }
 
         yield synchronize.standard_sip_synchronize(device)
 
-        self.sync_service.sip_notify_by_peer.assert_called_once_with(u'foobar', 'check-sync', None)
+        self.sync_service.sip_notify_by_peer.assert_called_once_with('foobar', 'check-sync', None)

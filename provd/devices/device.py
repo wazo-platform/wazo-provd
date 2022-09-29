@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Device and device collection module.
@@ -39,6 +39,8 @@ Finally, device collection objects are used as a storage for device objects.
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 from copy import deepcopy
 from provd.util import is_normed_mac, is_normed_ip
@@ -46,8 +48,8 @@ from provd.persist.util import ForwardingDocumentCollection
 
 logger = logging.getLogger(__name__)
 
-_RECONF_KEYS = [u'plugin', u'config', u'mac', u'uuid',
-                u'vendor', u'model', u'version', 'options']
+_RECONF_KEYS = ['plugin', 'config', 'mac', 'uuid',
+                'vendor', 'model', 'version', 'options']
 
 
 def copy(device):
@@ -63,13 +65,13 @@ def needs_reconfiguration(old_device, new_device):
 
 
 def _check_device_validity(device):
-    if u'mac' in device:
-        if not is_normed_mac(device[u'mac']):
-            raise ValueError('Non-normalized MAC address %s' % device[u'mac'])
-    if u'ip' in device:
-        if not is_normed_ip(device[u'ip']):
-            raise ValueError('Non-normalized IP address %s' % device[u'ip'])
-    if u'tenant_uuid' not in device:
+    if 'mac' in device:
+        if not is_normed_mac(device['mac']):
+            raise ValueError('Non-normalized MAC address %s' % device['mac'])
+    if 'ip' in device:
+        if not is_normed_ip(device['ip']):
+            raise ValueError('Non-normalized IP address %s' % device['ip'])
+    if 'tenant_uuid' not in device:
         raise ValueError('Tenant UUID not specified')
 
 

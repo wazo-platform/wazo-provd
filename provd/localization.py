@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Localization service.
@@ -19,6 +19,7 @@ and modifiers) as for now since there would be no use.
 
 
 from __future__ import absolute_import
+
 import logging
 import re
 import weakref
@@ -62,7 +63,7 @@ class LocalizationService(object):
 
     def _notify(self, event, arg):
         logger.debug('Notifying localization observers: %s %s', event, arg)
-        for observer in self._observers.keys():
+        for observer in list(self._observers.keys()):
             try:
                 logger.info('Notifying localization observer %s', observer)
                 observer((event, arg))
