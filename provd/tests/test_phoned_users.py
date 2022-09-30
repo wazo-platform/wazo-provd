@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2020-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import unittest
 
 from hamcrest import assert_that, equal_to, has_key, not_

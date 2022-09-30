@@ -26,7 +26,7 @@ class AMIError(Exception):
     pass
 
 
-class AsteriskAMISynchronizeService(object):
+class AsteriskAMISynchronizeService:
 
     TYPE = 'AsteriskAMI'
 

@@ -2,8 +2,6 @@
 # Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import unicode_literals
-
 import functools
 from twisted.web import http
 
@@ -11,7 +9,7 @@ from twisted.web import http
 def numeric_id_generator(prefix='', start=0):
     n = start
     while True:
-        yield prefix + str(n)
+        yield f'{prefix}{n}'
         n += 1
 
 

@@ -1,21 +1,19 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """TFTP service definition module."""
 
-
-from __future__ import absolute_import
 import os
-from six import StringIO
+from abc import ABCMeta
+from io import StringIO
+
 from provd.servers.tftp.packet import ERR_FNF
-from zope.interface import Interface
 
 
-class ITFTPReadService(Interface):
+class AbstractTFTPReadService(metaclass=ABCMeta):
     """A TFTP read service handles TFTP read requests (RRQ)."""
 
-    def handle_read_request(request, response):
+    def handle_read_request(self, request, response):
         """Handle a TFTP read request (RRQ).
 
         request is a dictionary with the following keys:
@@ -30,17 +28,17 @@ class ITFTPReadService(Interface):
             send an error packet to the client.
           ignore -- call this method if you want to silently ignore
             the request. You'll get the same behaviour if you call no
-            method of the reponse object.
+            method of the response object.
 
         Note that it's fine not to call one of the response methods before
         returning the control to the caller, i.e. for an asynchronous use.
         If you never eventually call one of the response methods, it will
-        implicitly behave like if you would have called the ignore method.
+        implicitly behave like if you had called the ignore method.
 
         """
 
 
-class TFTPNullService(object):
+class TFTPNullService:
     """A read service that always reject the requests."""
 
     def __init__(self, errcode=ERR_FNF, errmsg="File not found"):
@@ -51,7 +49,7 @@ class TFTPNullService(object):
         response.reject(self.errcode, self.errmsg)
 
 
-class TFTPStringService(object):
+class TFTPStringService:
     """A read service that always serve the same string."""
     def __init__(self, msg):
         self._msg = msg
@@ -60,7 +58,7 @@ class TFTPStringService(object):
         response.accept(StringIO(self._msg))
 
 
-class TFTPFileService(object):
+class TFTPFileService:
     """A read service that serve files under a path.
 
     It strips any leading path separator of the requested filename. For
@@ -89,7 +87,7 @@ class TFTPFileService(object):
                 response.accept(fobj)
 
 
-class TFTPHookService(object):
+class TFTPHookService:
     """Base class for non-terminal read service.
 
     Services that only want to inspect the request should derive from this

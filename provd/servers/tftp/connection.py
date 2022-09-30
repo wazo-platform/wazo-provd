@@ -7,8 +7,6 @@
 
 # TODO RFC1122 says we must use an adaptive timeout...
 
-from __future__ import absolute_import
-
 import struct
 import logging
 from provd.servers.tftp.packet import *

@@ -1,22 +1,17 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Return the current UTC offset and DST rules of arbitrary timezones.
 
 """
-
-
-
 import os.path
-from six.moves import range
 
 
 class TimezoneNotFoundError(Exception):
     pass
 
 
-class Time(object):
+class Time:
     def __init__(self, raw_seconds):
         self._raw_seconds = raw_seconds
 
@@ -61,7 +56,7 @@ class Time(object):
         return [seconds // 3600, seconds // 60 % 60, seconds % 60]
 
 
-class TextTimezoneInfoDB(object):
+class TextTimezoneInfoDB:
     """Instances of TextTimeZoneInfoDB return timezone information read from a
     text file. The file format is the same as the one created by default for
     the tzdataexport tool.
@@ -127,7 +122,7 @@ class TextTimezoneInfoDB(object):
             raise TimezoneNotFoundError(timezone_name)
 
 
-class DefaultTimezoneInfoDB(object):
+class DefaultTimezoneInfoDB:
     """Instances of DefaultTimezoneInfoDB returns timezone information from
     another TimezoneInfoDB, or a default timezone information in the case the
     timezone can't be found.

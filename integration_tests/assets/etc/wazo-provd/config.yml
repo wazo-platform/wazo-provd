@@ -1,5 +1,6 @@
 general:
   plugin_server: http://pluginserver:8080/
+  verbose: true
 rest_api:
   ip: 0.0.0.0
 auth:

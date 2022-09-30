@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Low-level functions to manipulate packets and datagrams.
@@ -7,9 +6,6 @@
 A packet is a dictionary object. A dgram (datagram) is a string object.
 
 """
-import six
-from six.moves import range
-
 
 OP_RRQ = '\x00\x01'
 OP_WRQ = '\x00\x02'
@@ -167,10 +163,10 @@ def _build_error(packet):
 
 
 def _build_oack(packet):
-    for opt, val in six.iteritems(packet['options']):
+    for opt, val in packet['options'].items():
         if '\x00' in opt or '\x00' in val:
             raise PacketError('null byte in option/value')
-    return '\x00'.join(elem for pair in six.iteritems(packet['options']) for elem in pair) + '\x00'
+    return '\x00'.join(elem for pair in packet['options'].items() for elem in pair) + '\x00'
 
 
 _BUILD_MAP = {

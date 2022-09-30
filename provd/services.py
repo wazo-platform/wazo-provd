@@ -1,14 +1,17 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Standardized service definition and helper."""
-
+from __future__ import annotations
 
 import json
 import logging
-from zope.interface import Attribute, Interface, implementer
-import six
+from abc import ABCMeta, abstractmethod
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    from twisted.internet.defer import Deferred
+    from provd.operation import OperationInProgress
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +20,7 @@ class InvalidParameterError(Exception):
     pass
 
 
-class IConfigureService(Interface):
+class AbstractConfigurationService(metaclass=ABCMeta):
     """Interface for a "configuration service".
 
     This service offers an easy way to discover a certain number of "parameters"
@@ -34,7 +37,8 @@ class IConfigureService(Interface):
 
     """
 
-    def get(name):
+    @abstractmethod
+    def get(self, name: str) -> str | None:
         """Return the value associated with a parameter.
 
         The object returned MUST be a string, or None if there's no value
@@ -45,7 +49,8 @@ class IConfigureService(Interface):
 
         """
 
-    def set(name, value):
+    @abstractmethod
+    def set(self, name: str, value: str | None) -> None:
         """Associate a value with a parameter.
 
         The value MUST be a string, or None if there's no value to associate
@@ -56,10 +61,11 @@ class IConfigureService(Interface):
         Raise an InvalidParameterError if the value for this parameter is not
         valid/acceptable. This means None has a special meaning and can't
         be used as a value.
-
         """
 
-    description = Attribute(
+    @property
+    @abstractmethod
+    def description(self) -> tuple[str, str | None]:
         """A read-only list of tuple where the first element is the name of
         the parameter that can be set and the second element is a short
         description of the parameter.
@@ -69,12 +75,11 @@ class IConfigureService(Interface):
         Localized description can also be given, which has the same structure
         as this attribute but with the name 'description_<locale>', i.e.
         'description_fr' for example.
+        """
 
-        """)
 
-
-class IInstallService(Interface):
-    """Interface for an install service.
+class AbstractInstallationService(metaclass=ABCMeta):
+    """Interface for an installation service.
 
     It offers a download/install/uninstall service, where files can be
     downloaded and manipulated in a way they can be used by the plugin to
@@ -86,33 +91,35 @@ class IInstallService(Interface):
     let the choice to the user.
 
     """
-    def install(pkg_id):
+
+    @abstractmethod
+    def install(self, pkg_id: str) -> tuple[Deferred, OperationInProgress]:
         """Install a package.
 
         The package SHOULD be reinstalled even if it seemed to be installed.
 
         Return a tuple (deferred, operation in progress).
 
-        Raise an Exception if there's already an install operation in progress
-        for the package.
+        Raise an Exception if there's already an installation in progress for the package.
 
         Raise an Exception if pkg_id is unknown.
 
         """
 
-    def uninstall(pkg_id):
+    @abstractmethod
+    def uninstall(self, pkg_id: str) -> None:
         """Uninstall a package.
 
         Raise an Exception if pkg_id is unknown.
 
         """
 
-    # XXX should probably rename list_installable, list_installed (remove list_)
-    def list_installable():
+    @abstractmethod
+    def list_installable(self):
         """Return a dictionary of installable packages, where keys are
         package identifier and values are dictionary of package information.
 
-        The package information dictionary can contains the following keys,
+        The package information dictionary can contain the following keys,
         which are all optional:
           dsize -- the download size of the package, in bytes
           isize -- the installed size of the package, in bytes
@@ -121,18 +128,18 @@ class IInstallService(Interface):
 
         """
 
-    def list_installed():
+    @abstractmethod
+    def list_installed(self):
         """Return a dictionary of installed packages, where keys are package
         identifier and value are dictionary of package information.
 
-        The package information dictionary can contains the following keys,
+        The package information dictionary can contain the following keys,
         which are all optional:
           version -- the version of the package
           description -- the description of the package
 
         """
-
-    def upgrade(pkg_id):
+    def upgrade(self, pkg_id):
         """Upgrade a package (optional operation).
 
         Interface similar to the one for the 'install' method.
@@ -141,7 +148,7 @@ class IInstallService(Interface):
 
         """
 
-    def update():
+    def update(self):
         """Update the list of installable package (optional operation).
 
         Return a tuple (deferred, operation in progress).
@@ -155,18 +162,19 @@ class IInstallService(Interface):
 
 # Some base service implementation
 
-class IConfigureServiceParam(Interface):
-    description = Attribute("The description of this parameter, or None.")
+class AbstractConfigurationServiceParameter:
+    description: str | None
 
-    def get():
+    @abstractmethod
+    def get(self) -> Any:
         """Get the value of this parameter."""
 
-    def set(value):
+    @abstractmethod
+    def set(self, value: Any) -> None:
         """Set the value of this parameter."""
 
 
-@implementer(IConfigureServiceParam)
-class AttrConfigureServiceParam(object):
+class AttrConfigurationServiceParameter(AbstractConfigurationServiceParameter):
     def __init__(self, obj, name, description=None, check_fun=None, **kwargs):
         # kwargs is used to set localized description for example "description_fr='bonjour'"
         self._obj = obj
@@ -184,12 +192,10 @@ class AttrConfigureServiceParam(object):
         setattr(self._obj, self._name, value)
 
 
-# @implementer(IConfigureServiceParam)
-class DictConfigureServiceParam(object):
+class DictConfigurationServiceParameter(AbstractConfigurationServiceParameter):
+    # Note that this deletes the key from the dict when setting a None valueIInstallService
 
-    # Note that this delete the key from the dict when setting a None value
-
-    def __init__(self, dict_, key, description=None, check_fun=None, **kwargs):
+    def __init__(self, dict_: dict, key: Any, description: str = None, check_fun: Callable = None, **kwargs: Any):
         # kwargs is used to set localized description, for example "description_fr='bonjour'"
         self._dict = dict_
         self._key = key
@@ -197,10 +203,10 @@ class DictConfigureServiceParam(object):
         self._check_fun = check_fun
         self.__dict__.update(kwargs)
 
-    def get(self):
+    def get(self) -> Any:
         return self._dict.get(self._key)
 
-    def set(self, value):
+    def set(self, value: Any) -> None:
         if self._check_fun is not None:
             self._check_fun(value)
         if value is None:
@@ -210,12 +216,11 @@ class DictConfigureServiceParam(object):
             self._dict[self._key] = value
 
 
-@implementer(IConfigureService)
-class BaseConfigureService(object):
-    def __init__(self, params):
+class BaseConfigurationService(AbstractConfigurationService):
+    def __init__(self, params: dict):
         """
         params -- a dictionary object where keys are parameter names and
-          values are IConfigureServiceParam objects. After a call to this
+          values are AbstractConfigurationService objects. After a call to this
           method, the params object belong to this object.
 
         Note that right now if you want a specific order in the description,
@@ -224,32 +229,32 @@ class BaseConfigureService(object):
         """
         self._params = params
 
-    def get(self, name):
+    def get(self, name: str) -> Any:
         param = self._params[name]
         return param.get()
 
-    def set(self, name, value):
+    def set(self, name: str, value: Any) -> None:
         param = self._params[name]
         param.set(value)
 
     @property
-    def description(self):
-        return [(k, v.description) for k, v in six.iteritems(self._params)]
+    def description(self) -> list[tuple[str, str]]:
+        return [(k, v.description) for k, v in self._params.items()]
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         # used to implement the localized description
         if not name.startswith('description_'):
             raise AttributeError(name)
-        description_dict = [(k, getattr(v, name)) for k, v in
-                            six.iteritems(self._params) if hasattr(v, name)]
+        description_dict = [
+            (k, getattr(v, name)) for k, v in self._params.items() if hasattr(v, name)
+        ]
         if not description_dict:
             raise AttributeError(name)
-        else:
-            return description_dict
+        return description_dict
 
 
-class PersistentConfigureServiceDecorator(object):
-    # Add persistence to a configure service.
+class PersistentConfigurationServiceDecorator:
+    # Add persistence to a configuration service.
     # This is quite ad-hoc, and something more centralized with something a
     # bit more elaborated could be better on certain point, but since our
     # needs is low currently, this might be just fine.
@@ -260,7 +265,7 @@ class PersistentConfigureServiceDecorator(object):
 
     def _load_params(self):
         params = self._persister.params()
-        for name, value in six.iteritems(params):
+        for name, value in params.items():
             logger.debug('Setting configure param %s to %s', name, value)
             try:
                 self._cfg_service.set(name, value)
@@ -270,42 +275,42 @@ class PersistentConfigureServiceDecorator(object):
                 logger.warning('Invalid value "%s" for parameter "%s": %s',
                                value, name, e)
 
-    def get(self, name):
+    def get(self, name: str) -> Any:
         return self._cfg_service.get(name)
 
-    def set(self, name, value):
+    def set(self, name: str, value: Any) -> None:
         self._cfg_service.set(name, value)
         self._persister.update(name, value)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         # used for description and localized description
         return getattr(self._cfg_service, name)
 
 
-class JsonConfigPersister(object):
-    def __init__(self, filename):
+class JsonConfigPersister:
+    def __init__(self, filename: str) -> None:
         self._filename = filename
         self._cache = {}
         self._load()
 
     def _load(self):
         try:
-            with open(self._filename) as fobj:
-                self._cache = json.load(fobj)
+            with open(self._filename) as f:
+                self._cache = json.load(f)
         except IOError as e:
             logger.debug('Could not load file %s: %s', self._filename, e)
         except ValueError as e:
             logger.warning('Invalid content in file %s: %s', self._filename, e)
 
-    def _save(self):
-        with open(self._filename, 'w') as fobj:
-            json.dump(self._cache, fobj)
+    def _save(self) -> None:
+        with open(self._filename, 'w') as f:
+            json.dump(self._cache, f)
 
-    def params(self):
+    def params(self) -> dict:
         # Return every persisted parameter as a dictionary of parameters
         # names and values.
         return dict(self._cache)
 
-    def update(self, name, value):
+    def update(self, name: str, value: Any) -> None:
         self._cache[name] = value
         self._save()

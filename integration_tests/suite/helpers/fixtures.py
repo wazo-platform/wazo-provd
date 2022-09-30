@@ -1,15 +1,13 @@
 # Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-
-from __future__ import absolute_import
 from wazo_test_helpers import until
 from .operation import operation_successful
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 
 
-class Device(object):
+class Device:
 
     device_counter = 0
 
@@ -43,7 +41,7 @@ class Device(object):
             self._client.devices.delete(self._device['id'])
 
 
-class Plugin(object):
+class Plugin:
     def __init__(self, client, delete_on_exit=True):
         self._client = client
         self._plugin = None
@@ -64,7 +62,7 @@ class Plugin(object):
             self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
 
 
-class Configuration(object):
+class Configuration:
 
     def __init__(self, client, delete_on_exit=True):
         self._client = client

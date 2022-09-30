@@ -24,7 +24,7 @@ class BaseHTTPHookService(resource.Resource):
     """Base class for HTTPHookService. Not made to be instantiated directly."""
 
     def __init__(self, service):
-        resource.Resource.__init__(self)
+        super().__init__()
         self._service = service
 
     def _next_service(self, path, request):
@@ -33,8 +33,7 @@ class BaseHTTPHookService(resource.Resource):
         if resrc.isLeaf:
             request.postpath.insert(0, request.prepath.pop())
             return resrc
-        else:
-            return resrc.getChildWithDefault(path, request)
+        return resrc.getChildWithDefault(path, request)
 
 
 class HTTPHookService(BaseHTTPHookService):
@@ -85,11 +84,11 @@ class HTTPLogService(HTTPHookService):
         logger -- a callable object taking a string as argument
         
         """
-        HTTPHookService.__init__(self, service)
+        super().__init__(service)
         self._logger = logger
 
     def _pre_handle(self, path, request):
-        self._logger(str(path) + ' ---- ' + str(request))
+        self._logger(f'{path} ---- {request}')
 
 
 class HTTPNoListingFileService(static.File):
@@ -106,7 +105,6 @@ class HTTPNoListingFileService(static.File):
         return self._FORBIDDEN_RESOURCE
 
     def getChild(self, path, request):
-        if request.method != 'GET':
+        if request.method != b'GET':
             return self._NOT_ALLOWED_RESOURCE
-        else:
-            return static.File.getChild(self, path, request)
+        return static.File.getChild(self, path, request)
