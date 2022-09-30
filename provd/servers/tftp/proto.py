@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-from __future__ import absolute_import
-
 import logging
 from provd.servers.tftp.connection import RFC2347Connection, RFC1350Connection
 from provd.servers.tftp.packet import *
@@ -13,7 +10,7 @@ from twisted.internet.protocol import DatagramProtocol
 logger = logging.getLogger(__name__)
 
 
-class _Response(object):
+class _Response:
     def __init__(self, freject, faccept):
         self._answered = False
         self._do_reject = freject

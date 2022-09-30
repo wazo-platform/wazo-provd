@@ -4,11 +4,6 @@
 
 # NOTE: these tests are not automated (yet). You need to manually check
 #       the output of each test and compare it with the expected output...
-
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import time
 from provd.synchro import DeferredRWLock
 from twisted.internet import defer

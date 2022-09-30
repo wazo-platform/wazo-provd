@@ -8,7 +8,7 @@ OIP_SUCCESS = 'success'
 OIP_FAIL = 'fail'
 
 
-class OperationInProgress(object):
+class OperationInProgress:
     """Base class for operations in progress.
     
     An operation in progress is a monitor over an underlying operation. It's

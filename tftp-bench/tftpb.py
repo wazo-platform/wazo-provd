@@ -1,15 +1,11 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# Copyright 2014-2021 The Wazo Authors  (see the AUTHORS file)
+#!/usr/bin/python3
+# Copyright 2014-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
-from __future__ import print_function
 import argparse
 import os
 import socket
 import subprocess
-import sys
 import time
 from itertools import chain, repeat
 
@@ -55,7 +51,7 @@ def main():
         stats.display()
 
 
-class Statistics(object):
+class Statistics:
 
     def __init__(self):
         self._rrq_success = 0

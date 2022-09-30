@@ -2,7 +2,6 @@
 # Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 import unittest
 from provd.servers.tftp.packet import parse_dgram, PacketError, OP_RRQ
 

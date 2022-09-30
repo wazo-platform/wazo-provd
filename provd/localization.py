@@ -17,9 +17,6 @@ and modifiers) as for now since there would be no use.
 
 """
 
-
-from __future__ import absolute_import
-
 import logging
 import re
 import weakref
@@ -33,7 +30,7 @@ _LOCALE_REGEX = re.compile(r'^[a-z]{2,3}(?:_[A-Z]{2,3})?$')
 LOCALE_CHANGED = 'locale_changed'
 
 
-class LocalizationService(object):
+class LocalizationService:
     def __init__(self, locale=None):
         self._locale = locale
         self._observers = weakref.WeakKeyDictionary()
@@ -63,7 +60,7 @@ class LocalizationService(object):
 
     def _notify(self, event, arg):
         logger.debug('Notifying localization observers: %s %s', event, arg)
-        for observer in list(self._observers.keys()):
+        for observer in self._observers:
             try:
                 logger.info('Notifying localization observer %s', observer)
                 observer((event, arg))

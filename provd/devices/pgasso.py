@@ -1,73 +1,73 @@
-# -*- coding: utf-8 -*-
 # Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Automatic plugin association."""
-
-
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import annotations
 
 import logging
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from enum import IntEnum
 from operator import itemgetter
-from provd.devices.ident import IDeviceUpdater
+from typing import Any
+
+from provd.devices.ident import AbstractDeviceUpdater
 from twisted.internet import defer
-from zope.interface import implementer, Interface
-import six
 
 logger = logging.getLogger(__name__)
 
 
-NO_SUPPORT = 0
-# Used when the device is known to not be supported
-IMPROBABLE_SUPPORT = 100
-# Used when it is expected the device won't be supported
-UNKNOWN_SUPPORT = 200
-# Used when not enough information is available to take a decision or when
-# the plugin is not interested in supporting the device.
-PROBABLE_SUPPORT = 300
-# Used when it is expected the device will be supported, but we are either
-# missing some information, either we don't know for real if this device is
-# supported, i.e. no test have been done
-INCOMPLETE_SUPPORT = 400
-# The device is supported, but in an incomplete way. This might be because
-# it's a kind of device that share some similarities but also have some
-# difference, or because this would be a completely supported device but we
-# did not add explicit support for it
-COMPLETE_SUPPORT = 500
-# The device is completely supported, i.e. we know it works well, but the
-# device might not be in the version we are targeting, but in a version that
-# is so closely similar that it makes no difference
-FULL_SUPPORT = 600
-# The device is exactly what the plugin is targeting.
+class DeviceSupport(IntEnum):
+    # Used when the device is known to not be supported
+    NONE = 0
+    # Used when it is expected the device won't be supported
+    IMPROBABLE = 100
+    # Used when not enough information is available to take a decision or when
+    # the plugin is not interested in supporting the device.
+    UNKNOWN = 200
+    # Used when it is expected the device will be supported, but we are either
+    # missing some information, either we don't know for real if this device is
+    # supported, i.e. no test have been done
+    PROBABLE = 300
+    # The device is supported, but in an incomplete way. This might be because
+    # it's a kind of device that share some similarities but also have some
+    # difference, or because this would be a completely supported device but we
+    # did not add explicit support for it
+    INCOMPLETE = 400
+    # The device is completely supported, i.e. we know it works well, but the
+    # device might not be in the version we are targeting, but in a version that
+    # is so closely similar that it makes no difference
+    COMPLETE = 500
+    # The device is exactly what the plugin is targeting.
+    EXACT = 600
 
 
-class IPluginAssociator(Interface):
-    def associate(dev_info):
+class AbstractPluginAssociator(metaclass=ABCMeta):
+
+    @abstractmethod
+    def associate(self, dev_info: dict[str, Any]) -> DeviceSupport:
         """Return a 'support score' from a device info object."""
 
 
-@implementer(IPluginAssociator)
-class BasePgAssociator(object):
+class BasePgAssociator(AbstractPluginAssociator):
     def associate(self, dev_info):
         vendor = dev_info.get('vendor')
         if vendor is None:
-            return UNKNOWN_SUPPORT
-        else:
-            model = dev_info.get('model')
-            version = dev_info.get('version')
-            return self._do_associate(vendor, model, version)
+            return DeviceSupport.UNKNOWN
+        model = dev_info.get('model')
+        version = dev_info.get('version')
+        return self._do_associate(vendor, model, version)
 
-    def _do_associate(self, vendor, model, version):
+    def _do_associate(self, vendor: str, model: str, version: str) -> DeviceSupport:
         """
         Pre: vendor is not None
         """
         raise NotImplementedError('must be overridden in derived class')
 
 
-class IConflictSolver(Interface):
-    def solve(pg_ids):
+class AbstractConflictSolver(metaclass=ABCMeta):
+    @abstractmethod
+    def solve(self, pg_ids: list[str]) -> str | None:
         """
         Return a pg_id or None if not able to solve the conflict.
 
@@ -75,16 +75,14 @@ class IConflictSolver(Interface):
         """
 
 
-@implementer(IConflictSolver)
-class ReverseAlphabeticConflictSolver(object):
+class ReverseAlphabeticConflictSolver(AbstractConflictSolver):
     def solve(self, pg_ids):
         return max(pg_ids)
 
 
-@implementer(IDeviceUpdater)
-class PluginAssociatorDeviceUpdater(object):
+class PluginAssociatorDeviceUpdater(AbstractDeviceUpdater):
     force_update = False
-    min_level = PROBABLE_SUPPORT
+    min_level = DeviceSupport.PROBABLE
 
     def __init__(self, pg_mgr, conflict_solver):
         self._pg_mgr = pg_mgr
@@ -100,7 +98,7 @@ class PluginAssociatorDeviceUpdater(object):
     def _do_update(self, dev_info):
         pg_scores = self._get_scores(dev_info)
         if pg_scores:
-            max_score, pg_ids = max(six.iteritems(pg_scores), key=itemgetter(0))
+            max_score, pg_ids = max(pg_scores.items(), key=itemgetter(0))
             if max_score >= self.min_level:
                 assert pg_ids
                 if len(pg_ids) == 1:
@@ -116,7 +114,7 @@ class PluginAssociatorDeviceUpdater(object):
 
     def _get_scores(self, dev_info):
         pg_scores = defaultdict(list)
-        for pg_id, pg in six.iteritems(self._pg_mgr):
+        for pg_id, pg in self._pg_mgr.items():
             sstor = pg.pg_associator
             if sstor is not None:
                 try:

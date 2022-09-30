@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from hamcrest import assert_that, equal_to, has_entry
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 from provd.devices import ident
-from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper,\
-    RemoveOutdatedIpDeviceUpdater, AddDeviceRetriever
+from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper, \
+    RemoveOutdatedIpDeviceUpdater, AddDeviceRetriever, RequestType
 from twisted.internet import defer
 from twisted.trial import unittest
 
@@ -224,7 +220,7 @@ class TestRequestHelper(unittest.TestCase):
         dev_info = {}
         self.request = Mock()
         self.request.path = '001122334455.cfg'
-        self.request_type = 'http'
+        self.request_type = RequestType.HTTP
         plugin = Mock()
         plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
         self.app.pg_mgr.get.return_value = plugin
@@ -258,7 +254,7 @@ class TestRequestHelper(unittest.TestCase):
         dev_info = {}
         self.request = Mock()
         self.request.path = '001122334455.cfg'
-        self.request_type = 'http'
+        self.request_type = RequestType.HTTP
         plugin = Mock()
         plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
         self.app.pg_mgr.get.return_value = plugin
@@ -324,10 +320,10 @@ class TestLogSensitiveRequest(unittest.TestCase):
     def setUp(self):
         self.ip = '169.254.0.1'
         self.filename = 'foobar.cfg'
-        self.request_type = ident.REQUEST_TYPE_HTTP
+        self.request_type = ident.RequestType.HTTP
         self.request = Mock()
         self.request.getClientIP.return_value = self.ip
-        self.request.path = '/{}'.format(self.filename)
+        self.request.path = f'/{self.filename}'
         self.plugin = Mock()
 
     @patch('provd.devices.ident.log_security_msg')

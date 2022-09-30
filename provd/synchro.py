@@ -16,7 +16,7 @@ class InvalidLockUsage(Exception):
     pass
 
 
-class _DeferredRWLock_Base(object):
+class _DeferredRWLock_Base:
     def __init__(self, acquire_fun, release_fun):
         self._acquire_fun = acquire_fun
         self._release_fun = release_fun
@@ -42,7 +42,7 @@ class _DeferredRWLock_Base(object):
         self._release_fun()
 
 
-class DeferredRWLock(object):
+class DeferredRWLock:
     """A read-write lock for event driven systems.
     
     Instances of this class have the following attributes:

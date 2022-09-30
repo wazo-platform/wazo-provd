@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 import os.path
+
+from zope.interface import implementer
+
 import provd.config
 import provd.localization
 import provd.synchronize
@@ -31,14 +30,12 @@ from twisted.python import log
 from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
-from zope.interface import implementer
 from xivo.token_renewer import TokenRenewer
-import six
 
 logger = logging.getLogger(__name__)
 
 LOG_FILE_NAME = '/var/log/wazo-provd.log'
-API_VERSION = '0.2'
+API_VERSION = b'0.2'
 
 
 # given in command line to redirect logs to standard logging
@@ -57,11 +54,10 @@ class ProvisioningService(Service):
         self._config = config
 
     def _extract_database_specific_config(self):
-        db_config = {}
-        for k, v in six.iteritems(self._config['database']):
-            if k not in ['type', 'generator']:
-                db_config[k] = v
-        return db_config
+        return {
+            k: v for k, v in self._config['database'].items()
+            if k not in ['type', 'generator']
+        }
 
     def _create_database(self):
         db_type = self._config['database']['type']
@@ -133,7 +129,7 @@ class ProcessService(Service):
         conffile_globals = self._get_conffile_globals()
         try:
             with open(pathname, 'rb') as f:
-                six.exec_(compile(f.read(), pathname, 'exec'), conffile_globals)
+                exec(compile(f.read(), pathname, 'exec'), conffile_globals)
         except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
@@ -232,8 +228,8 @@ class RemoteConfigurationService(Service):
 
         # /{version}/api/api.yml
         api_resource = UnsecuredResource()
-        api_resource.putChild('api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
-        server_resource.putChild('api', api_resource)
+        api_resource.putChild(b'api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
+        server_resource.putChild(b'api', api_resource)
 
         rest_site = Site(root_resource)
 
@@ -328,7 +324,7 @@ class TokenRenewerService(Service):
 
 
 @implementer(IServiceMaker, IPlugin)
-class ProvisioningServiceMaker(object):
+class ProvisioningServiceMaker:
     tapname = 'wazo-provd'
     description = 'A provisioning server.'
     options = provd.config.Options

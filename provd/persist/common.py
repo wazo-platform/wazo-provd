@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -44,9 +43,10 @@ Here's examples of valid selector and the documents the selector will match:
     Match: {"a": 1}, {"a": 2}, {"a": [1]}, {"a": [1, 3]}
 
 """
+from __future__ import annotations
 
-
-from zope.interface import Interface
+from abc import ABCMeta, abstractmethod
+from typing import Any
 
 ID_KEY = 'id'
 
@@ -58,21 +58,23 @@ class InvalidIdError(Exception):
 class NonDeletableError(Exception):
 
     def __init__(self, document):
-        super(NonDeletableError, self).__init__('The document {} is not deletable'.format(document))
+        super().__init__(f'The document {document} is not deletable')
         self.document = document
 
 
-class IDocumentCollection(Interface):
+class AbstractDocumentCollection(metaclass=ABCMeta):
     """A collection of documents."""
 
-    def close():
+    @abstractmethod
+    def close(self):
         """Close the collection. This method may be called more than once, and
         if it doesn't raise an exception on the first time, it should not
         raise an exception the next times it is called.
 
         """
 
-    def insert(document):
+    @abstractmethod
+    def insert(self, document):
         """Store a new document in the collection and return a deferred that
         will fire with the ID of the newly added document once the document
         has been successfully inserted.
@@ -86,7 +88,8 @@ class IDocumentCollection(Interface):
 
         """
 
-    def update(document):
+    @abstractmethod
+    def update(self, document: str):
         """Update the document with the current document and return a
         deferred that fire with None once the document has been successfully
         updated.
@@ -97,7 +100,8 @@ class IDocumentCollection(Interface):
 
         """
 
-    def delete(id):
+    @abstractmethod
+    def delete(self, document_id: str):
         """Delete the document with the given ID and return a deferred that
         fire with None once the document with the given id has been
         successfully deleted.
@@ -107,13 +111,15 @@ class IDocumentCollection(Interface):
 
         """
 
-    def retrieve(id):
+    @abstractmethod
+    def retrieve(self, document_id):
         """Return a deferred that will fire with the document with the given
         ID, or fire with None if there's no such document.
 
         """
 
-    def find(selector, fields, skip, limit, sort):
+    @abstractmethod
+    def find(self, selector: dict, fields: list[str], skip: int, limit: int, sort: tuple[str, int]):
         """Return a deferred that will fire with an iterator over documents
         that match the selector.
 
@@ -134,13 +140,15 @@ class IDocumentCollection(Interface):
 
         """
 
-    def find_one(selector):
+    @abstractmethod
+    def find_one(self, selector):
         """Return a deferred that will fire with the 'first' document that
         match the selector, or fire with None if there's no document.
 
         """
 
-    def ensure_index(complex_key):
+    @abstractmethod
+    def ensure_index(self, complex_key):
         """Create an index on the given complex key if it does not already
         exist and return a deferred that fire with None once the index has
         been created.
@@ -155,17 +163,19 @@ class IDocumentCollection(Interface):
         """
 
 
-class IDatabase(Interface):
+class AbstractDatabase(metaclass=ABCMeta):
     """A database is a group of zero or more document collections."""
 
-    def close():
+    @abstractmethod
+    def close(self):
         """Close the underlying collections and the database. All resources
         used by the collections and the database should be freed after a call
         to this method.
 
         """
 
-    def collection(id):
+    @abstractmethod
+    def collection(self, collection_id: str) -> AbstractDatabase:
         """Return the collection with the given id.
 
         Raise a ValueError if there's no collection with the given id and/or
@@ -174,8 +184,10 @@ class IDatabase(Interface):
         """
 
 
-class IDatabaseFactory(Interface):
-    def new_database(type, generator, **kwargs):
+class AbstractDatabaseFactory(metaclass=ABCMeta):
+    @staticmethod
+    @abstractmethod
+    def new_database(db_type: str, generator: str, **kwargs: Any) -> AbstractDatabase:
         """Return a new database object.
 
         - type is a string identifying the type of database to create.
