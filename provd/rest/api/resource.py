@@ -10,4 +10,4 @@ class ResponseFile(File):
         return File.render(self, request)
 
     def render_OPTIONS(self, request):
-        return ''
+        return b''

@@ -864,7 +864,7 @@ class ProvisioningApplication:
         logger.info('Installing and loading plugin %s', plugin_id)
         if self.pg_mgr.is_installed(plugin_id):
             logger.error('Error: plugin %s is already installed', plugin_id)
-            raise Exception('plugin %s is already installed' % plugin_id)
+            raise Exception(f'plugin {plugin_id} is already installed')
 
         def callback1(_):
             # reset the state to in progress

@@ -524,7 +524,7 @@ class SimpleBackendDocumentCollection:
         # Return an iterator that yield (id, value) tuple for each document
         # in the backend that has the given complex key.
         get_value_fun = self._new_get_value_fun_from_complex_key(complex_key)
-        for document in self._backend.items():
+        for document in self._backend.values():
             has_key, value = get_value_fun(document)
             if has_key:
                 yield document[ID_KEY], value

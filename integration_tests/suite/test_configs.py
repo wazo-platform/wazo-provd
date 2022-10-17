@@ -14,7 +14,7 @@ from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
-from .helpers.base import BaseIntegrationTest
+from .helpers.base import BaseIntegrationTest, INVALID_TOKEN
 from .helpers.wait_strategy import NoWaitStrategy
 
 
@@ -27,7 +27,7 @@ class TestConfigs(BaseIntegrationTest):
         assert_that(results, has_key('configs'))
 
     def test_list_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.configs.list),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -45,7 +45,7 @@ class TestConfigs(BaseIntegrationTest):
         )
 
     def test_get_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.get).with_args(config['id']),
@@ -68,7 +68,7 @@ class TestConfigs(BaseIntegrationTest):
         )
 
     def test_get_raw_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.get_raw).with_args(config['id']),
@@ -112,7 +112,7 @@ class TestConfigs(BaseIntegrationTest):
         )
 
     def test_create_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         config = {
             'id': 'test1',
             'parent_ids': ['base'],
@@ -145,7 +145,7 @@ class TestConfigs(BaseIntegrationTest):
             )
 
     def test_update_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.update).with_args({'id': config['id']}),
@@ -186,7 +186,7 @@ class TestConfigs(BaseIntegrationTest):
         self._client.configs.delete(config['id'])
 
     def test_delete_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.delete).with_args(config['id']),
@@ -202,7 +202,7 @@ class TestConfigs(BaseIntegrationTest):
         assert_that(result, has_key('id'))
 
     def test_autocreate_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.configs.autocreate),
             raises(ProvdError).matching(has_properties('status_code', 401))

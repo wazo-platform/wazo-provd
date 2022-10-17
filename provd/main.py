@@ -63,8 +63,10 @@ class ProvisioningService(Service):
         db_type = self._config['database']['type']
         db_generator = self._config['database']['generator']
         db_specific_config = self._extract_database_specific_config()
-        logger.info('Using %s database with %s generator and config %s',
-                    db_type, db_generator, db_specific_config)
+        logger.info(
+            'Using %s database with %s generator and config %s',
+            db_type, db_generator, db_specific_config
+        )
         db_factory = self._DB_FACTORIES[db_type]
         return db_factory.new_database(db_type, db_generator, **db_specific_config)
 
@@ -112,13 +114,13 @@ class ProcessService(Service):
         self._prov_service = prov_service
         self._config = config
 
-    def _get_conffile_globals(self):
+    def _get_conf_file_globals(self):
         # Pre: hasattr(self._prov_service, 'app')
-        conffile_globals = {}
-        conffile_globals.update(ident.__dict__)
-        conffile_globals.update(pgasso.__dict__)
-        conffile_globals['app'] = self._prov_service.app
-        return conffile_globals
+        conf_file_globals = {}
+        conf_file_globals.update(ident.__dict__)
+        conf_file_globals.update(pgasso.__dict__)
+        conf_file_globals['app'] = self._prov_service.app
+        return conf_file_globals
 
     def _create_processor(self, name):
         # name is the name of the processor, for example 'info_extractor'
@@ -126,25 +128,25 @@ class ProcessService(Service):
         config_name = self._config['general'][name]
         filename = '%s.py.conf.%s' % (name, config_name)
         pathname = os.path.join(dirname, filename)
-        conffile_globals = self._get_conffile_globals()
+        conf_file_globals = self._get_conf_file_globals()
         try:
-            with open(pathname, 'rb') as f:
-                exec(compile(f.read(), pathname, 'exec'), conffile_globals)
+            with open(pathname, 'r') as f:
+                exec(compile(f.read(), pathname, 'exec'), conf_file_globals)
         except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
-        if name not in conffile_globals:
-            raise Exception('process config file "%s" doesn\'t define a "%s" name',
-                            pathname, name)
-        return conffile_globals[name]
+        if name not in conf_file_globals:
+            raise Exception(f'process config file "{pathname}" doesn\'t define a "{name}" name')
+        return conf_file_globals[name]
 
     def startService(self):
         # Pre: hasattr(self._prov_service, 'app')
         dev_info_extractor = self._create_processor('info_extractor')
         dev_retriever = self._create_processor('retriever')
         dev_updater = self._create_processor('updater')
-        self.request_processing = ident.RequestProcessingService(self._prov_service.app, dev_info_extractor,
-                                                                 dev_retriever, dev_updater)
+        self.request_processing = ident.RequestProcessingService(
+            self._prov_service.app, dev_info_extractor, dev_retriever, dev_updater
+        )
         Service.startService(self)
 
 
@@ -271,10 +273,9 @@ class SynchronizeService(Service):
         try:
             fun = getattr(self, name)
         except AttributeError:
-            raise ValueError('unknown sync_service_type: %s' %
-                             sync_service_type)
-        else:
-            return fun()
+            raise ValueError(f'unknown sync_service_type: {sync_service_type}')
+
+        return fun()
 
     def startService(self):
         sync_service = self._new_sync_service(self._config['general']['sync_service_type'])
@@ -288,11 +289,8 @@ class SynchronizeService(Service):
 
 
 class LocalizationService(Service):
-    def _new_l10n_service(self):
-        return provd.localization.LocalizationService()
-
     def startService(self):
-        l10n_service = self._new_l10n_service()
+        l10n_service = provd.localization.LocalizationService()
         provd.localization.register_localization_service(l10n_service)
         Service.startService(self)
 

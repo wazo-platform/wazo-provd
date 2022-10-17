@@ -176,11 +176,8 @@ def _convert_cli_to_config(options):
 def _load_json_file(raw_value):
     # Return a dictionary representing the JSON document contained in the
     # file pointed by raw value. The file must be encoded in UTF-8.
-    fobj = open(raw_value)
-    try:
-        return json.load(fobj)
-    finally:
-        fobj.close()
+    with open(raw_value, 'r') as f:
+        return json.load(f)
 
 
 def _process_aliases(raw_config):
