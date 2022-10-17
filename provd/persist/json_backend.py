@@ -32,7 +32,7 @@ class JsonSimpleBackend:
             abs_filename = os.path.join(self._directory, rel_filename)
             try:
                 fobj = open(abs_filename)
-            except EnvironmentError as e:
+            except OSError as e:
                 logger.warning('Could not open file %s: %s', abs_filename, e)
             else:
                 try:
@@ -62,7 +62,7 @@ class JsonSimpleBackend:
         abs_filename = os.path.join(self._directory, document_id)
         try:
             os.remove(abs_filename)
-        except EnvironmentError as e:
+        except OSError as e:
             logger.info('Error while removing JSON document %s: %s', e)
 
     def __contains__(self, document_id: str):

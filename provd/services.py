@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 from abc import ABCMeta, abstractmethod
+from copy import copy
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
@@ -182,6 +183,7 @@ class AttrConfigurationServiceParameter(AbstractConfigurationServiceParameter):
         self.description = description
         self._check_fun = check_fun
         self.__dict__.update(kwargs)
+        super().__init__()
 
     def get(self):
         return getattr(self._obj, self._name)
@@ -195,9 +197,9 @@ class AttrConfigurationServiceParameter(AbstractConfigurationServiceParameter):
 class DictConfigurationServiceParameter(AbstractConfigurationServiceParameter):
     # Note that this deletes the key from the dict when setting a None valueIInstallService
 
-    def __init__(self, dict_: dict, key: Any, description: str = None, check_fun: Callable = None, **kwargs: Any):
+    def __init__(self, data: dict, key: str, description: str = None, check_fun: Callable = None, **kwargs: Any):
         # kwargs is used to set localized description, for example "description_fr='bonjour'"
-        self._dict = dict_
+        self._dict = data
         self._key = key
         self.description = description
         self._check_fun = check_fun

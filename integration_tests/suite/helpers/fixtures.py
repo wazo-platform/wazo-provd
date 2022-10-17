@@ -1,6 +1,5 @@
 # Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
 from wazo_test_helpers import until
 from .operation import operation_successful
 
@@ -23,7 +22,7 @@ class Device:
             'config': 'defaultconfigdevice',
             'configured': True,
             'description': 'Test device',
-            'id': 'testdevice{}'.format(Device.device_counter),
+            'id': f'testdevice{Device.device_counter}',
             'ip': '10.0.0.2',
             'mac': '00:11:22:33:44:55',
             'model': 'testdevice',

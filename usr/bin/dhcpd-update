@@ -9,7 +9,7 @@ installed on a Wazo.
 
 """
 import contextlib
-import optparse
+from argparse import ArgumentParser
 import os
 import sys
 import tarfile
@@ -53,7 +53,7 @@ def regenerate(dhcpd_dir, subnet_file, ignore_missing):
         _concat_file('.head')
         try:
             _concat_file('.middle')
-        except EnvironmentError:
+        except OSError:
             if not ignore_missing:
                 raise
         _concat_file('.tail')
@@ -61,12 +61,9 @@ def regenerate(dhcpd_dir, subnet_file, ignore_missing):
 
 def new_empty_dhcpd_update_file(dhcpd_dir):
     file = os.path.join(dhcpd_dir, DHCPD_UPDATE_FILENAME)
-    try:
-        fd = os.open(file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 644)
-    except EnvironmentError:
-        pass
-    else:
-        os.close(fd)
+    with contextlib.suppress(OSError):
+        with os.open(file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 644):
+            return
 
 
 def _read_config_from_default(config):
@@ -81,12 +78,12 @@ def _read_config_from_default(config):
 
 
 def _read_config_from_commandline(config):
-    parser = optparse.OptionParser()
-    parser.add_option('-n', '--newempty', action='store_true')
-    parser.add_option('-d', '--download', action='store_true')
-    parser.add_option('-r', '--regenerate', action='store_true')
-    parser.add_option('-i', '--ignoremissing', action='store_true')
-    parser.add_option('-F', '--configfile', action='store')
+    parser = ArgumentParser()
+    parser.add_argument('-n', '--newempty', action='store_true')
+    parser.add_argument('-d', '--download', action='store_true')
+    parser.add_argument('-r', '--regenerate', action='store_true')
+    parser.add_argument('-i', '--ignoremissing', action='store_true')
+    parser.add_argument('-F', '--configfile', action='store')
 
     opts, args = parser.parse_args()
     result = {'general': {}}

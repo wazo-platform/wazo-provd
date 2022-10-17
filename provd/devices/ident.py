@@ -197,7 +197,7 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
         pg_mgr.attach(self._obs)
 
     def _xtor_name(self, request_type):
-        return '_%s_xtor' % request_type
+        return f'_{request_type}_xtor'
 
     def _set_xtors(self):
         logger.debug('Updating extractors for %s', self)

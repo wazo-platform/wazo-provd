@@ -66,7 +66,7 @@ class AuthResource(resource.Resource):
             auth.auth_verifier.MissingPermissionsTokenAPIException,
         ):
             request.setResponseCode(http.UNAUTHORIZED)
-            return 'Unauthorized'
+            return b'Unauthorized'
 
     def _extract_render_method(self, request):
         # from twisted.web.resource.Resource
@@ -80,7 +80,7 @@ class AuthResource(resource.Resource):
         return render_method
 
     def render_OPTIONS(self, request):
-        return ''
+        return b''
 
     def _extract_tenant_uuid(self, request):
         auth_client = auth.get_auth_client()

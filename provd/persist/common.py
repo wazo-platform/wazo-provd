@@ -57,7 +57,7 @@ class InvalidIdError(Exception):
 
 class NonDeletableError(Exception):
 
-    def __init__(self, document):
+    def __init__(self, document: dict):
         super().__init__(f'The document {document} is not deletable')
         self.document = document
 
@@ -74,7 +74,7 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def insert(self, document):
+    def insert(self, document: dict):
         """Store a new document in the collection and return a deferred that
         will fire with the ID of the newly added document once the document
         has been successfully inserted.
@@ -89,7 +89,7 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def update(self, document: str):
+    def update(self, document: dict):
         """Update the document with the current document and return a
         deferred that fire with None once the document has been successfully
         updated.
@@ -112,7 +112,7 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def retrieve(self, document_id):
+    def retrieve(self, document_id: str):
         """Return a deferred that will fire with the document with the given
         ID, or fire with None if there's no such document.
 
@@ -141,16 +141,16 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def find_one(self, selector):
+    def find_one(self, selector: dict):
         """Return a deferred that will fire with the 'first' document that
         match the selector, or fire with None if there's no document.
 
         """
 
     @abstractmethod
-    def ensure_index(self, complex_key):
+    def ensure_index(self, complex_key: str):
         """Create an index on the given complex key if it does not already
-        exist and return a deferred that fire with None once the index has
+        exist and return a deferred that fires with None once the index has
         been created.
 
         complex_key has the same format as keys for selectors, i.e. it
@@ -167,7 +167,7 @@ class AbstractDatabase(metaclass=ABCMeta):
     """A database is a group of zero or more document collections."""
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Close the underlying collections and the database. All resources
         used by the collections and the database should be freed after a call
         to this method.

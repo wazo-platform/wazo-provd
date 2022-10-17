@@ -20,6 +20,8 @@ import logging
 from binascii import a2b_base64
 from typing import Any
 
+from twisted.python import log
+
 from provd.app import (
     InvalidIdError,
     DeviceNotInProvdTenantError,
@@ -66,6 +68,10 @@ def new_id_generator():
     return numeric_id_generator(start=1)
 
 
+def json_response(data: dict) -> bytes:
+    return json_dumps(data).encode('utf-8')
+
+
 def respond_no_content(request, response_code=http.NO_CONTENT):
     request.setResponseCode(response_code)
     # next lines are tricks for twisted to omit the 'Content-Type' and 'Content-Length'
@@ -84,7 +90,7 @@ def respond_created_no_content(request, location):
 def respond_error(request, err_msg, response_code=http.BAD_REQUEST):
     request.setResponseCode(response_code)
     request.setHeader('Content-Type', 'text/plain; charset=ascii')
-    return str(err_msg).encode('utf8')
+    return str(err_msg).encode('ascii')
 
 
 def respond_bad_json_entity(request, err_msg=None):
@@ -121,7 +127,7 @@ def deferred_respond_error(request, err_msg, response_code=http.BAD_REQUEST):
 def deferred_respond_ok(request, data, response_code=http.OK):
     request.setResponseCode(response_code)
     if isinstance(data, str):
-        data = data.encode('utf8')
+        data = data.encode('utf-8')
     request.write(data)
     request.finish()
 
@@ -323,7 +329,7 @@ class IntermediaryResource(AuthResource):
     @json_response_entity
     def render_GET(self, request):
         content = {'links': self._build_links(request.path)}
-        return json_dumps(content)
+        return json_response(content)
 
 
 class ServerResource(IntermediaryResource):
@@ -357,8 +363,7 @@ class OperationInProgressResource(AuthResource):
     @required_acl('provd.operation.read')
     @json_response_entity
     def render_GET(self, request):
-        content = {'status': format_oip(self._oip)}
-        return json_dumps(content).encode('utf8')
+        return json_response({'status': format_oip(self._oip)})
 
     @required_acl('provd.operation.delete')
     def render_DELETE(self, request):
@@ -382,12 +387,12 @@ class ConfigureServiceResource(AuthResource):
         locale, lang = get_locale_and_language()
         cfg_srv = self._cfg_srv
         if locale is not None:
-            locale_name = 'description_%s' % locale
+            locale_name = f'description_{locale}'
             try:
                 return getattr(cfg_srv, locale_name)
             except AttributeError:
                 if lang != locale:
-                    lang_name = 'description_%s' % lang
+                    lang_name = f'description_{lang}'
                     try:
                         return getattr(cfg_srv, lang_name)
                     except AttributeError:
@@ -400,24 +405,24 @@ class ConfigureServiceResource(AuthResource):
     def render_GET(self, request):
         description_list = self._get_localized_description_list()
         params = []
-        for id_, description in description_list:
-            value = self._cfg_srv.get(id_)
-            href = uri_append_path(request.path, id_)
-            params.append({'id': id_,
-                           'description': description,
-                           'value': value,
-                           'links': [{'rel': REL_CONFIGURE_PARAM,
-                                       'href': href}]})
-        content = {'params': params}
-        return json_dumps(content).encode('utf8')
+        for key, description in description_list:
+            value = self._cfg_srv.get(key)
+            href = uri_append_path(request.path, key)
+            params.append({
+                'id': key,
+                'description': description,
+                'value': value,
+                'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}]
+            })
+        return json_response({'params': params})
 
 
 class PluginConfigureServiceResource(ConfigureServiceResource):
     def __init__(self, cfg_srv, plugin_id):
         super().__init__(cfg_srv)
-        self.id_ = plugin_id
+        self.plugin_id = plugin_id
 
-    @required_acl('provd.pg_mgr.plugins.{id_}.configure.read')
+    @required_acl('provd.pg_mgr.plugins.{plugin_id}.configure.read')
     @json_response_entity
     def render_GET(self, request):
         return ConfigureServiceResource.render_GET(self, request)
@@ -438,9 +443,7 @@ class ConfigureParameterResource(AuthResource):
         except KeyError:
             logger.info('Invalid/unknown key: %s', self.param_id)
             return respond_no_resource(request)
-        else:
-            content = {'param': {'value': value}}
-            return json_dumps(content).encode('utf8')
+        return json_response({'param': {'value': value}})
 
     @required_acl('provd.configure.{param_id}.update')
     @json_request_entity
@@ -463,7 +466,7 @@ class ConfigureParameterResource(AuthResource):
 
 
 class PluginInstallServiceResource(IntermediaryResource):
-    def __init__(self, install_srv, plugin_id):
+    def __init__(self, install_srv, plugin_id: str):
         self.plugin_id = decode_bytes(plugin_id)
         links = [
             (REL_INSTALL, 'install', PackageInstallResource(install_srv, plugin_id)),
@@ -621,9 +624,8 @@ class _ListInstallxxxxResource(AuthResource):
         except Exception as e:
             logger.error('Error while listing install packages', exc_info=True)
             return respond_error(request, e, http.INTERNAL_SERVER_ERROR)
-        else:
-            content = {'pkgs': pkgs}
-            return json_dumps(content).encode('utf8')
+
+        return json_response({'pkgs': pkgs})
 
 
 class InstalledResource(_ListInstallxxxxResource):
@@ -777,6 +779,7 @@ class DeviceDHCPInfoResource(AuthResource):
     @json_request_entity
     @required_acl('provd.dev_mgr.dhcpinfo.create')
     def render_POST(self, request, content):
+        mac, options = None, None
         try:
             raw_dhcp_info = content['dhcp_info']
             op = raw_dhcp_info['op']
@@ -1154,20 +1157,20 @@ class _PluginManagerInstallServiceAdapter:
     def __init__(self, app):
         self._app = app
 
-    def install(self, pkg_id):
+    def install(self, pkg_id: str):
         return self._app.pg_install(pkg_id)
 
-    def upgrade(self, pkg_id):
+    def upgrade(self, pkg_id: str):
         return self._app.pg_upgrade(pkg_id)
 
     @staticmethod
-    def _clean_info(pkg_info):
+    def _clean_info(pkg_info: dict[str, Any]):
         return {k: v for k, v in pkg_info.items() if k != 'filename'}
 
-    @staticmethod
-    def _clean_installable_pkgs(pkg_infos):
-        clean_info = _PluginManagerInstallServiceAdapter._clean_info
-        return {k: clean_info(v) for k, v in pkg_infos.items()}
+    @classmethod
+    def _clean_installable_pkgs(cls, pkg_info):
+        logger.error(f'{cls} {pkg_info}')
+        return {k: cls._clean_info(v) for k, v in pkg_info.items()}
 
     def list_installable(self):
         return self._clean_installable_pkgs(self._app.pg_mgr.list_installable())
@@ -1181,7 +1184,7 @@ class _PluginManagerInstallServiceAdapter:
 
 class PluginManagerUninstallResource(AuthResource):
     def __init__(self, app):
-        AuthResource.__init__(self)
+        super().__init__()
         self._app = app
 
     @json_request_entity
@@ -1205,7 +1208,7 @@ class PluginManagerUninstallResource(AuthResource):
 
 class PluginsResource(AuthResource):
     def __init__(self, pg_mgr):
-        AuthResource.__init__(self)
+        super().__init__()
         self._pg_mgr = pg_mgr
         self._children = {
             pg_id: PluginResource(pg) for
@@ -1233,13 +1236,12 @@ class PluginsResource(AuthResource):
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.read')
     def render_GET(self, request):
-        plugins = {}
-        for pg_id in self._pg_mgr:
-            href = uri_append_path(request.path, pg_id)
-            links = [{'rel': 'pg.plugin', 'href': href}]
-            plugins[pg_id] = {'links': links}
-        content = {'plugins': plugins}
-        return json_dumps(content).encode('utf8')
+        return json_response({
+            'plugins': {
+                pg_id: {'links': [{'rel': 'pg.plugin', 'href': uri_append_path(request.path, pg_id)}]}
+                for pg_id in self._pg_mgr
+            }
+        })
 
 
 class PluginReloadResource(AuthResource):
@@ -1275,7 +1277,7 @@ class PluginInfoResource(AuthResource):
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.info.read')
     def render_GET(self, request):
-        return json_dumps({'plugin_info': self._plugin.info()}).encode('utf8')
+        return json_response({'plugin_info': self._plugin.info()})
 
 
 class PluginResource(IntermediaryResource):
@@ -1300,7 +1302,7 @@ class StatusResource(AuthResource):
     @json_response_entity
     @required_acl('provd.status.read')
     def render_GET(self, request):
-        return json_dumps({'rest_api': 'ok'}).encode('utf8')
+        return json_response({'rest_api': 'ok'})
 
 
 def new_authenticated_server_resource(app, dhcp_request_processing_service):

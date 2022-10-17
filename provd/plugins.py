@@ -207,7 +207,7 @@ class Plugin(metaclass=ABCMeta):
 
         """
         plugin_info_path = os.path.join(self._plugin_dir, _PLUGIN_INFO_FILENAME)
-        with open(plugin_info_path) as f:
+        with open(plugin_info_path, 'r') as f:
             raw_plugin_info = json.load(f)
         _check_raw_plugin_info(raw_plugin_info, self.id, _PLUGIN_INFO_INSTALLED_KEYS)
         localize_fun = _new_localize_fun()
@@ -433,7 +433,7 @@ class StandardPlugin(Plugin):
     _TFTPBOOT_DIR = os.path.join('var', 'tftpboot')
 
     def __init__(self, app, plugin_dir, gen_cfg, spec_cfg):
-        Plugin.__init__(self, app, plugin_dir, gen_cfg, spec_cfg)
+        super().__init__(app, plugin_dir, gen_cfg, spec_cfg)
         self._tftpboot_dir = os.path.join(plugin_dir, self._TFTPBOOT_DIR)
 
 
@@ -484,6 +484,7 @@ class TemplatePluginHelper:
 
 class AsyncInstallerController(InstallerController):
     def __init__(self, installable_pkg_sto, installed_pkg_sto, dl_oip, install_oip):
+        super().__init__(installable_pkg_sto, installed_pkg_sto)
         self._dl_oip = dl_oip
         self._install_oip = install_oip
 
@@ -573,34 +574,34 @@ class FetchfwPluginHelper(AbstractInstallationService):
         ed_sto = DefaultInstalledPkgStorage(installed_db_dir)
         return PackageManager(able_sto, ed_sto)
 
-    def install(self, pkg_id):
+    def install(self, pkg_id: str):
         """Install a package.
         """
         logger.info('Installing plugin-package %s', pkg_id)
         if pkg_id in self._in_install_set:
-            raise Exception('an install operation for pkg %s is already in progress' % pkg_id)
+            raise Exception(f'an install operation for pkg {pkg_id} is already in progress')
         if pkg_id not in self._pkg_mgr.installable_pkg_sto:
             raise Exception('package not found')
 
         dl_oip = OperationInProgress('download')
         install_oip = OperationInProgress('install')
-        oip = OperationInProgress('install_pkg', OIP_PROGRESS,
-                                  sub_oips=[dl_oip, install_oip])
+        oip = OperationInProgress('install_pkg', OIP_PROGRESS, sub_oips=[dl_oip, install_oip])
         ctrl_factory = AsyncInstallerController.new_factory(dl_oip, install_oip)
-        deferred = threads.deferToThread(self._pkg_mgr.install, [pkg_id],
-                                         self.root_dir, ctrl_factory)
+        deferred = threads.deferToThread(self._pkg_mgr.install, [pkg_id], self.root_dir, ctrl_factory)
         self._in_install_set.add(pkg_id)
+
         def callback(res):
             logger.info('Plugin-package %s installed', pkg_id)
             self._in_install_set.remove(pkg_id)
             oip.state = OIP_SUCCESS
             return res
+
         def errback(err):
-            logger.info('Error while installing plugin-package %s: %s',
-                        pkg_id, err.value)
+            logger.info('Error while installing plugin-package %s: %s', pkg_id, err.value)
             self._in_install_set.remove(pkg_id)
             oip.state = OIP_FAIL
             return err
+
         deferred.addCallbacks(callback, errback)
         return deferred, oip
 
@@ -633,6 +634,7 @@ class FetchfwPluginHelper(AbstractInstallationService):
                     return pkg_info['description']
             return aux
         lang_name = f'description_{lang}'
+
         def aux(pkg_info):
             try:
                 return pkg_info[locale_name]
@@ -763,7 +765,7 @@ class PluginManager:
         logger.info('Closing plugin manager...')
         # important not to use an iterator over self._plugins since it is
         # modified in the unload method
-        for plugin_id in list(self._plugins.keys()):
+        for plugin_id in self._plugins:
             self._unload_and_notify(plugin_id)
         logger.info('Plugin manager closed')
 
@@ -786,7 +788,7 @@ class PluginManager:
             # XXX this is unsafe unless we have authenticated the tarfile
             tfile.extractall(self._plugins_dir)
 
-    def install(self, plugin_id):
+    def install(self, plugin_id: str):
         """Install a plugin.
 
         This does not check if the plugin is already installed and does not
@@ -805,8 +807,8 @@ class PluginManager:
         logger.info('Installing plugin %s', plugin_id)
         if plugin_id in self._in_install:
             logger.warning('Install operation already in progress for plugin %s', plugin_id)
-            raise Exception('an install/upgrade operation for plugin %s is already in progress' % plugin_id)
-
+            raise Exception(f'an install/upgrade operation for plugin {plugin_id} is already in progress')
+        logger.error(f'{plugin_id} {self._get_installable_plugin_info(plugin_id)}')
         try:
             pg_info = self._get_installable_plugin_info(plugin_id)
         except KeyError:
@@ -832,6 +834,7 @@ class PluginManager:
             self._in_install.add(plugin_id)
             top_deferred = defer.Deferred()
             top_oip = OperationInProgress(self._INSTALL_LABEL, OIP_PROGRESS, sub_oips=[dl_oip])
+
             def dl_callback(_):
                 self._in_install.remove(plugin_id)
                 try:
@@ -845,18 +848,23 @@ class PluginManager:
                 finally:
                     if not self._cache_plugin:
                         os.remove(cache_filename)
+
             def dl_errback(err):
                 self._in_install.remove(plugin_id)
                 top_oip.state = OIP_FAIL
                 top_deferred.errback(err)
+
             # do not move this line up (see dl_callback def)
             dl_deferred.addCallbacks(dl_callback, dl_errback)
+
         def top_callback(res):
             logger.info('Plugin %s installed', plugin_id)
             return res
+
         def top_errback(err):
             logger.error('Error while installing plugin %s: %s', plugin_id, err.value)
             return err
+
         top_deferred.addCallbacks(top_callback, top_errback)
         return top_deferred, top_oip
 
@@ -914,15 +922,19 @@ class PluginManager:
         dl_deferred, dl_oip = async_download_with_oip(rfile)
         dl_oip.label = self._UPDATE_LABEL
         self._in_update = True
+
         def callback(res):
             logger.info('Plugin definition file updated')
             return res
+
         def errback(err):
             logger.error('Error while updating plugin definition file: %s', err.value)
             return err
+
         def dl_end(v):
             self._in_update = False
             return v
+
         dl_deferred.addCallbacks(callback, errback)
         dl_deferred.addBoth(dl_end)
         return dl_deferred, dl_oip
@@ -933,7 +945,7 @@ class PluginManager:
         installable_plugins = self.list_installable()
         return installable_plugins[plugin_id]
 
-    def list_installable(self):
+    def list_installable(self) -> dict[str, Any]:
         """Return a dictionary of installable plugins, where keys are
         plugin identifier and values are dictionary of plugin information.
 
@@ -955,36 +967,34 @@ class PluginManager:
 
         """
         try:
-            with open(self._db_pathname()) as f:
-                raw_plugin_infos = json.load(f)
+            with open(self._db_pathname(), 'r') as f:
+                all_raw_plugin_info = json.load(f)
         except IOError:
             return {}
-        else:
-            localize_fun = _new_localize_fun()
-            for plugin_id, raw_plugin_info in raw_plugin_infos.items():
-                _check_raw_plugin_info(raw_plugin_info, plugin_id,
-                                       _PLUGIN_INFO_INSTALLABLE_KEYS)
-                localize_fun(raw_plugin_info)
-            return raw_plugin_infos
 
-    def is_installed(self, plugin_id):
+        localize_fun = _new_localize_fun()
+        for plugin_id, raw_plugin_info in all_raw_plugin_info.items():
+            _check_raw_plugin_info(raw_plugin_info, plugin_id, _PLUGIN_INFO_INSTALLABLE_KEYS)
+            localize_fun(raw_plugin_info)
+        return all_raw_plugin_info
+
+    def is_installed(self, plugin_id: str) -> bool:
         """Return true if the plugin <plugin_id> is currently installed, else
         false.
 
         """
         return plugin_id in self.list_installed()
 
-    def _get_installed_plugin_info(self, plugin_dir):
+    def _get_installed_plugin_info(self, plugin_dir: str) -> dict[str, Any]:
         plugin_info_path = os.path.join(plugin_dir, _PLUGIN_INFO_FILENAME)
-        with open(plugin_info_path) as f:
+        with open(plugin_info_path, 'r') as f:
             return json.load(f)
 
-    def list_installed(self):
+    def list_installed(self) -> dict[str, Any]:
         """Return a dictionary of installed plugins, where keys are plugin
         identifier and value are dictionary of plugin information.
 
-        See Plugin.info() method for more information on the returned
-        dictionary.
+        See Plugin.info method for more information on the returned dictionary.
 
         """
         # we can't iterate over loaded plugins (i.e. self._plugins) here
@@ -997,8 +1007,9 @@ class PluginManager:
             abs_plugin_dir = os.path.join(self._plugins_dir, rel_plugin_dir)
             if os.path.isdir(abs_plugin_dir):
                 raw_plugin_info = self._get_installed_plugin_info(abs_plugin_dir)
-                _check_raw_plugin_info(raw_plugin_info, rel_plugin_dir,
-                                       _PLUGIN_INFO_INSTALLED_KEYS)
+                _check_raw_plugin_info(
+                    raw_plugin_info, rel_plugin_dir, _PLUGIN_INFO_INSTALLED_KEYS,
+                )
                 localize_fun(raw_plugin_info)
                 installed_plugins[rel_plugin_dir] = raw_plugin_info
         return installed_plugins
@@ -1059,28 +1070,28 @@ class PluginManager:
         for observer in self._observers:
             try:
                 logger.info('Notifying plugin manager observer %s', observer)
-                fun = getattr(observer, 'pg_' + action)
+                fun = getattr(observer, f'pg_{action}')
                 fun(plugin_id)
             except Exception:
                 logger.error('Error while notifying plugin manager observer %s',
                              observer, exc_info=True)
 
-    def _load_and_notify(self, plugin_id, plugin):
+    def _load_and_notify(self, plugin_id: str, plugin: Plugin):
         self._plugins[plugin_id] = plugin
         self._notify(plugin_id, 'load')
 
-    def _unload_and_notify(self, plugin_id):
+    def _unload_and_notify(self, plugin_id: str):
         try:
             plugin = self._plugins.pop(plugin_id)
         except KeyError:
             raise PluginNotLoadedError(plugin_id)
-        else:
-            logger.info('Closing plugin %s', plugin_id)
-            try:
-                plugin.close()
-            except Exception:
-                logger.error('Error while closing plugin %s', plugin_id, exc_info=True)
-            self._notify(plugin_id, 'unload')
+
+        logger.info('Closing plugin %s', plugin_id)
+        try:
+            plugin.close()
+        except Exception:
+            logger.error('Error while closing plugin %s', plugin_id, exc_info=True)
+        self._notify(plugin_id, 'unload')
 
     @staticmethod
     def _is_plugin_class(obj):
@@ -1088,7 +1099,7 @@ class PluginManager:
         return isinstance(obj, type) and issubclass(obj, Plugin) and \
                hasattr(obj, 'IS_PLUGIN') and getattr(obj, 'IS_PLUGIN')
 
-    def load(self, plugin_id, gen_cfg: dict = None, spec_cfg: dict = None):
+    def load(self, plugin_id: str, gen_cfg: dict = None, spec_cfg: dict = None):
         """Load a plugin.
 
         Raise an Exception if the plugin is already loaded, since we offer
@@ -1107,7 +1118,7 @@ class PluginManager:
         """
         logger.info('Loading plugin %s', plugin_id)
         if plugin_id in self._plugins:
-            raise Exception('plugin %s is already loaded' % plugin_id)
+            raise Exception(f'plugin {plugin_id} is already loaded')
         plugin_dir = os.path.join(self._plugins_dir, plugin_id)
         plugin_info = self._get_installed_plugin_info(plugin_dir)
         if self._check_compat_min:
@@ -1121,8 +1132,9 @@ class PluginManager:
             max_compat = plugin_info.get('plugin_iface_version_max')
             if max_compat is not None:
                 if self.PLUGIN_IFACE_VERSION > max_compat:
-                    logger.error('Plugin %s is not compatible: %s > %s',
-                                 plugin_id, self.PLUGIN_IFACE_VERSION, max_compat)
+                    logger.error(
+                        'Plugin %s is not compatible: %s > %s', plugin_id, self.PLUGIN_IFACE_VERSION, max_compat
+                    )
                     raise Exception('plugin max compat not satisfied')
         plugin_globals = {}
         self._execplugin(plugin_dir, plugin_globals)
@@ -1130,13 +1142,13 @@ class PluginManager:
             if self._is_plugin_class(obj):
                 break
         else:
-            raise Exception('plugin %s has no plugin class' % plugin_id)
+            raise Exception(f'plugin {plugin_id} has no plugin class')
         logger.debug('Creating plugin instance from class %s', obj)
         plugin = obj(self._app, plugin_dir, gen_cfg, spec_cfg)
         plugin.id = plugin_id
         self._load_and_notify(plugin_id, plugin)
 
-    def unload(self, plugin_id):
+    def unload(self, plugin_id: str):
         """Unload a plugin.
 
         Raise a PluginNotLoadedError if the plugin is not loaded.
@@ -1147,13 +1159,13 @@ class PluginManager:
 
     # Dictionary-like methods for loaded plugin access
 
-    def __contains__(self, key):
+    def __contains__(self, key: str):
         return key in self._plugins
 
     def __iter__(self):
         return iter(self._plugins)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return self._plugins[key]
 
     def __len__(self):
@@ -1163,10 +1175,10 @@ class PluginManager:
         return self._plugins.get(key, default)
 
     def keys(self):
-        return list(self._plugins.keys())
+        return list(self._plugins)
 
     def items(self):
-        return list(self._plugins.items())
+        yield from self._plugins.items()
 
     def values(self):
-        return self._plugins.values()
+        yield from self._plugins.values()

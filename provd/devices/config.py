@@ -25,6 +25,7 @@ Config objects have the following standardized keys:
 Config collection objects are used as a storage for config objects.
 
 """
+from collections import defaultdict
 
 """Specification of the configuration parameters.
 
@@ -520,18 +521,14 @@ class ConfigCollection(ForwardingDocumentCollection):
         #     but then it's only about efficiency (doing the same job twice
         #     is less efficient than only once...)
         logger.debug('Building child and parent indexes')
-        child_idx = {}
+        child_idx = defaultdict(list)
         parent_idx = {}
         configs = yield self._collection.find({})
         for config in configs:
             config_id = config[ID_KEY]
             parent_ids = config['parent_ids']
-            # update child_idx
             for parent_id in parent_ids:
-                if parent_id in child_idx:
-                    child_idx[parent_id].append(config_id)
-                else:
-                    child_idx[parent_id] = [config_id]
+                child_idx[parent_id].append(config_id)
             # update parent_idx
             parent_idx[config_id] = list(parent_ids)
         self._child_idx = child_idx

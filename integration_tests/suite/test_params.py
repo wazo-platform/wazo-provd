@@ -13,7 +13,7 @@ from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
 
-from .helpers.base import BaseIntegrationTest
+from .helpers.base import BaseIntegrationTest, INVALID_TOKEN
 from .helpers.operation import operation_successful, operation_fail
 from .helpers.wait_strategy import NoWaitStrategy
 
@@ -34,7 +34,7 @@ class TestParams(BaseIntegrationTest):
         )
 
     def test_get_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.params.get).with_args('locale'),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -45,7 +45,7 @@ class TestParams(BaseIntegrationTest):
         assert_that(result, has_key('params'))
 
     def test_list_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.params.list),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -61,7 +61,7 @@ class TestParams(BaseIntegrationTest):
         )
 
     def test_update_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         self._client.params.update('locale', 'en_US')
         assert_that(
             calling(provd.params.update).with_args('locale', 'fr_FR'),
@@ -80,7 +80,7 @@ class TestParams(BaseIntegrationTest):
         )
 
     def test_delete_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.params.delete).with_args('locale'),
             raises(ProvdError).matching(has_properties('status_code', 401))
