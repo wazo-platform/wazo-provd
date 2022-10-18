@@ -808,7 +808,6 @@ class PluginManager:
         if plugin_id in self._in_install:
             logger.warning('Install operation already in progress for plugin %s', plugin_id)
             raise Exception(f'an install/upgrade operation for plugin {plugin_id} is already in progress')
-        logger.error(f'{plugin_id} {self._get_installable_plugin_info(plugin_id)}')
         try:
             pg_info = self._get_installable_plugin_info(plugin_id)
         except KeyError:
