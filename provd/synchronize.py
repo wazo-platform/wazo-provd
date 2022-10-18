@@ -96,7 +96,7 @@ class SynchronizeException(Exception):
 def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
     sync_service = _SYNC_SERVICE
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
-        return defer.fail(SynchronizeException('Incompatible sync service: %s' % sync_service))
+        return defer.fail(SynchronizeException(f'Incompatible sync service: {sync_service}'))
 
     for fun in [_synchronize_by_peer, _synchronize_by_ip]:
         d = fun(device, event, sync_service, extra_vars)

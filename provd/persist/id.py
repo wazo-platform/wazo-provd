@@ -40,4 +40,4 @@ def get_id_generator_factory(generator_name: str) -> Callable:
     try:
         return globals()[f'{generator_name}_id_generator']
     except KeyError:
-        raise ValueError('unknown generator name "%s"' % generator_name)
+        raise ValueError(f'Unknown generator name "{generator_name}"')

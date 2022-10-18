@@ -62,10 +62,10 @@ def needs_reconfiguration(old_device, new_device):
 def _check_device_validity(device):
     if 'mac' in device:
         if not is_normed_mac(device['mac']):
-            raise ValueError('Non-normalized MAC address %s' % device['mac'])
+            raise ValueError(f'Non-normalized MAC address {device["mac"]}')
     if 'ip' in device:
         if not is_normed_ip(device['ip']):
-            raise ValueError('Non-normalized IP address %s' % device['ip'])
+            raise ValueError(f'Non-normalized IP address {device["ip"]}')
     if 'tenant_uuid' not in device:
         raise ValueError('Tenant UUID not specified')
 

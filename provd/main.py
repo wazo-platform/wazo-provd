@@ -126,7 +126,7 @@ class ProcessService(Service):
         # name is the name of the processor, for example 'info_extractor'
         dirname = self._config['general']['request_config_dir']
         config_name = self._config['general'][name]
-        filename = '%s.py.conf.%s' % (name, config_name)
+        filename = f'{name}.py.conf.{config_name}'
         pathname = os.path.join(dirname, filename)
         conf_file_globals = self._get_conf_file_globals()
         try:

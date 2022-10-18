@@ -479,7 +479,7 @@ class RequestProcessingService:
         self._req_id = 0    # used for logging
 
     def _new_request_id(self):
-        req_id = "%d" % self._req_id
+        req_id = f"{self._req_id:d}"
         self._req_id = (self._req_id + 1) % 100
         return req_id
 

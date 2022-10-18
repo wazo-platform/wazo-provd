@@ -54,8 +54,7 @@ def accept(mime_types):
             else:
                 request.setResponseCode(http.NOT_ACCEPTABLE)
                 request.setHeader('Content-Type', 'text/plain; charset=UTF-8')
-                return ("You must accept one of the following MIME type '%s'."
-                        % mime_types).encode('UTF-8')
+                return f"You must accept one of the following MIME type '{mime_types}'.".encode('utf-8')
         return aux
     return in_accept
 
@@ -68,9 +67,7 @@ def content_type(mime_type):
             if not content_type or content_type not in mime_type:
                 request.setResponseCode(http.UNSUPPORTED_MEDIA_TYPE)
                 request.setHeader('Content-Type', 'text/plain; charset=UTF-8')
-                return ("Entity must be in one of these media types '%s'."
-                        % mime_type).encode('UTF-8')
-            else:
-                return fun(self, request)
+                return f"Entity must be in one of these media types '{mime_type}'.".encode('utf-8')
+            return fun(self, request)
         return aux
     return in_content_type
