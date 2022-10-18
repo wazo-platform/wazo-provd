@@ -118,8 +118,7 @@ class TFTPLogService(TFTPHookService):
 
     def _pre_handle(self, request):
         packet = request['packet']
-        msg = "TFTP request from %s - filename '%s' - mode '%s'" % \
-              (request['address'], packet['filename'], packet['mode'])
+        msg = f"TFTP request from {request['address']} - filename '{packet['filename']}' - mode '{packet['mode']}'"
         if packet['options']:
-            msg += "- options '%s'" % packet['options']
+            msg += f"- options '{packet['options']}'"
         self._logger(msg)

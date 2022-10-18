@@ -26,7 +26,7 @@ def _retrieve_doc_values(s_key, doc):
         else:
             assert pre != current_s_key
             if post is None:
-                raise ValueError('invalid selector key "%s"' % s_key)
+                raise ValueError(f'invalid selector key "{s_key}"')
 
             if isinstance(current_doc, dict) and pre in current_doc:
                 for result in func(post, current_doc[pre]):
@@ -73,7 +73,7 @@ def _new_in_matcher(s_value):
     # Return a matcher that returns true if there's a value in the document
     # matching the select key that is equal to one of the value in s_value
     if not isinstance(s_value, list):
-        raise ValueError('selector value for in matcher must be a list: %s is not' % s_value)
+        raise ValueError(f'selector value for in matcher must be a list: {s_value} is not')
     pred = lambda doc_value: doc_value in s_value
     return _new_simple_matcher_from_pred(pred)
 
@@ -89,7 +89,7 @@ def _new_nin_matcher(s_value):
     # Return a matcher that returns true if there's no values in the document
     # matching the select key that is equal to one of the value in s_value
     if not isinstance(s_value, list):
-        raise ValueError('selector value for nin matcher must be a list: %s is not' % s_value)
+        raise ValueError(f'Selector value for nin matcher must be a list: {s_value} is not')
     pred = lambda doc_value: doc_value in s_value
     return _new_simple_inv_matcher_from_pred(pred)
 
@@ -172,7 +172,7 @@ def _new_operator_matcher(operator_key, operator_value):
     try:
         matcher_factory = _MATCHER_FACTORIES[operator_key]
     except KeyError:
-        raise ValueError('invalid operator: %s' % operator_key)
+        raise ValueError(f'Invalid operator: {operator_key}')
     else:
         return matcher_factory(operator_value)
 

@@ -97,7 +97,7 @@ def _wlock(fun):
 def _check_common_raw_config_validity(raw_config):
     for param in ['ip', 'http_port', 'tftp_port']:
         if param not in raw_config:
-            raise RawConfigError('missing %s parameter' % param)
+            raise RawConfigError(f'missing {param} parameter')
 
 
 def _check_raw_config_validity(raw_config):
@@ -324,7 +324,7 @@ class ProvisioningApplication:
             # somewhat rare case were the device is marked as configured but
             # the plugin used by the device is not installed/loaded. This
             # is often caused by a manual plugin uninstallation
-            raise Exception('Plugin %s is not installed/loaded' % device.get('plugin'))
+            raise Exception(f'Plugin {device.get("plugin")} is not installed/loaded')
         else:
             yield self._dev_synchronize(device, plugin, raw_config)
 
@@ -332,7 +332,7 @@ class ProvisioningApplication:
     def _dev_get_or_raise(self, device_id):
         device = yield self._dev_collection.retrieve(device_id)
         if device is None:
-            raise InvalidIdError('invalid device ID "%s"' % device_id)
+            raise InvalidIdError(f'invalid device ID "{device_id}"')
         else:
             defer.returnValue(device)
 
@@ -412,7 +412,7 @@ class ProvisioningApplication:
             try:
                 device_id = device[ID_KEY]
             except KeyError:
-                raise InvalidIdError('no id key for device %s' % device)
+                raise InvalidIdError(f'No id key for device {device}')
             else:
                 logger.info('Updating device %s', device_id)
                 old_device = yield self._dev_get_or_raise(device_id)
@@ -545,7 +545,7 @@ class ProvisioningApplication:
         try:
             device = yield self._dev_get_or_raise(device_id)
             if not device['configured']:
-                raise Exception('can\'t synchronize not configured device %s' % device_id)
+                raise Exception(f'Can\'t synchronize not configured device {device_id}')
             else:
                 yield self._dev_synchronize_if_possible(device)
         except Exception:
@@ -558,9 +558,8 @@ class ProvisioningApplication:
     def _cfg_get_or_raise(self, config_id):
         config = yield self._cfg_collection.retrieve(config_id)
         if config is None:
-            raise InvalidIdError('invalid config ID "%s"' % config_id)
-        else:
-            defer.returnValue(config)
+            raise InvalidIdError(f'Invalid config ID "{config_id}"')
+        defer.returnValue(config)
 
     @_wlock
     @defer.inlineCallbacks
@@ -638,38 +637,38 @@ class ProvisioningApplication:
             try:
                 config_id = config[ID_KEY]
             except KeyError:
-                raise InvalidIdError('no id key for config %s' % config)
+                raise InvalidIdError(f'No id key for config {config}')
+
+            logger.info('Updating config %s', config_id)
+            old_config = yield self._cfg_get_or_raise(config_id)
+            if old_config == config:
+                logger.info('config has not changed, ignoring update')
             else:
-                logger.info('Updating config %s', config_id)
-                old_config = yield self._cfg_get_or_raise(config_id)
-                if old_config == config:
-                    logger.info('config has not changed, ignoring update')
-                else:
-                    yield self._cfg_collection.update(config)
-                    affected_cfg_ids = yield self._cfg_collection.get_descendants(config_id)
-                    affected_cfg_ids.add(config_id)
-                    # 2. get the raw_config of every affected config
-                    raw_configs = {}
-                    for affected_cfg_id in affected_cfg_ids:
-                        raw_configs[affected_cfg_id] = yield self._cfg_collection.get_raw_config(
-                                                                 affected_cfg_id, self._base_raw_config)
-                    # 3. reconfigure each device having a direct dependency on
-                    #    one of the affected cfg id
-                    affected_devices = yield self._dev_collection.find({'config': {'$in': list(affected_cfg_ids)}})
-                    for device in affected_devices:
-                        plugin = self._dev_get_plugin(device)
-                        if plugin is not None:
-                            raw_config = raw_configs[device['config']]
-                            assert raw_config is not None
-                            # deconfigure
-                            if device['configured']:
-                                self._dev_deconfigure(device, plugin)
-                            # configure
-                            configured = self._dev_configure(device, plugin, raw_config)
-                            # update device if it has changed
-                            if device['configured'] != configured:
-                                device['configured'] = configured
-                                yield self._dev_collection.update(device)
+                yield self._cfg_collection.update(config)
+                affected_cfg_ids = yield self._cfg_collection.get_descendants(config_id)
+                affected_cfg_ids.add(config_id)
+                # 2. get the raw_config of every affected config
+                raw_configs = {}
+                for affected_cfg_id in affected_cfg_ids:
+                    raw_configs[affected_cfg_id] = yield self._cfg_collection.get_raw_config(
+                                                             affected_cfg_id, self._base_raw_config)
+                # 3. reconfigure each device having a direct dependency on
+                #    one of the affected cfg id
+                affected_devices = yield self._dev_collection.find({'config': {'$in': list(affected_cfg_ids)}})
+                for device in affected_devices:
+                    plugin = self._dev_get_plugin(device)
+                    if plugin is not None:
+                        raw_config = raw_configs[device['config']]
+                        assert raw_config is not None
+                        # deconfigure
+                        if device['configured']:
+                            self._dev_deconfigure(device, plugin)
+                        # configure
+                        configured = self._dev_configure(device, plugin, raw_config)
+                        # update device if it has changed
+                        if device['configured'] != configured:
+                            device['configured'] = configured
+                            yield self._dev_collection.update(device)
         except Exception:
             logger.error('Error while updating config', exc_info=True)
             raise
@@ -903,7 +902,7 @@ class ProvisioningApplication:
         logger.info('Upgrading and reloading plugin %s', plugin_id)
         if not self.pg_mgr.is_installed(plugin_id):
             logger.error('Error: plugin %s is not already installed', plugin_id)
-            raise Exception('plugin %s is not already installed' % plugin_id)
+            raise Exception(f'plugin {plugin_id} is not already installed')
 
         def callback1(_):
             # reset the state to in progress
@@ -976,7 +975,7 @@ class ProvisioningApplication:
         logger.info('Reloading plugin %s', plugin_id)
         if not self.pg_mgr.is_installed(plugin_id):
             logger.error('Can\'t reload plugin %s: not installed', plugin_id)
-            raise Exception('plugin %s is not installed' % plugin_id)
+            raise Exception(f'plugin {plugin_id} is not installed')
 
         devices = yield self._dev_collection.find({'plugin': plugin_id})
         devices = list(devices)
@@ -1020,9 +1019,9 @@ def _check_is_server_url(value):
         raise InvalidParameterError(e)
     else:
         if not parse_result.scheme:
-            raise InvalidParameterError('no scheme: %s' % value)
+            raise InvalidParameterError(f'no scheme: {value}')
         if not parse_result.hostname:
-            raise InvalidParameterError('no hostname: %s' % value)
+            raise InvalidParameterError(f'no hostname: {value}')
 
 
 def _check_is_proxy(value):
@@ -1035,11 +1034,11 @@ def _check_is_proxy(value):
         raise InvalidParameterError(e)
     else:
         if not parse_result.scheme:
-            raise InvalidParameterError(f'no scheme: {value}')
+            raise InvalidParameterError(f'No scheme: {value}')
         if not parse_result.hostname:
-            raise InvalidParameterError(f'no hostname: {value}')
+            raise InvalidParameterError(f'No hostname: {value}')
         if parse_result.path:
-            raise InvalidParameterError('path: %s' % value)
+            raise InvalidParameterError(f'Path: {value}')
 
 
 def _check_is_https_proxy(value):
@@ -1136,7 +1135,7 @@ class ApplicationConfigureService:
         self._app.nat = value
 
     def get(self, name):
-        get_fun_name = '_get_param_%s' % name
+        get_fun_name = f'_get_param_{name}'
         try:
             get_fun = getattr(self, get_fun_name)
         except AttributeError:
@@ -1145,7 +1144,7 @@ class ApplicationConfigureService:
             return get_fun()
 
     def set(self, name, value):
-        set_fun_name = '_set_param_%s' % name
+        set_fun_name = f'_set_param_{name}'
         try:
             set_fun = getattr(self, set_fun_name)
         except AttributeError:

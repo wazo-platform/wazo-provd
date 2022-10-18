@@ -63,8 +63,7 @@ def _check_raw_plugin_info(raw_plugin_info, plugin_id, keys):
     # Quick and incomplete check of a raw plugin info object.
     for plugin_info_key in keys:
         if plugin_info_key not in raw_plugin_info:
-            raise ValueError('invalid plugin info: missing %s key in %s'
-                             % (plugin_info_key, plugin_id))
+            raise ValueError(f'invalid plugin info: missing {plugin_info_key} key in {plugin_id}')
 
 
 def _clean_localized_description(raw_plugin_info):
@@ -89,7 +88,7 @@ def _new_localize_fun() -> Callable:
                 _clean_localized_description(raw_plugin_info)
             return aux
         else:
-            lang_name = 'description_%s' % lang
+            lang_name = f'description_{lang}'
             def aux(raw_plugin_info):
                 try:
                     raw_plugin_info['description'] = raw_plugin_info[locale_name]

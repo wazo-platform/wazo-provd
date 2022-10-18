@@ -176,7 +176,7 @@ def json_request_entity(fun):
         content_type = request.getHeader('Content-Type')
         if content_type != PROV_MIME_TYPE:
             return respond_error(request,
-                                 'Entity must be in media type "%s".' % PROV_MIME_TYPE,
+                                 f'Entity must be in media type "{PROV_MIME_TYPE}".',
                                  http.UNSUPPORTED_MEDIA_TYPE)
         else:
             try:

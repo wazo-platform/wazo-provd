@@ -19,7 +19,7 @@ class HTTPRequest:
     def __init__(self, host='127.0.0.1', port=80, headers=None, username=None, password=None):
         self._host = host
         self._port = port
-        self._url = '%s:%s' % (self._host, self._port)
+        self._url = f'{self._host}:{self._port}'
         self._headers = {
             'Content-Type': 'application/json',
             'Accept': 'text/plain'
@@ -31,9 +31,9 @@ class HTTPRequest:
     def run(self, uri='', qry=None, data=None):
         url = self._url
         if uri:
-            url = '%s/%s' % (url, uri)
+            url = f'{url}/{uri}'
         if qry is not None:
-            url = '%s?%s' % (url, self._build_qry(qry))
+            url = f'{url}?{self._build_qry(qry)}'
         if isinstance(data, dict):
             data = json.dumps(data)
         request = Request(url=url, data=data, headers=self._headers)

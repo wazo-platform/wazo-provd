@@ -77,7 +77,7 @@ class LocalizationService:
         
         """
         if locale is not None and not _LOCALE_REGEX.match(locale):
-            raise ValueError('invalid locale %s' % locale)
+            raise ValueError(f'Invalid locale {locale}')
         if locale != self._locale:
             self._locale = locale
             self._notify(LOCALE_CHANGED, None)

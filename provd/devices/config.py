@@ -463,15 +463,14 @@ def _check_config_validity(config):
                          type(config['parent_ids']))
     for parent_id in config['parent_ids']:
         if not isinstance(parent_id, str):
-            raise ValueError('parent id must be a string; is %s' % type(parent_id))
+            raise ValueError(f'parent id must be a string; is {type(parent_id)}')
 
     if 'raw_config' not in config:
         raise ValueError('missing "raw_config" field in config')
 
     raw_config = config['raw_config']
     if not isinstance(raw_config, dict):
-        raise ValueError('"raw_config" field must be a dict; is %s' %
-                         type(config['raw_config']))
+        raise ValueError(f'"raw_config" field must be a dict; is {type(config["raw_config"])}')
 
 
 def _needs_child_and_parent_indexes(fun):
