@@ -1062,7 +1062,7 @@ class ConfigResource(AuthResource):
     def render_PUT(self, request, content):
         # XXX praise KeyError
         config = content['config']
-        # XXX praise TypeError if config not dict
+        # XXX raise TypeError if config not dict ?
         config[ID_KEY] = self.config_id
 
         def on_callback(_):
@@ -1169,7 +1169,6 @@ class _PluginManagerInstallServiceAdapter:
 
     @classmethod
     def _clean_installable_pkgs(cls, pkg_info):
-        logger.error(f'{cls} {pkg_info}')
         return {k: cls._clean_info(v) for k, v in pkg_info.items()}
 
     def list_installable(self):
@@ -1229,7 +1228,7 @@ class PluginsResource(AuthResource):
 
     def getChild(self, path, request):
         try:
-            return self._children[path]
+            return self._children[path.decode('ascii')]
         except KeyError:
             return super().getChild(path, request)
 
@@ -1277,7 +1276,7 @@ class PluginInfoResource(AuthResource):
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.info.read')
     def render_GET(self, request):
-        return json_response({'plugin_info': self._plugin.info()})
+        return json_response({'plugin_info': self._plugin.info})
 
 
 class PluginResource(IntermediaryResource):

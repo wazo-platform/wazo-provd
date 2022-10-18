@@ -122,6 +122,6 @@ class JsonDatabaseFactory(AbstractDatabaseFactory):
             base_directory = kwargs['json_db_dir']
         except KeyError:
             raise ValueError(f'missing "json_db_dir" arguments in "{kwargs}"')
-        else:
-            generator_factory = get_id_generator_factory(generator)
-            return JsonDatabase(base_directory, generator_factory)
+
+        generator_factory = get_id_generator_factory(generator)
+        return JsonDatabase(base_directory, generator_factory)
