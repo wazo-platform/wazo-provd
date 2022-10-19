@@ -14,7 +14,6 @@ from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
-from twisted.python.compat import nativeString
 from twisted.web.resource import _computeAllowedMethods
 from twisted.web.error import UnsupportedMethod
 
@@ -22,6 +21,8 @@ from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
 from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from requests.exceptions import HTTPError
+
+from provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class Request(server.Request):
         self.postpath = list(map(server.unquote, self.path[1:].split(b'/')))
 
         # We do not really care about the content if the request is a CORS preflight
-        if self.method == 'OPTIONS':
+        if self.method == b'OPTIONS':
             self.finish()
         else:
             d = self.site.getResourceFor(self)
@@ -75,7 +76,7 @@ class AuthResource(resource.Resource):
 
     def _extract_render_method(self, request: Request):
         # from twisted.web.resource.Resource
-        render_method = getattr(self, 'render_' + nativeString(request.method), None)
+        render_method = getattr(self, f'render_{decode_bytes(request.method)}', None)
         if not render_method:
             try:
                 allowed_methods = self.allowedMethods
@@ -85,6 +86,7 @@ class AuthResource(resource.Resource):
         return render_method
 
     def render_OPTIONS(self, request: Request):
+        logging.error(f'REQUEST: {request.getAllHeaders()}')
         return b''
 
     def _extract_tenant_uuid(self, request: Request):
@@ -169,9 +171,9 @@ def getChildForRequest(resource, request: Request):
     Traverse resource tree to find who will handle the request.
     """
     while request.postpath and not resource.isLeaf:
-        pathElement = request.postpath.pop(0)
-        request.prepath.append(pathElement)
-        retval = resource.getChildWithDefault(pathElement, request)
+        path_element = request.postpath.pop(0)
+        request.prepath.append(path_element)
+        retval = resource.getChildWithDefault(path_element, request)
         if isinstance(retval, defer.Deferred):
             resource = yield retval
         else:
