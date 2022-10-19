@@ -76,7 +76,7 @@ class ProvisioningService(Service):
             self._database.close()
         except Exception:
             logger.error('Error while closing database', exc_info=True)
-        logger.info('Database closed')
+        logger.info('/Database closed')
 
     def startService(self):
         self._database = self._create_database()
@@ -92,8 +92,9 @@ class ProvisioningService(Service):
                 except AttributeError as e:
                     logger.warning('This type of database doesn\'t seem to support index: %s', e)
             self.app = ProvisioningApplication(cfg_collection, dev_collection, self._config)
-        except Exception:
+        except Exception as e:
             try:
+                logger.error(f'An error occurred whilst starting the server: {e}', exc_info=True)
                 raise
             finally:
                 self._close_database()
@@ -105,7 +106,7 @@ class ProvisioningService(Service):
         try:
             self.app.close()
         except Exception:
-            logger.error('Error while closing application', exc_info=True)
+            logger.error('An error occurred whilst stopping the application', exc_info=True)
         self._close_database()
 
 

@@ -186,12 +186,14 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat = 0
 
-        self.pg_mgr = PluginManager(self,
-                                    plugins_dir,
-                                    config['general']['cache_dir'],
-                                    config['general']['cache_plugin'],
-                                    config['general']['check_compat_min'],
-                                    config['general']['check_compat_max'])
+        self.pg_mgr = PluginManager(
+            self,
+            plugins_dir,
+            config['general']['cache_dir'],
+            config['general']['cache_plugin'],
+            config['general']['check_compat_min'],
+            config['general']['check_compat_max']
+        )
         if 'plugin_server' in config['general']:
             self.pg_mgr.server = config['general']['plugin_server']
 
@@ -232,8 +234,7 @@ class ProvisioningApplication:
     def _dev_get_plugin(self, device):
         if 'plugin' in device:
             return self.pg_mgr.get(device['plugin'])
-        else:
-            return None
+        return None
 
     def _dev_get_raw_config(self, device):
         # Return a deferred that will fire with a raw config associated
@@ -241,8 +242,7 @@ class ProvisioningApplication:
         if 'config' in device:
             cfg_id = device['config']
             return self._cfg_collection.get_raw_config(cfg_id, self._base_raw_config)
-        else:
-            return defer.succeed(None)
+        return defer.succeed(None)
 
     @defer.inlineCallbacks
     def _dev_get_plugin_and_raw_config(self, device):

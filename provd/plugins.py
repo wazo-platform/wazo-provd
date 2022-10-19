@@ -67,7 +67,7 @@ def _check_raw_plugin_info(raw_plugin_info, plugin_id, keys):
 
 
 def _clean_localized_description(raw_plugin_info):
-    for key in raw_plugin_info:
+    for key in list(raw_plugin_info):
         if key.startswith('description_'):
             del raw_plugin_info[key]
 
@@ -764,7 +764,7 @@ class PluginManager:
         logger.info('Closing plugin manager...')
         # important not to use an iterator over self._plugins since it is
         # modified in the unload method
-        for plugin_id in self._plugins:
+        for plugin_id in list(self._plugins):
             self._unload_and_notify(plugin_id)
         logger.info('Plugin manager closed')
 
