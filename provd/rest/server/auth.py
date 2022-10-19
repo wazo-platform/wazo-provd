@@ -9,6 +9,8 @@ from wazo_auth_client import Client as AuthClient
 from wazo_auth_client.exceptions import InvalidTokenException, MissingPermissionsTokenException
 from xivo import auth_verifier
 
+from provd.util import decode_bytes
+
 logger = logging.getLogger(__name__)
 
 required_acl = auth_verifier.required_acl
@@ -20,7 +22,6 @@ def get_auth_verifier():
     global _auth_verifier
     if not _auth_verifier:
         _auth_verifier = AuthVerifier()
-
     return _auth_verifier
 
 
@@ -43,8 +44,8 @@ class AuthVerifier(auth_verifier.AuthVerifier):
                 return func(*args, **kwargs)
 
             acl_check = getattr(func, 'acl', self._fallback_acl_check)
-            token_id = request.getHeader('X-Auth-Token')
-            tenant_uuid = request.getHeader('Wazo-Tenant')
+            token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
+            tenant_uuid = decode_bytes(request.getHeader(b'Wazo-Tenant'))
             kwargs_for_required_acl = dict(kwargs)
             kwargs_for_required_acl.update(obj.__dict__)
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)

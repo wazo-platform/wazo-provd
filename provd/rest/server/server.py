@@ -33,7 +33,7 @@ from provd.operation import format_oip, operation_in_progres_from_deferred
 from provd.persist.common import ID_KEY
 from provd.plugins import BasePluginManagerObserver
 from provd.rest.util import PROV_MIME_TYPE, uri_append_path
-from provd.servers.http_site import AuthResource
+from provd.servers.http_site import AuthResource, Request
 from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.services import InvalidParameterError
 from provd.util import norm_mac, norm_ip, decode_bytes, decode_value
@@ -72,59 +72,59 @@ def json_response(data: dict) -> bytes:
     return json_dumps(data).encode('utf-8')
 
 
-def respond_no_content(request, response_code=http.NO_CONTENT):
+def respond_no_content(request: Request, response_code=http.NO_CONTENT):
     request.setResponseCode(response_code)
     # next lines are tricks for twisted to omit the 'Content-Type' and 'Content-Length'
     # of 'No content' response. This is not strictly necessary per the RFC, but it certainly
     # makes the HTTP response cleaner (but not my source code)
-    request.responseHeaders.removeHeader('Content-Type')
+    request.responseHeaders.removeHeader(b'Content-Type')
     request.finish()
     return NOT_DONE_YET
 
 
-def respond_created_no_content(request, location):
-    request.setHeader('Location', location)
+def respond_created_no_content(request: Request, location):
+    request.setHeader(b'Location', location.encode('ascii'))
     return respond_no_content(request, http.CREATED)
 
 
-def respond_error(request, err_msg, response_code=http.BAD_REQUEST):
+def respond_error(request: Request, err_msg, response_code=http.BAD_REQUEST):
     request.setResponseCode(response_code)
-    request.setHeader('Content-Type', 'text/plain; charset=ascii')
+    request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     return str(err_msg).encode('ascii')
 
 
-def respond_bad_json_entity(request, err_msg=None):
+def respond_bad_json_entity(request: Request, err_msg=None):
     if err_msg is None:
         err_msg = 'Missing information in received entity'
     return respond_error(request, err_msg)
 
 
-def respond_no_resource(request, response_code=http.NOT_FOUND):
+def respond_no_resource(request: Request, response_code=http.NOT_FOUND):
     request.setResponseCode(response_code)
-    request.setHeader('Content-Type', 'text/plain; charset=ascii')
+    request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     return b'No such resource'
 
 
-def deferred_respond_unauthorized(request):
-    request.setResponseCode(401)
+def deferred_respond_unauthorized(request: Request):
+    request.setResponseCode(http.UNAUTHORIZED)
     request.write(b'Unauthorized')
     request.finish()
 
 
-def deferred_respond_no_content(request, response_code=http.NO_CONTENT):
+def deferred_respond_no_content(request: Request, response_code=http.NO_CONTENT):
     request.setResponseCode(response_code)
-    request.responseHeaders.removeHeader('Content-Type')
+    request.responseHeaders.removeHeader(b'Content-Type')
     request.finish()
 
 
-def deferred_respond_error(request, err_msg, response_code=http.BAD_REQUEST):
+def deferred_respond_error(request: Request, err_msg, response_code=http.BAD_REQUEST):
     request.setResponseCode(response_code)
-    request.setHeader('Content-Type', 'text/plain; charset=ascii')
+    request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     request.write(str(err_msg).encode('utf8'))
     request.finish()
 
 
-def deferred_respond_ok(request, data, response_code=http.OK):
+def deferred_respond_ok(request: Request, data, response_code=http.OK):
     request.setResponseCode(response_code)
     if isinstance(data, str):
         data = data.encode('utf-8')
@@ -132,9 +132,9 @@ def deferred_respond_ok(request, data, response_code=http.OK):
     request.finish()
 
 
-def deferred_respond_no_resource(request, response_code=http.NOT_FOUND):
+def deferred_respond_no_resource(request: Request, response_code=http.NOT_FOUND):
     request.setResponseCode(response_code)
-    request.setHeader('Content-Type', 'text/plain; charset=ascii')
+    request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     request.write(b'No such resource')
     request.finish()
 
@@ -150,16 +150,15 @@ def json_response_entity(fun):
 
     """
     @functools.wraps(fun)
-    def aux(self, request):
+    def aux(self, request: Request):
         if not accept_mime_type(PROV_MIME_TYPE, request):
             return respond_error(
                 request,
                 f'You must accept the "{PROV_MIME_TYPE}" MIME type.',
                 http.NOT_ACCEPTABLE
             )
-        else:
-            request.setHeader('Content-Type', PROV_MIME_TYPE)
-            return fun(self, request)
+        request.setHeader(b'Content-Type', PROV_MIME_TYPE.encode('ascii'))
+        return fun(self, request)
     return aux
 
 
@@ -172,20 +171,20 @@ def json_request_entity(fun):
 
     """
     @functools.wraps(fun)
-    def aux(self, request):
-        content_type = request.getHeader('Content-Type')
+    def aux(self, request: Request):
+        content_type = decode_bytes(request.getHeader(b'Content-Type'))
         if content_type != PROV_MIME_TYPE:
-            return respond_error(request,
-                                 f'Entity must be in media type "{PROV_MIME_TYPE}".',
-                                 http.UNSUPPORTED_MEDIA_TYPE)
-        else:
-            try:
-                content = json.loads(request.content.getvalue())
-            except ValueError as e:
-                logger.info('Received invalid JSON document: %s', e)
-                return respond_error(request, b'Invalid JSON document: %s' % e)
-            else:
-                return fun(self, request, content)
+            return respond_error(
+                request,
+                f'Entity must be in media type "{PROV_MIME_TYPE}".',
+                http.UNSUPPORTED_MEDIA_TYPE
+            )
+        try:
+            content = json.loads(request.content.getvalue())
+        except ValueError as e:
+            logger.info('Received invalid JSON document: %s', e)
+            return respond_error(request, b'Invalid JSON document: %s' % e)
+        return fun(self, request, content)
     return aux
 
 
@@ -263,7 +262,7 @@ def _add_sort_parameters(args, result):
         result['sort'] = (key, direction)
 
 
-def find_arguments_from_request(request) -> dict[str, Any]:
+def find_arguments_from_request(request: Request) -> dict[str, Any]:
     # Return a dictionary representing the different find parameters that
     # were passed in the request. The dictionary is usable as **kwargs for
     # the find method of collections.
@@ -327,7 +326,7 @@ class IntermediaryResource(AuthResource):
         ]
 
     @json_response_entity
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         content = {'links': self._build_links(request.path)}
         return json_response(content)
 
@@ -344,7 +343,7 @@ class ServerResource(IntermediaryResource):
         super().__init__(links)
 
     @required_acl('provd.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return IntermediaryResource.render_GET(self, request)
 
 
@@ -362,11 +361,11 @@ class OperationInProgressResource(AuthResource):
 
     @required_acl('provd.operation.read')
     @json_response_entity
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return json_response({'status': format_oip(self._oip)})
 
     @required_acl('provd.operation.delete')
-    def render_DELETE(self, request):
+    def render_DELETE(self, request: Request):
         if self._on_delete is not None:
             self._on_delete()
         return respond_no_content(request)
@@ -380,7 +379,7 @@ class ConfigureServiceResource(AuthResource):
         super().__init__()
         self._cfg_srv = cfg_srv
 
-    def getChild(self, path, request):
+    def getChild(self, path, request: Request):
         return ConfigureParameterResource(self._cfg_srv, path)
 
     def _get_localized_description_list(self):
@@ -402,7 +401,7 @@ class ConfigureServiceResource(AuthResource):
 
     @required_acl('provd.configure.read')
     @json_response_entity
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         description_list = self._get_localized_description_list()
         params = []
         for key, description in description_list:
@@ -424,7 +423,7 @@ class PluginConfigureServiceResource(ConfigureServiceResource):
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.configure.read')
     @json_response_entity
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return ConfigureServiceResource.render_GET(self, request)
 
 
@@ -437,7 +436,7 @@ class ConfigureParameterResource(AuthResource):
 
     @required_acl('provd.configure.{param_id}.read')
     @json_response_entity
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         try:
             value = self._cfg_srv.get(self.param_id)
         except KeyError:
@@ -447,22 +446,21 @@ class ConfigureParameterResource(AuthResource):
 
     @required_acl('provd.configure.{param_id}.update')
     @json_request_entity
-    def render_PUT(self, request, content):
+    def render_PUT(self, request: Request, content):
         try:
             value = content['param']['value']
         except KeyError:
             return respond_error(request, 'Wrong information in entity')
-        else:
-            try:
-                self._cfg_srv.set(self.param_id, value)
-            except InvalidParameterError as e:
-                logger.info('Invalid value for key %s: %r', self.param_id, value)
-                return respond_error(request, e)
-            except KeyError:
-                logger.info('Invalid/unknown key: %s', self.param_id)
-                return respond_no_resource(request)
-            else:
-                return respond_no_content(request)
+
+        try:
+            self._cfg_srv.set(self.param_id, value)
+        except InvalidParameterError as e:
+            logger.info('Invalid value for key %s: %r', self.param_id, value)
+            return respond_error(request, e)
+        except KeyError:
+            logger.info('Invalid/unknown key: %s', self.param_id)
+            return respond_no_resource(request)
+        return respond_no_content(request)
 
 
 class PluginInstallServiceResource(IntermediaryResource):
@@ -486,7 +484,7 @@ class _OipInstallResource(AuthResource):
         super().__init__()
         self._id_gen = new_id_generator()
 
-    def _add_new_oip(self, oip, request):
+    def _add_new_oip(self, oip, request: Request):
         # add a new child to this resource, and return the location
         # of the child
         path = next(self._id_gen)
@@ -506,7 +504,7 @@ class InstallResource(_OipInstallResource):
         super().__init__()
         self._install_srv = install_srv
 
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             pkg_id = content['id']
         except KeyError:
@@ -527,7 +525,7 @@ class InstallResource(_OipInstallResource):
 class PluginInstallResource(InstallResource):
     @json_request_entity
     @required_acl('provd.pg_mgr.install.install.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         return InstallResource.render_POST(self, request, content)
 
 
@@ -538,7 +536,7 @@ class PackageInstallResource(InstallResource):
 
     @json_request_entity
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.install.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         return InstallResource.render_POST(self, request, content)
 
 
@@ -550,7 +548,7 @@ class PackageUninstallResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.uninstall.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             pkg_id = content['id']
         except KeyError:
@@ -571,7 +569,7 @@ class PluginUpgradeResource(_OipInstallResource):
 
     @json_request_entity
     @required_acl('provd.pg_mgr.install.upgrade.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             pkg_id = content['id']
         except KeyError:
@@ -596,7 +594,7 @@ class UpdateResource(_OipInstallResource):
 
     @json_request_entity
     @required_acl('provd.pg_mgr.install.update.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             deferred, oip = self._install_srv.update()
         except Exception as e:
@@ -617,7 +615,7 @@ class _ListInstallxxxxResource(AuthResource):
         self._method_name = method_name
 
     @json_response_entity
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         fun = getattr(self._install_srv, self._method_name)
         try:
             pkgs = fun()
@@ -632,14 +630,14 @@ class InstalledResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
         super().__init__(install_srv, 'list_installed')
 
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         logger.info('list installed')
         return _ListInstallxxxxResource.render_GET(self, request)
 
 
 class PluginInstalledResource(InstalledResource):
     @required_acl('provd.pg_mgr.install.installed.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return InstalledResource.render_GET(self, request)
 
 
@@ -649,7 +647,7 @@ class PackageInstalledResource(InstalledResource):
         self.plugin_id = plugin_id
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.installed.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return InstalledResource.render_GET(self, request)
 
 
@@ -657,13 +655,13 @@ class InstallableResource(_ListInstallxxxxResource):
     def __init__(self, install_srv):
         super().__init__(install_srv, 'list_installable')
 
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return _ListInstallxxxxResource.render_GET(self, request)
 
 
 class PluginInstallableResource(InstallableResource):
     @required_acl('provd.pg_mgr.install.installable.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return InstallableResource.render_GET(self, request)
 
 
@@ -673,7 +671,7 @@ class PackageInstallableResource(InstallableResource):
         super().__init__(install_srv)
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.install.installable.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return InstallableResource.render_GET(self, request)
 
 
@@ -688,7 +686,7 @@ class DeviceManagerResource(IntermediaryResource):
         super().__init__(links)
 
     @required_acl('provd.dev_mgr.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return IntermediaryResource.render_GET(self, request)
 
 
@@ -699,7 +697,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
 
     @json_request_entity
     @required_acl('provd.dev_mgr.synchronize.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             device_id = content['id']
         except KeyError:
@@ -735,7 +733,7 @@ class DeviceReconfigureResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.dev_mgr.reconfigure.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             device_id = content['id']
         except KeyError:
@@ -778,7 +776,7 @@ class DeviceDHCPInfoResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.dev_mgr.dhcpinfo.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         mac, options = None, None
         try:
             raw_dhcp_info = content['dhcp_info']
@@ -809,17 +807,17 @@ class DevicesResource(AuthResource):
         super().__init__()
         self._app = app
 
-    def getChild(self, path, request):
+    def getChild(self, path: bytes, request: Request):
         return DeviceResource(self._app, path)
 
-    def _extract_recurse(self, request):
+    def _extract_recurse(self, request: Request):
         for value in request.args.get('recurse', []):
             return value in ['true', 'True']
         return False
 
     @json_response_entity
     @required_acl('provd.dev_mgr.devices.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(devices):
@@ -838,7 +836,7 @@ class DevicesResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.dev_mgr.devices.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         # XXX praise KeyError
         device = content['device']
 
@@ -849,7 +847,7 @@ class DevicesResource(AuthResource):
 
         def on_callback(device_id):
             location = uri_append_path(request.path, device_id)
-            request.setHeader('Location', location)
+            request.setHeader(b'Location', location.encode('ascii'))
             data = json_dumps({'id': device_id})
             deferred_respond_ok(request, data, http.CREATED)
 
@@ -873,7 +871,7 @@ class DeviceResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.dev_mgr.devices.{device_id}.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         def on_callback(device):
             if device is None:
                 deferred_respond_no_resource(request)
@@ -891,7 +889,7 @@ class DeviceResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.dev_mgr.devices.{device_id}.update')
-    def render_PUT(self, request, content):
+    def render_PUT(self, request: Request, content):
         # XXX praise KeyError
         device = content['device']
         # XXX praise TypeError if device not dict
@@ -930,7 +928,7 @@ class DeviceResource(AuthResource):
         return NOT_DONE_YET
 
     @required_acl('provd.dev_mgr.devices.{device_id}.delete')
-    def render_DELETE(self, request):
+    def render_DELETE(self, request: Request):
         def on_valid_tenant(tenant_uuid):
             return self._is_tenant_valid_for_device(self._app, self.device_id, tenant_uuid)
 
@@ -962,7 +960,7 @@ class ConfigManagerResource(IntermediaryResource):
         super().__init__(links)
 
     @required_acl('provd.cfg_mgr.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return IntermediaryResource.render_GET(self, request)
 
 
@@ -973,10 +971,10 @@ class AutocreateConfigResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.cfg_mgr.autocreate.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         def on_callback(config_id):
             location = uri_append_path(request.path, config_id)
-            request.setHeader('Location', location)
+            request.setHeader(b'Location', location.encode('ascii'))
             data = json_dumps({'id': config_id})
             deferred_respond_ok(request, data, http.CREATED)
 
@@ -992,12 +990,12 @@ class ConfigsResource(AuthResource):
         super().__init__()
         self._app = app
 
-    def getChild(self, path, request):
+    def getChild(self, path: bytes, request: Request):
         return ConfigResource(self._app, path)
 
     @json_response_entity
     @required_acl('provd.cfg_mgr.configs.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(configs):
@@ -1012,13 +1010,13 @@ class ConfigsResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.cfg_mgr.configs.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         # XXX praise KeyError
         config = content['config']
 
         def on_callback(config_id):
             location = uri_append_path(request.path, config_id)
-            request.setHeader('Location', location)
+            request.setHeader('Location', location.encode('ascii'))
             data = json_dumps({'id': config_id})
             deferred_respond_ok(request, data, http.CREATED)
 
@@ -1035,14 +1033,14 @@ class ConfigResource(AuthResource):
         self._app = app
         self.config_id = decode_bytes(config_id)
 
-    def getChild(self, path, request):
+    def getChild(self, path: bytes, request: Request):
         if path == b'raw':
             return RawConfigResource(self._app, self.config_id)
         return super().getChild(path, request)
 
     @json_response_entity
     @required_acl('provd.cfg_mgr.configs.{config_id}.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         def on_callback(config):
             if config is None:
                 deferred_respond_no_resource(request)
@@ -1059,7 +1057,7 @@ class ConfigResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.cfg_mgr.configs.{config_id}.update')
-    def render_PUT(self, request, content):
+    def render_PUT(self, request: Request, content):
         # XXX praise KeyError
         config = content['config']
         # XXX raise TypeError if config not dict ?
@@ -1078,7 +1076,7 @@ class ConfigResource(AuthResource):
         return NOT_DONE_YET
 
     @required_acl('provd.cfg_mgr.configs.{config_id}.delete')
-    def render_DELETE(self, request):
+    def render_DELETE(self, request: Request):
         def on_callback(_):
             deferred_respond_no_content(request)
 
@@ -1102,7 +1100,7 @@ class RawConfigResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.cfg_mgr.configs.{config_id}.raw.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         def on_callback(raw_config):
             if raw_config is None:
                 deferred_respond_no_resource(request)
@@ -1129,7 +1127,7 @@ class PluginManagerResource(IntermediaryResource):
         super().__init__(links)
 
     @required_acl('provd.pg_mgr.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return IntermediaryResource.render_GET(self, request)
 
 
@@ -1148,7 +1146,7 @@ class PluginManagerInstallServiceResource(IntermediaryResource):
         super().__init__(links)
 
     @required_acl('provd.pg_mgr.install.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return IntermediaryResource.render_GET(self, request)
 
 
@@ -1188,7 +1186,7 @@ class PluginManagerUninstallResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.pg_mgr.install.uninstall.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             pkg_id = content['id']
         except KeyError:
@@ -1226,7 +1224,7 @@ class PluginsResource(AuthResource):
     def _on_plugin_unload(self, pg_id):
         del self._children[pg_id]
 
-    def getChild(self, path, request):
+    def getChild(self, path: bytes, request: Request):
         try:
             return self._children[path.decode('ascii')]
         except KeyError:
@@ -1234,7 +1232,7 @@ class PluginsResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return json_response({
             'plugins': {
                 pg_id: {'links': [{'rel': 'pg.plugin', 'href': uri_append_path(request.path, pg_id)}]}
@@ -1250,7 +1248,7 @@ class PluginReloadResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.pg_mgr.reload.create')
-    def render_POST(self, request, content):
+    def render_POST(self, request: Request, content):
         try:
             plugin_id = content['id']
         except KeyError:
@@ -1275,7 +1273,7 @@ class PluginInfoResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.info.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return json_response({'plugin_info': self._plugin.info})
 
 
@@ -1292,7 +1290,7 @@ class PluginResource(IntermediaryResource):
         super().__init__(links)
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return IntermediaryResource.render_GET(self, request)
 
 
@@ -1300,7 +1298,7 @@ class StatusResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.status.read')
-    def render_GET(self, request):
+    def render_GET(self, request: Request):
         return json_response({'rest_api': 'ok'})
 
 

@@ -1,14 +1,23 @@
 # Copyright 2019-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
 
 from xivo import tenant_helpers
 from xivo.tenant_helpers import InvalidTenant, InvalidToken, UnauthorizedTenant
+
+from provd.util import decode_bytes
+
+if TYPE_CHECKING:
+    from provd.servers.http_site import Request
 
 
 class Tenant(tenant_helpers.Tenant):
 
     @classmethod
-    def autodetect(cls, request, tokens):
+    def autodetect(cls, request: Request, tokens: Tokens):
         token = tokens.from_headers(request)
         try:
             tenant = cls.from_headers(request)
@@ -21,8 +30,8 @@ class Tenant(tenant_helpers.Tenant):
             raise UnauthorizedTenant(tenant.uuid)
 
     @classmethod
-    def from_headers(cls, request):
-        tenant_uuid = request.getHeader('Wazo-Tenant')
+    def from_headers(cls, request: Request):
+        tenant_uuid = decode_bytes(request.getHeader(b'Wazo-Tenant'))
         if not tenant_uuid:
             raise InvalidTenant()
         return cls(uuid=tenant_uuid)
@@ -30,8 +39,8 @@ class Tenant(tenant_helpers.Tenant):
 
 class Tokens(tenant_helpers.Tokens):
 
-    def from_headers(self, request):
-        token_id = request.getHeader('X-Auth-Token')
+    def from_headers(self, request: Request):
+        token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
         if not token_id:
             raise InvalidToken()
         return self.get(token_id)
