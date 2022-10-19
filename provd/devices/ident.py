@@ -13,6 +13,7 @@ from os.path import basename
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
+from provd.servers.http_site import Request
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService
 from twisted.internet import defer
@@ -31,7 +32,7 @@ class RequestType(Enum):
 logger = logging.getLogger(__name__)
 
 
-def _get_ip_from_request(request, request_type: RequestType):
+def _get_ip_from_request(request: Request, request_type: RequestType):
     if request_type == RequestType.HTTP:
         return request.getClientIP()
     elif request_type == RequestType.TFTP:
@@ -42,9 +43,9 @@ def _get_ip_from_request(request, request_type: RequestType):
         raise RuntimeError(f'invalid request_type: {request_type}')
 
 
-def _get_filename_from_request(request, request_type: RequestType):
+def _get_filename_from_request(request: Request, request_type: RequestType):
     if request_type == RequestType.HTTP:
-        return basename(request.path)
+        return basename(request.path.decode('ascii'))
     elif request_type == RequestType.TFTP:
         return basename(request['packet']['filename'])
     elif request_type == RequestType.DHCP:
@@ -689,7 +690,7 @@ class HTTPRequestProcessingService(Resource):
         self.service_factory = _null_service_factory
 
     @defer.inlineCallbacks
-    def getChild(self, path, request):
+    def getChild(self, path: bytes, request: Request):
         logger.info('Processing HTTP request: %s', request.path)
         logger.debug('HTTP request: %s', request)
         logger.debug('postpath: %s', request.postpath)
@@ -697,9 +698,11 @@ class HTTPRequestProcessingService(Resource):
             device, pg_id = yield self._process_service.process(request, RequestType.HTTP)
         except Exception:
             logger.error('Error while processing HTTP request:', exc_info=True)
-            defer.returnValue(ErrorPage(INTERNAL_SERVER_ERROR,
-                              'Internal processing error',
-                              'Internal processing error'))
+            defer.returnValue(ErrorPage(
+                INTERNAL_SERVER_ERROR,
+                'Internal processing error',
+                'Internal processing error',
+            ))
         else:
             # Here we 'inject' the device object into the request object
             request.prov_dev = device

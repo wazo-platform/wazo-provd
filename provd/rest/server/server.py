@@ -811,8 +811,8 @@ class DevicesResource(AuthResource):
         return DeviceResource(self._app, path)
 
     def _extract_recurse(self, request: Request):
-        for value in request.args.get('recurse', []):
-            return value in ['true', 'True']
+        for value in request.args.get(b'recurse', []):
+            return value in [b'true', b'True']
         return False
 
     @json_response_entity
