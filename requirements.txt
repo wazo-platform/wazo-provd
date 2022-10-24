@@ -3,6 +3,7 @@ https://github.com/wazo-platform/wazo-amid-client/archive/master.zip
 https://github.com/wazo-platform/wazo-auth-client/archive/master.zip
 https://github.com/wazo-platform/xivo-fetchfw/archive/master.zip
 https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
+incremental==16.10.1  # from twisted
 jinja2==2.10
 pyopenssl==19.0.0
 pyyaml==3.13
