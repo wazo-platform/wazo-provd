@@ -44,6 +44,7 @@ _PARSE_OPT_MAP = {
     'blksize': _parse_option_blksize,
 }
 
+
 def _parse_request(dgram):
     """dgram is the original datagram with the first 2 bytes removed.
     
@@ -56,45 +57,43 @@ def _parse_request(dgram):
     tokens = dgram.split('\x00')
     if len(tokens) < 3:
         raise PacketError('too small')
-    elif dgram[-1] != '\x00':
+    if dgram[-1] != '\x00':
         assert tokens[-1]
         raise PacketError('last dgram byte not null')
-    elif len(tokens) % 2 == 0:
+    if len(tokens) % 2 == 0:
         raise PacketError('invalid number of field')
-    else:
-        options = {}
-        for i in range(2, len(tokens) - 1, 2):
-            opt = tokens[i].lower()
-            val = tokens[i + 1].lower()
-            if opt in options:
-                # An option may only be specified once
-                raise PacketError('same option specified more than once')
-            opt_fct = _PARSE_OPT_MAP.get(opt, lambda x: x)
-            options[opt] = opt_fct(val)
-        return {'filename': tokens[0], 'mode': tokens[1].lower(), 'options': options}
+
+    options = {}
+    for i in range(2, len(tokens) - 1, 2):
+        opt = tokens[i].lower()
+        val = tokens[i + 1].lower()
+        if opt in options:
+            # An option may only be specified once
+            raise PacketError('same option specified more than once')
+        opt_fct = _PARSE_OPT_MAP.get(opt, lambda x: x)
+        options[opt] = opt_fct(val)
+    return {'filename': tokens[0], 'mode': tokens[1].lower(), 'options': options}
 
 
 def _parse_data(dgram):
     if len(dgram) < 2:
         raise PacketError('too small')
-    else:
-        return {'blkno': dgram[:2], 'data': dgram[2:]}
+    return {'blkno': dgram[:2], 'data': dgram[2:]}
 
 
 def _parse_ack(dgram):
     if len(dgram) != 2:
         raise PacketError('incorrect size')
-    else:
-        return {'blkno': dgram}
+    return {'blkno': dgram}
 
 
 def _parse_err(dgram):
     if len(dgram) < 3:
         raise PacketError('too small')
-    elif dgram[-1] != '\x00':
+    if dgram[-1] != '\x00':
         raise PacketError('last datagram byte not null')
-    else:
-        return {'errcode': dgram[:2], 'errmsg': dgram[2:-1]}
+
+    return {'errcode': dgram[:2], 'errmsg': dgram[2:-1]}
 
 
 _PARSE_MAP = {
@@ -104,6 +103,7 @@ _PARSE_MAP = {
     OP_ACK: _parse_ack,
     OP_ERR: _parse_err,
 }
+
 
 def parse_dgram(dgram):
     """Return a packet object (a dictionary) from a datagram (a string).
@@ -140,17 +140,16 @@ def parse_dgram(dgram):
         fct = _PARSE_MAP[opcode]
     except KeyError:
         raise PacketError('invalid opcode')
-    else:
-        res = fct(dgram[2:])
-        res['opcode'] = opcode
-        return res
+
+    res = fct(dgram[2:])
+    res['opcode'] = opcode
+    return res
 
 
 def _build_data(packet):
     if len(packet['blkno']) != 2:
         raise PacketError('invalid blkno length')
-    else:
-        return packet['blkno'] + packet['data']
+    return packet['blkno'] + packet['data']
 
 
 def _build_error(packet):
@@ -158,8 +157,7 @@ def _build_error(packet):
         raise PacketError('invalid errcode length')
     elif '\x00' in packet['errmsg']:
         raise PacketError('null byte in errmsg')
-    else:
-        return packet['errcode'] + packet['errmsg'] + '\x00'
+    return packet['errcode'] + packet['errmsg'] + '\x00'
 
 
 def _build_oack(packet):
@@ -174,6 +172,7 @@ _BUILD_MAP = {
     OP_ERR: _build_error,
     OP_OACK: _build_oack,
 }
+
 
 def build_dgram(packet):
     """Return a datagram (string) from a packet objet (a dictionary).
@@ -191,8 +190,7 @@ def build_dgram(packet):
         fct = _BUILD_MAP[opcode]
     except KeyError:
         raise PacketError('invalid opcode')
-    else:
-        return opcode + fct(packet)
+    return opcode + fct(packet)
 
 
 def err_packet(errcode, errmsg=''):
@@ -203,6 +201,7 @@ def err_packet(errcode, errmsg=''):
     """
     return {'opcode': OP_ERR, 'errcode': errcode, 'errmsg': errmsg}
 
+
 def data_packet(blk_no, data):
     """Return a new data packet.
     
@@ -210,6 +209,7 @@ def data_packet(blk_no, data):
     
     """
     return {'opcode': OP_DATA, 'blkno': blk_no, 'data': data}
+
 
 def oack_packet(options):
     """Return a new option acknowledgement packet.

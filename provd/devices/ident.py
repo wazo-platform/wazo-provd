@@ -684,7 +684,7 @@ class HTTPRequestProcessingService(Resource):
     default_service = NoResource('Nowhere to route this request.')
 
     def __init__(self, process_service, pg_mgr):
-        Resource.__init__(self)
+        super().__init__()
         self._process_service = process_service
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
@@ -739,6 +739,7 @@ class TFTPRequestProcessingService:
     def handle_read_request(self, request, response):
         logger.info('Processing TFTP request: %s', request['packet']['filename'])
         logger.debug('TFTP request: %s', request)
+
         def callback(plugin_for_device):
             # Here we 'inject' the device object into the request object
             (device, pg_id) = plugin_for_device
@@ -751,9 +752,11 @@ class TFTPRequestProcessingService:
                     _log_sensitive_request(plugin, request, RequestType.TFTP)
                     service = self.service_factory(pg_id, plugin.tftp_service)
             service.handle_read_request(request, response)
+
         def errback(failure):
             logger.error('Error while processing TFTP request: %s', failure)
             response.reject(ERR_UNDEF, 'Internal processing error')
+
         d = self._process_service.process(request, RequestType.TFTP)
         d.addCallbacks(callback, errback)
 

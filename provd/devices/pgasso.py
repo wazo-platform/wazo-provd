@@ -9,7 +9,6 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from enum import IntEnum
 from operator import itemgetter
-from typing import Any
 
 from provd.devices.ident import AbstractDeviceUpdater
 from twisted.internet import defer
@@ -45,12 +44,12 @@ class DeviceSupport(IntEnum):
 class AbstractPluginAssociator(metaclass=ABCMeta):
 
     @abstractmethod
-    def associate(self, dev_info: dict[str, Any]) -> DeviceSupport:
+    def associate(self, dev_info: dict[str, str]) -> DeviceSupport | int:
         """Return a 'support score' from a device info object."""
 
 
 class BasePgAssociator(AbstractPluginAssociator):
-    def associate(self, dev_info):
+    def associate(self, dev_info: dict[str, str]) -> DeviceSupport | int:
         vendor = dev_info.get('vendor')
         if vendor is None:
             return DeviceSupport.UNKNOWN
@@ -58,7 +57,7 @@ class BasePgAssociator(AbstractPluginAssociator):
         version = dev_info.get('version')
         return self._do_associate(vendor, model, version)
 
-    def _do_associate(self, vendor: str, model: str, version: str) -> DeviceSupport:
+    def _do_associate(self, vendor: str, model: str | None, version: str | None) -> DeviceSupport | int:
         """
         Pre: vendor is not None
         """
