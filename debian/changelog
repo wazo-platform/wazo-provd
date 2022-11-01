@@ -186,7 +186,7 @@ pf-xivo-provisioning (0.4~svn3485-3) etch-xivo-k-9-dev; urgency=low
 
 pf-xivo-provisioning (0.4~svn3485-2) etch-xivo-k-9-dev; urgency=low
 
-  * Added ${python:Versions} and ${python:Depends} 
+  * Added ${python:Versions} and ${python3:Depends}
 
  -- Guillaume Knispel <gknispel@proformatique.com>  Thu, 10 Jul 2008 16:56:41 +0200
 
