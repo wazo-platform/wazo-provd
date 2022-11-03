@@ -219,7 +219,7 @@ class TestRequestHelper(unittest.TestCase):
         }
         dev_info = {}
         self.request = Mock()
-        self.request.path = '001122334455.cfg'
+        self.request.path = b'001122334455.cfg'
         self.request_type = RequestType.HTTP
         plugin = Mock()
         plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
@@ -253,7 +253,7 @@ class TestRequestHelper(unittest.TestCase):
         }
         dev_info = {}
         self.request = Mock()
-        self.request.path = '001122334455.cfg'
+        self.request.path = b'001122334455.cfg'
         self.request_type = RequestType.HTTP
         plugin = Mock()
         plugin.get_remote_state_trigger_filename.return_value = '001122334455.cfg'
@@ -323,7 +323,7 @@ class TestLogSensitiveRequest(unittest.TestCase):
         self.request_type = ident.RequestType.HTTP
         self.request = Mock()
         self.request.getClientIP.return_value = self.ip
-        self.request.path = f'/{self.filename}'
+        self.request.path = f'/{self.filename}'.encode('ascii')
         self.plugin = Mock()
 
     @patch('provd.devices.ident.log_security_msg')

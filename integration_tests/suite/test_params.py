@@ -1,4 +1,4 @@
-# Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import (
@@ -87,14 +87,14 @@ class TestParams(BaseIntegrationTest):
         )
 
     def test_stable_pluign_server(self):
-        stable_url = 'http://provd.wazo.community/plugins/1/stable/'
+        stable_url = 'http://provd.wazo.community/plugins/2/stable/'
         self._client.params.update('plugin_server', stable_url)
 
         with self._client.plugins.update() as op_progress:
             until.assert_(operation_successful, op_progress, tries=10, interval=0.5)
 
     def test_wrong_pluign_server(self):
-        wrong_url = 'http://provd.wazo.community/plugins/1/wrong/'
+        wrong_url = 'http://provd.wazo.community/plugins/2/wrong/'
         self._client.params.update('plugin_server', wrong_url)
 
         with self._client.plugins.update() as op_progress:
