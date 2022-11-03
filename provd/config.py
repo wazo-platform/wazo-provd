@@ -62,9 +62,9 @@ The following parameters are defined:
 """
 
 
-# XXX there's is some naming confusion between application configuration
+# XXX there is some naming confusion between application configuration
 #     and device configuration, since both used the word 'config' and
-#     raw config yet it means different thing
+#     raw config, yet they mean different things
 
 import logging
 import json
@@ -88,7 +88,7 @@ _DEFAULT_CONFIG = {
         'check_compat_min': True,
         'check_compat_max': True,
         'base_storage_dir': '/var/lib/wazo-provd',
-        'plugin_server': 'http://provd.wazo.community/plugins/1/stable/',
+        'plugin_server': 'http://provd.wazo.community/plugins/2/stable/',
         'info_extractor': 'default',
         'retriever': 'default',
         'updater': 'default',
