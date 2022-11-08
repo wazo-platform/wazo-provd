@@ -22,6 +22,8 @@ from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
 from twisted.web import rewrite
 
+from provd.util import decode_bytes
+
 
 class RequestType(Enum):
     HTTP = 'http'
@@ -657,7 +659,7 @@ def _log_sensitive_request(plugin, request, request_type):
     if is_sensitive_filename is None:
         return
 
-    filename = _get_filename_from_request(request, request_type)
+    filename = decode_bytes(_get_filename_from_request(request, request_type))
     if is_sensitive_filename(filename):
         ip = _get_ip_from_request(request, request_type)
         log_security_msg('Sensitive file requested from %s: %s', ip, filename)

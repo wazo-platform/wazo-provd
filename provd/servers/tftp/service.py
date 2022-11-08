@@ -73,16 +73,16 @@ class TFTPFileService:
         self._path = os.path.abspath(path)
 
     def handle_read_request(self, request, response):
-        rq_orig_path = request['packet']['filename']
+        rq_orig_path = request['packet']['filename'].decode('ascii')
         rq_stripped_path = rq_orig_path.lstrip(os.sep)
         rq_final_path = os.path.normpath(os.path.join(self._path, rq_stripped_path))
         if not rq_final_path.startswith(self._path):
-            response.reject(ERR_FNF, 'Invalid filename')
+            response.reject(ERR_FNF, b'Invalid filename')
         else:
             try:
                 fobj = open(rq_final_path, 'rb')
             except IOError:
-                response.reject(ERR_FNF, 'File not found')
+                response.reject(ERR_FNF, b'File not found')
             else:
                 response.accept(fobj)
 
