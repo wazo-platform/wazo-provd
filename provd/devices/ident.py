@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
@@ -19,7 +19,7 @@ from twisted.internet import defer
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
 from twisted.web import rewrite
-from zope.interface import Interface, implements
+from zope.interface import implementer, Interface
 import six
 
 REQUEST_TYPE_HTTP = 'http'
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def _get_ip_from_request(request, request_type):
     if request_type == REQUEST_TYPE_HTTP:
-        return request.getClientIP().decode('ascii')
+        return request.getClientIP()
     elif request_type == REQUEST_TYPE_TFTP:
         return request['address'][0].decode('ascii')
     elif request_type == REQUEST_TYPE_DHCP:
@@ -85,6 +85,7 @@ class IDeviceInfoExtractor(Interface):
         """
 
 
+@implementer(IDeviceInfoExtractor)
 class StandardDeviceInfoExtractor(object):
     """Device info extractor that return standard and readily available
     information from requests, like IP addresses, or MAC addresses for DHCP
@@ -93,9 +94,6 @@ class StandardDeviceInfoExtractor(object):
     You SHOULD always use this extractor.
 
     """
-
-    implements(IDeviceInfoExtractor)
-
     def extract(self, request, request_type):
         dev_info = {u'ip': _get_ip_from_request(request, request_type)}
         if request_type == REQUEST_TYPE_DHCP:
@@ -148,6 +146,7 @@ class VotingUpdater(object):
             self._vote(key, value)
 
 
+@implementer(IDeviceInfoExtractor)
 class CollaboratingDeviceInfoExtractor(object):
     """Composite device info extractor that return a device info object
     which is the composition of every device info objects returned.
@@ -160,9 +159,6 @@ class CollaboratingDeviceInfoExtractor(object):
     - 'dev_info' attribute, which is the current computed dev_info
 
     """
-
-    implements(IDeviceInfoExtractor)
-
     def __init__(self, updater_factory, extractors):
         self._updater_factory = updater_factory
         self._extractors = extractors
@@ -181,14 +177,12 @@ class CollaboratingDeviceInfoExtractor(object):
         defer.returnValue(updater.dev_info)
 
 
+@implementer(IDeviceInfoExtractor)
 class AllPluginsDeviceInfoExtractor(object):
     """Composite device info extractor that forward extraction requests to
     device info extractors of every loaded plugins.
 
     """
-
-    implements(IDeviceInfoExtractor)
-
     def __init__(self, extractor_factory, pg_mgr):
         """
         extractor_factory -- a function taking a list of extractors and
@@ -241,15 +235,13 @@ class IDeviceRetriever(Interface):
         """
 
 
+@implementer(IDeviceRetriever)
 class SearchDeviceRetriever(object):
     """Device retriever who search in the application for a device with a
     key's value the same as a device info key's value, and return the first
     one found.
 
     """
-
-    implements(IDeviceRetriever)
-
     def __init__(self, app, key):
         self._app = app
         self._key = key
@@ -260,9 +252,8 @@ class SearchDeviceRetriever(object):
         return defer.succeed(None)
 
 
+@implementer(IDeviceRetriever)
 class IpDeviceRetriever(object):
-    implements(IDeviceRetriever)
-
     def __init__(self, app):
         self._app = app
 
@@ -324,6 +315,7 @@ def UUIDDeviceRetriever(app):
     return SearchDeviceRetriever(app, u'uuid')
 
 
+@implementer(IDeviceRetriever)
 class AddDeviceRetriever(object):
     """A device retriever that does no lookup and always insert a new device
     in the application.
@@ -333,9 +325,6 @@ class AddDeviceRetriever(object):
     don't find anything.
 
     """
-
-    implements(IDeviceRetriever)
-
     def __init__(self, app):
         self._app = app
 
@@ -354,14 +343,12 @@ class AddDeviceRetriever(object):
             defer.returnValue(device)
 
 
+@implementer(IDeviceRetriever)
 class FirstCompositeDeviceRetriever(object):
     """Composite device retriever which return the device its first retriever
     returns.
 
     """
-
-    implements(IDeviceRetriever)
-
     def __init__(self, retrievers=None):
         self.retrievers = [] if retrievers is None else retrievers
 
@@ -393,15 +380,14 @@ class IDeviceUpdater(Interface):
         """
 
 
+@implementer(IDeviceUpdater)
 class NullDeviceUpdater(object):
     """Device updater that updates nothing."""
-
-    implements(IDeviceUpdater)
-
     def update(self, device, dev_info, request, request_type):
         return defer.succeed(None)
 
 
+@implementer(IDeviceUpdater)
 class DynamicDeviceUpdater(object):
     """Device updater that updates zero or more of the device key with the
     value of the device info key.
@@ -413,9 +399,6 @@ class DynamicDeviceUpdater(object):
     reconfiguration.
 
     """
-
-    implements(IDeviceUpdater)
-
     def __init__(self, keys, force_update=False):
         # keys can either be a string (i.e. u'ip') or a list of string
         #   (i.e. [u'ip', u'version'])
@@ -432,6 +415,7 @@ class DynamicDeviceUpdater(object):
         return defer.succeed(None)
 
 
+@implementer(IDeviceUpdater)
 class AddInfoDeviceUpdater(object):
     """Device updater that add any missing information to the device from
     the device info.
@@ -440,9 +424,6 @@ class AddInfoDeviceUpdater(object):
     reconfiguration.
 
     """
-
-    implements(IDeviceUpdater)
-
     def update(self, device, dev_info, request, request_type):
         for key in dev_info:
             if key not in device:
@@ -481,9 +462,8 @@ class RemoveOutdatedIpDeviceUpdater(object):
                 self._app.dev_update(outdated_device)
 
 
+@implementer(IDeviceUpdater)
 class CompositeDeviceUpdater(object):
-    implements(IDeviceUpdater)
-
     def __init__(self, updaters=None):
         self.updaters = [] if updaters is None else updaters
 
@@ -690,6 +670,7 @@ def _log_sensitive_request(plugin, request, request_type):
         log_security_msg('Sensitive file requested from %s: %s', ip, filename)
 
 
+# @implementer(IHTTPService)
 class HTTPRequestProcessingService(Resource):
     """An HTTP service that does HTTP request processing and routing to
     the HTTP service of plugins.
@@ -707,9 +688,6 @@ class HTTPRequestProcessingService(Resource):
     is used to continue with the request processing.
 
     """
-
-    # implements(IHTTPService)
-
     default_service = NoResource('Nowhere to route this request.')
 
     def __init__(self, process_service, pg_mgr):
@@ -750,14 +728,12 @@ class HTTPRequestProcessingService(Resource):
                 defer.returnValue(service.getChildWithDefault(path, request))
 
 
+# @implementer(ITFTPReadService)
 class TFTPRequestProcessingService(object):
     """A TFTP read service that does TFTP request processing and routing to
     the TFTP read service of plugins.
 
     """
-
-    # implements(ITFTPReadService)
-
     default_service = TFTPNullService(errmsg="Nowhere to route this request")
 
     def __init__(self, process_service, pg_mgr):

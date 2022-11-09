@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """TFTP service definition module."""
@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 import os
-import StringIO
+from six import StringIO
 from provd.servers.tftp.packet import ERR_FNF
 from zope.interface import Interface
 
@@ -17,11 +17,11 @@ class ITFTPReadService(Interface):
 
     def handle_read_request(request, response):
         """Handle a TFTP read request (RRQ).
-        
+
         request is a dictionary with the following keys:
           address -- the address of the client (an (ip, port) tuple)
           packet -- the RRQ packet sent by the client
-        
+
         response is an object with the following methods:
           accept -- call this method with a file-like object you
             want to transfer if you accept the request.
@@ -31,12 +31,12 @@ class ITFTPReadService(Interface):
           ignore -- call this method if you want to silently ignore
             the request. You'll get the same behaviour if you call no
             method of the reponse object.
-        
+
         Note that it's fine not to call one of the response methods before
         returning the control to the caller, i.e. for an asynchronous use.
         If you never eventually call one of the response methods, it will
         implicitly behave like if you would have called the ignore method.
-        
+
         """
 
 
@@ -57,19 +57,19 @@ class TFTPStringService(object):
         self._msg = msg
 
     def handle_read_request(self, request, response):
-        response.accept(StringIO.StringIO(self._msg))
+        response.accept(StringIO(self._msg))
 
 
 class TFTPFileService(object):
     """A read service that serve files under a path.
-    
+
     It strips any leading path separator of the requested filename. For
     example, filename '/foo.txt' is the same as 'foo.txt'.
-    
+
     It also rejects any request that makes reference to the parent directory
     once normalized. For example, a request for filename 'bar/../../foo.txt'
     will be rejected even if 'foo.txt' exist in the parent directory.
-      
+
     """
     def __init__(self, path):
         self._path = os.path.abspath(path)
@@ -91,10 +91,10 @@ class TFTPFileService(object):
 
 class TFTPHookService(object):
     """Base class for non-terminal read service.
-    
+
     Services that only want to inspect the request should derive from this
     class and override the _pre_handle method.
-      
+
     """
     def __init__(self, service):
         self._service = service
@@ -113,7 +113,7 @@ class TFTPLogService(TFTPHookService):
     def __init__(self, logger, service):
         """
         logger -- a callable object taking a string as argument
-        
+
         """
         TFTPHookService.__init__(self, service)
         self._logger = logger
