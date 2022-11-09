@@ -32,6 +32,15 @@ def decode_bytes(value: Any, encoding: str = 'utf-8') -> str:
     return value
 
 
+def encode_bytes(value: str | bytes, encoding: str = 'utf-8') -> bytes:
+    """Take a value and if it is a string encode it as bytes
+    It is helpful for ensuring values are encoded in situations where it might be a string or bytes.
+    """
+    if isinstance(value, str):
+        return value.encode(encoding)
+    return value
+
+
 def to_ip(ip_string: str) -> bytes:
     """Takes a human-readable IP address unicode string (i.e. '127.0.0.1')
     and return a 4-bytes string representation of it.

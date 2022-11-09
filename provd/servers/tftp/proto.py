@@ -7,6 +7,8 @@ from provd.servers.tftp.packet import *
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
+from provd.util import encode_bytes
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +60,7 @@ class TFTPProtocol(DatagramProtocol):
                 # sent in the TFTP packet, for example '\x00\x11'
                 logger.info('TFTP read request rejected: %s', errmsg)
 
-                self.transport.write(build_dgram(err_packet(errcode, errmsg)), addr)
+                self.transport.write(build_dgram(err_packet(errcode, encode_bytes(errmsg))), addr)
 
             def on_accept(fobj):
                 logger.info('TFTP read request accepted')
