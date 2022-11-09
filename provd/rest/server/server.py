@@ -18,9 +18,6 @@ import functools
 import json
 import logging
 from binascii import a2b_base64
-from typing import Any
-
-from twisted.python import log
 
 from provd.app import (
     InvalidIdError,
@@ -765,12 +762,13 @@ class DeviceDHCPInfoResource(AuthResource):
         self._app = app
         self._dhcp_req_processing_srv = dhcp_request_processing_service
 
-    def _transform_options(self, raw_options):
+    def _transform_options(self, raw_options) -> dict[int, str]:
         options = {}
         for raw_option in raw_options:
             code = int(raw_option[:3], 10)
-            value = ''.join(chr(int(token, 16)) for token in
-                            raw_option[3:].split('.'))
+            value = ''.join(
+                chr(int(token, 16)) for token in raw_option[3:].split('.')
+            )
             options[code] = value
         return options
 
@@ -788,17 +786,16 @@ class DeviceDHCPInfoResource(AuthResource):
         except (KeyError, TypeError, ValueError) as e:
             logger.warning('Invalid DHCP info content: %s', e)
             return respond_error(request, e)
-        else:
-            if op == 'commit':
-                dhcp_request = {'ip': ip, 'mac': mac, 'options': options}
-                self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
-                return respond_no_content(request)
-            elif op == 'expiry' or op == 'release':
-                # we are keeping this only for compatibility -- release and
-                # expiry event doesn't interest us anymore
-                return respond_no_content(request)
-            else:
-                return respond_error(request, 'invalid operation value')
+
+        if op == 'commit':
+            dhcp_request = {'ip': ip, 'mac': mac, 'options': options}
+            self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
+            return respond_no_content(request)
+        if op == 'expiry' or op == 'release':
+            # we are keeping this only for compatibility -- release and
+            # expiry event doesn't interest us anymore
+            return respond_no_content(request)
+        return respond_error(request, 'invalid operation value')
 
 
 class DevicesResource(AuthResource):

@@ -2,18 +2,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """TFTP service definition module."""
+from __future__ import annotations
 
 import os
 from abc import ABCMeta
 from io import StringIO
+from typing import Dict, Union
 
-from provd.servers.tftp.packet import ERR_FNF
+from provd.servers.tftp.packet import ERR_FNF, Packet
+
+TFTPRequest = Dict[str, Union[str, Packet]]
 
 
 class AbstractTFTPReadService(metaclass=ABCMeta):
     """A TFTP read service handles TFTP read requests (RRQ)."""
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         """Handle a TFTP read request (RRQ).
 
         request is a dictionary with the following keys:
@@ -45,7 +49,7 @@ class TFTPNullService:
         self.errcode = errcode
         self.errmsg = errmsg
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         response.reject(self.errcode, self.errmsg)
 
 
@@ -54,7 +58,7 @@ class TFTPStringService:
     def __init__(self, msg):
         self._msg = msg
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         response.accept(StringIO(self._msg))
 
 
@@ -72,7 +76,7 @@ class TFTPFileService:
     def __init__(self, path):
         self._path = os.path.abspath(path)
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         rq_orig_path = request['packet']['filename'].decode('ascii')
         rq_stripped_path = rq_orig_path.lstrip(os.sep)
         rq_final_path = os.path.normpath(os.path.join(self._path, rq_stripped_path))
@@ -97,11 +101,11 @@ class TFTPHookService:
     def __init__(self, service):
         self._service = service
 
-    def _pre_handle(self, request):
+    def _pre_handle(self, request: TFTPRequest):
         """This MAY be overridden in derived classes."""
         pass
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         self._pre_handle(request)
         self._service.handle_read_request(request, response)
 
@@ -113,10 +117,10 @@ class TFTPLogService(TFTPHookService):
         logger -- a callable object taking a string as argument
 
         """
-        TFTPHookService.__init__(self, service)
+        super().__init__(service)
         self._logger = logger
 
-    def _pre_handle(self, request):
+    def _pre_handle(self, request: TFTPRequest):
         packet = request['packet']
         msg = f"TFTP request from {request['address']} - filename '{packet['filename']}' - mode '{packet['mode']}'"
         if packet['options']:

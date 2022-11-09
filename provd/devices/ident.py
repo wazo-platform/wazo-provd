@@ -10,6 +10,8 @@ from collections import defaultdict
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
+from typing import Dict, Union
+
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
@@ -30,6 +32,8 @@ class RequestType(Enum):
     TFTP = 'tftp'
     DHCP = 'dhcp'
 
+
+DHCPRequest = Dict[str, Union[str, Dict[str, str]]]
 
 logger = logging.getLogger(__name__)
 
@@ -738,7 +742,7 @@ class TFTPRequestProcessingService:
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: DHCPRequest, response):
         logger.info('Processing TFTP request: %s', request['packet']['filename'])
         logger.debug('TFTP request: %s', request)
 
@@ -774,13 +778,13 @@ class DHCPRequestProcessingService(Resource):
 
     Also, in this context, these are not real DHCP request, but more like
     DHCP transaction information objects. We use the term request for
-    homogeneity sake.
+    homogeneity’s sake.
 
     """
     def __init__(self, process_service):
         self._process_service = process_service
 
-    def handle_dhcp_request(self, request):
+    def handle_dhcp_request(self, request: DHCPRequest):
         """Handle DHCP request.
 
         DHCP requests are dictionary objects with the following keys:
