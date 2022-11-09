@@ -87,7 +87,8 @@ class TestParams(BaseIntegrationTest):
         )
 
     def test_stable_pluign_server(self):
-        stable_url = 'http://provd.wazo.community/plugins/2/stable/'
+        # TODO: change once the new URL repository is published. Also, why is this test dependant on an external URL?
+        stable_url = 'http://provd.wazo.community/plugins/1/stable/'
         self._client.params.update('plugin_server', stable_url)
 
         with self._client.plugins.update() as op_progress:
