@@ -276,8 +276,8 @@ class SimpleBackendDocumentCollection:
                 for cur_key in split_key:
                     cur_elem = cur_elem[cur_key]
             except (KeyError, TypeError):
-                # document does not have the given key -- return None
-                return None
+                # document does not have the given key -- return ''
+                return ''
             return cur_elem
 
         return func
