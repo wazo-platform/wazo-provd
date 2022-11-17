@@ -169,6 +169,7 @@ class Plugin(metaclass=ABCMeta):
             XXX should specify better
 
         """
+        self._services = {}
         self._plugin_dir = plugin_dir
 
     def load(self) -> None:
@@ -229,7 +230,11 @@ class Plugin(metaclass=ABCMeta):
         If the service name is 'install', the associated service object must
         provide the IInstallService interface.
         """
-        return {}
+        return self._services
+
+    @services.setter
+    def services(self, value: dict[str, AbstractConfigurationService | AbstractInstallationService]):
+        self._services = value
 
     # Methods for TFTP/HTTP services
 
