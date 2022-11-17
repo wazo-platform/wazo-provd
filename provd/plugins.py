@@ -215,6 +215,7 @@ class Plugin(metaclass=ABCMeta):
 
     # Methods for additional plugin services
 
+    @property
     def services(self) -> dict[str, AbstractConfigurationService | AbstractInstallationService]:
         """Return a dictionary where keys are service name and values are
         service object.
