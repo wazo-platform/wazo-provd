@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -6,18 +5,15 @@
 Only thing you need to do is to use this Site class instead of twisted.web.server.Site.
 
 """
+from __future__ import annotations
 
-
-from __future__ import absolute_import
 import copy
-import string
 import logging
 
 from twisted.internet import defer
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
-from twisted.python.compat import nativeString
 from twisted.web.resource import _computeAllowedMethods
 from twisted.web.error import UnsupportedMethod
 
@@ -25,7 +21,8 @@ from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
 from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from requests.exceptions import HTTPError
-from six.moves import map
+
+from provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -34,24 +31,27 @@ auth_verifier = auth.get_auth_verifier()
 
 class Request(server.Request):
     # originally taken from twisted.web.server.Request
+    prepath: list[bytes]
+    postpath: list[bytes]
+
     def process(self):
-        "Process a request."
+        """Process a request."""
 
         # get site from channel
         self.site = self.channel.site
 
         corsify_request(self)
         # set various default headers
-        self.setHeader('server', server.version)
-        self.setHeader('date', http.datetimeToString())
-        self.setHeader('content-type', "text/html")
+        self.setHeader(b'server', server.version)
+        self.setHeader(b'date', http.datetimeToString())
+        self.setHeader(b'content-type', b"text/html")
 
         # Resource Identification
         self.prepath = []
-        self.postpath = list(map(server.unquote, string.split(self.path[1:], '/')))
+        self.postpath = list(map(server.unquote, self.path[1:].split(b'/')))
 
         # We do not really care about the content if the request is a CORS preflight
-        if self.method == 'OPTIONS':
+        if self.method == b'OPTIONS':
             self.finish()
         else:
             d = self.site.getResourceFor(self)
@@ -61,7 +61,7 @@ class Request(server.Request):
 
 class AuthResource(resource.Resource):
 
-    def render(self, request):
+    def render(self, request: Request):
         render_method = self._extract_render_method(request)
         decorated_render_method = auth_verifier.verify_token(self, request, render_method)
         try:
@@ -72,23 +72,24 @@ class AuthResource(resource.Resource):
             auth.auth_verifier.MissingPermissionsTokenAPIException,
         ):
             request.setResponseCode(http.UNAUTHORIZED)
-            return 'Unauthorized'
+            return b'Unauthorized'
 
-    def _extract_render_method(self, request):
+    def _extract_render_method(self, request: Request):
         # from twisted.web.resource.Resource
-        render_method = getattr(self, 'render_' + nativeString(request.method), None)
+        render_method = getattr(self, f'render_{decode_bytes(request.method)}', None)
         if not render_method:
             try:
-                allowedMethods = self.allowedMethods
+                allowed_methods = self.allowedMethods
             except AttributeError:
-                allowedMethods = _computeAllowedMethods(self)
-            raise UnsupportedMethod(allowedMethods)
+                allowed_methods = _computeAllowedMethods(self)
+            raise UnsupportedMethod(allowed_methods)
         return render_method
 
-    def render_OPTIONS(self, request):
-        return ''
+    def render_OPTIONS(self, request: Request):
+        logging.error(f'REQUEST: {request.getAllHeaders()}')
+        return b''
 
-    def _extract_tenant_uuid(self, request):
+    def _extract_tenant_uuid(self, request: Request):
         auth_client = auth.get_auth_client()
 
         tokens = Tokens(auth_client)
@@ -130,7 +131,7 @@ class AuthResource(resource.Resource):
         raise TenantInvalidForDeviceError(tenant_uuid)
 
     @defer.inlineCallbacks
-    def _verify_tenant(self, request):
+    def _verify_tenant(self, request: Request):
         tenant_uuid = self._extract_tenant_uuid(request)
         yield defer.returnValue(tenant_uuid)
 
@@ -148,11 +149,11 @@ class Site(server.Site):
     # originally taken from twisted.web.server.Site
     requestFactory = Request
 
-    def getResourceFor(self, request):
+    def getResourceFor(self, request: Request):
         """
         Get a deferred that will callback with a resource for a request.
 
-        This iterates through the resource heirarchy, calling
+        This iterates through the resource hierarchy, calling
         getChildWithDefault on each resource it finds for a path element,
         stopping when it hits an element where isLeaf is true.
         """
@@ -164,15 +165,15 @@ class Site(server.Site):
 
 
 @defer.inlineCallbacks
-def getChildForRequest(resource, request):
+def getChildForRequest(resource, request: Request):
     # originally taken from twisted.web.resource
     """
     Traverse resource tree to find who will handle the request.
     """
     while request.postpath and not resource.isLeaf:
-        pathElement = request.postpath.pop(0)
-        request.prepath.append(pathElement)
-        retval = resource.getChildWithDefault(pathElement, request)
+        path_element = request.postpath.pop(0)
+        request.prepath.append(path_element)
+        retval = resource.getChildWithDefault(path_element, request)
         if isinstance(retval, defer.Deferred):
             resource = yield retval
         else:
@@ -180,10 +181,13 @@ def getChildForRequest(resource, request):
     defer.returnValue(resource)
 
 
-def corsify_request(request):
+def corsify_request(request: Request):
     # CORS
-    request.setHeader('Access-Control-Allow-Origin', '*')
-    request.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    request.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Accept, Content-Type, X-Auth-Token, Wazo-Tenant')
-    request.setHeader('Access-Control-Allow-Credentials', 'false')
-    request.setHeader('Access-Control-Expose-Headers', 'Location')
+    request.setHeader(b'Access-Control-Allow-Origin', b'*')
+    request.setHeader(b'Access-Control-Allow-Methods', b'GET, POST, PUT, DELETE, OPTIONS')
+    request.setHeader(
+        b'Access-Control-Allow-Headers',
+        b'Origin, X-Requested-With, Accept, Content-Type, X-Auth-Token, Wazo-Tenant',
+    )
+    request.setHeader(b'Access-Control-Allow-Credentials', b'false')
+    request.setHeader(b'Access-Control-Expose-Headers', b'Location')

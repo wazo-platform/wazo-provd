@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Basic configuration provd for XiVO
 
@@ -7,17 +7,19 @@
 
 import json
 import urllib
-import urllib2
+from urllib.parse import urlencode
+from urllib.request import Request, HTTPPasswordMgrWithDefaultRealm, HTTPDigestAuthHandler, build_opener
 
-ADDRESS = '192.168.113.99' # XiVO ip address
+ADDRESS = '192.168.113.99'  # XiVO ip address
 PROVD_ADDRESS = '192.168.32.41'
 
-class HTTPRequest(object):
+
+class HTTPRequest:
 
     def __init__(self, host='127.0.0.1', port=80, headers=None, username=None, password=None):
         self._host = host
         self._port = port
-        self._url = '%s:%s' % (self._host, self._port)
+        self._url = f'{self._host}:{self._port}'
         self._headers = {
             'Content-Type': 'application/json',
             'Accept': 'text/plain'
@@ -29,12 +31,12 @@ class HTTPRequest(object):
     def run(self, uri='', qry=None, data=None):
         url = self._url
         if uri:
-            url = '%s/%s' % (url, uri)
+            url = f'{url}/{uri}'
         if qry is not None:
-            url = '%s?%s' % (url, self._build_qry(qry))
+            url = f'{url}?{self._build_qry(qry)}'
         if isinstance(data, dict):
             data = json.dumps(data)
-        request = urllib2.Request(url=url, data=data, headers=self._headers)
+        request = Request(url=url, data=data, headers=self._headers)
         handle = self._opener.open(request)
         try:
             response = handle.read()
@@ -46,13 +48,13 @@ class HTTPRequest(object):
     def _build_opener(self, username, password):
         handlers = []
         if username is not None and password is not None:
-            pwd_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            pwd_manager = HTTPPasswordMgrWithDefaultRealm()
             pwd_manager.add_password(None, self._host, username, password)
-            handlers.append(urllib2.HTTPDigestAuthHandler(pwd_manager))
-        return urllib2.build_opener(*handlers)
+            handlers.append(HTTPDigestAuthHandler(pwd_manager))
+        return build_opener(*handlers)
 
     def _build_qry(self, qry):
-        return urllib.urlencode(qry)
+        return urlencode(qry)
 
 
 def provd():
@@ -130,9 +132,11 @@ def provd():
 
 
 if __name__ == '__main__':
-    provd_http_request = HTTPRequest('http://%s' % PROVD_ADDRESS,
-                                     8666,
-                                     {'Content-Type': 'application/vnd.proformatique.provd+json'},
-                                     'admin',
-                                     'admin')
+    provd_http_request = HTTPRequest(
+        f'http://{PROVD_ADDRESS}',
+        8666,
+        {'Content-Type': 'application/vnd.proformatique.provd+json'},
+        'admin',
+        'admin',
+    )
     provd()

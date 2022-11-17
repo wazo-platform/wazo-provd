@@ -2,9 +2,9 @@ Source: wazo-provd
 Section: python
 Priority: extra
 Maintainer: Wazo Maintainers <dev@wazo.community>
-Build-Depends: debhelper (>= 9), dh-python, dh-systemd (>= 1.5), python-all (>= 2.7), python-setuptools
+Build-Depends: debhelper (>= 9), dh-python, dh-systemd (>= 1.5), python3-all (>= 3.7), python3-setuptools
 Standards-Version: 3.9.6
-X-Python-Version: >= 2.7
+X-Python3-Version: >= 3.7, << 3.8
 
 Package: wazo-provd
 Architecture: all
@@ -13,22 +13,20 @@ Conflicts: xivo-provd, xivo-libprovd
 Replaces: xivo-provd, xivo-libprovd
 Pre-Depends: ${misc:Pre-Depends}
 Depends:
-    ${python:Depends},
+    ${python3:Depends},
     ${misc:Depends},
     adduser,
-    python-jinja2,
-    python-openssl,
-    python-six,
-    python-twisted-core,
-    python-twisted-web,
+    python3-jinja2,
+    python3-openssl,
+    python3-twisted,
     rename,
     unar,
     unrar-free,
     unzip,
-    wazo-amid-client,
-    wazo-auth-client,
-    xivo-lib-fetchfw,
-    xivo-lib-python
+    wazo-amid-client-python3,
+    wazo-auth-client-python3,
+    xivo-lib-fetchfw-python3,
+    xivo-lib-python-python3
 Description: Wazo provisioning daemon
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
@@ -42,7 +40,7 @@ Provides: xivo-dhcpd-update
 Conflicts: xivo-dhcpd-update
 Replaces: xivo-dhcpd-update
 Pre-Depends: ${misc:Pre-Depends}
-Depends: ${python:Depends}, ${misc:Depends}
+Depends: ${python3:Depends}, ${misc:Depends}
 Description: Wazo dhcpd configuration file for Wazo
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.

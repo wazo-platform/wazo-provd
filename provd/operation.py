@@ -8,7 +8,7 @@ OIP_SUCCESS = 'success'
 OIP_FAIL = 'fail'
 
 
-class OperationInProgress(object):
+class OperationInProgress:
     """Base class for operations in progress.
     
     An operation in progress is a monitor over an underlying operation. It's
@@ -60,14 +60,14 @@ def format_oip(oip):
     """
     s = ''
     if oip.label is not None:
-        s += '%s|' % oip.label
+        s += f'{oip.label}|'
     s += oip.state
     if oip.current is not None:
-        s += ';%s' % oip.current
+        s += f';{oip.current}'
         if oip.end:
-            s += '/%s' % oip.end
+            s += f'/{oip.end}'
     for sub_oip in oip.sub_oips:
-        s += '(%s)' % format_oip(sub_oip)
+        s += f'({format_oip(sub_oip)})'
     return s
 
 

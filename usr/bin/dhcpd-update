@@ -1,7 +1,5 @@
-#!/usr/bin/python
-# -*- coding: UTF-8 -*-
-
-# Copyright 2011-2019 The Wazo Authors  (see the AUTHORS file)
+#!/usr/bin/python3
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Small utility to download and update the configuration files of the DHCP
@@ -10,23 +8,22 @@ of the wazo-* provd plugins is able to boot correctly using the DHCP server
 installed on a Wazo.
 
 """
-
 import contextlib
-import ConfigParser
-import optparse
+from argparse import ArgumentParser
 import os
 import sys
 import tarfile
-import urllib2
-import urlparse
 import tempfile
+from configparser import RawConfigParser
+from urllib.parse import urljoin
+from urllib.request import build_opener, ProxyHandler
 
 PKG_FILENAME = 'dhcpd.tar.bz2'
 DHCPD_UPDATE_FILENAME = 'dhcpd_update.conf'
 
 
 def _build_opener(proxies):
-    return urllib2.build_opener(urllib2.ProxyHandler(proxies))
+    return build_opener(ProxyHandler(proxies))
 
 
 def _extract_pkg_file(fobj, dhcpd_dir):
@@ -56,7 +53,7 @@ def regenerate(dhcpd_dir, subnet_file, ignore_missing):
         _concat_file('.head')
         try:
             _concat_file('.middle')
-        except EnvironmentError:
+        except OSError:
             if not ignore_missing:
                 raise
         _concat_file('.tail')
@@ -64,32 +61,31 @@ def regenerate(dhcpd_dir, subnet_file, ignore_missing):
 
 def new_empty_dhcpd_update_file(dhcpd_dir):
     file = os.path.join(dhcpd_dir, DHCPD_UPDATE_FILENAME)
-    try:
-        fd = os.open(file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 644)
-    except EnvironmentError:
-        pass
-    else:
-        os.close(fd)
+    with contextlib.suppress(OSError):
+        with os.open(file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 644):
+            return
 
 
 def _read_config_from_default(config):
-    return {'general':
-                {'config_file': '/etc/xivo/dhcpd-update.conf',
-                 'update_url': 'http://provd.wazo.community/xivo/dhcpd-update/13.17/',
-                 'dhcpd_dir': '/etc/dhcp/',
-                 'subnet_file': 'dhcpd_subnet.conf'},
-            }
+    return {
+        'general': {
+            'config_file': '/etc/xivo/dhcpd-update.conf',
+            'update_url': 'http://provd.wazo.community/xivo/dhcpd-update/13.17/',
+            'dhcpd_dir': '/etc/dhcp/',
+            'subnet_file': 'dhcpd_subnet.conf',
+        },
+    }
 
 
 def _read_config_from_commandline(config):
-    parser = optparse.OptionParser()
-    parser.add_option('-n', '--newempty', action='store_true')
-    parser.add_option('-d', '--download', action='store_true')
-    parser.add_option('-r', '--regenerate', action='store_true')
-    parser.add_option('-i', '--ignoremissing', action='store_true')
-    parser.add_option('-F', '--configfile', action='store')
+    parser = ArgumentParser()
+    parser.add_argument('-n', '--newempty', action='store_true')
+    parser.add_argument('-d', '--download', action='store_true')
+    parser.add_argument('-r', '--regenerate', action='store_true')
+    parser.add_argument('-i', '--ignoremissing', action='store_true')
+    parser.add_argument('-F', '--configfile', action='store')
 
-    opts, args = parser.parse_args()
+    opts, args = parser.parse_known_args()
     result = {'general': {}}
     if opts.newempty:
         result['general']['new_empty'] = 'yes'
@@ -107,9 +103,9 @@ def _read_config_from_commandline(config):
 def _read_config_from_file(config):
     # read config file
     config_file = config['general']['config_file']
-    config_parser = ConfigParser.RawConfigParser()
+    config_parser = RawConfigParser()
     with open(config_file) as fobj:
-        config_parser.readfp(fobj)
+        config_parser.read_file(fobj)
     # create config dictionary out of it
     result = {}
     for section in config_parser.sections():
@@ -134,9 +130,9 @@ def read_config():
     #     dhcpd_dir
     #     subnet_file
     #     ignore_missing
-    #     new_empty -- 'yes' if must create empty dhcpd update file
-    #     download -- 'yes' if must download, else won't download
-    #     regenerate -- 'yes' if must regenerate, else won't regenerate
+    #     new_empty -- 'yes' to create empty dhcpd update file
+    #     download -- 'yes' to download, else won't download
+    #     regenerate -- 'yes' to regenerate, else won't regenerate
     #   proxy
     #     http -- proxy for http
     config = {'general': {}, 'proxy': {}}
@@ -154,7 +150,7 @@ def _do_new_empty(config):
 
 
 def _do_download(config):
-    url = urlparse.urljoin(config['general']['update_url'], PKG_FILENAME)
+    url = urljoin(config['general']['update_url'], PKG_FILENAME)
     dhcpd_dir = config['general']['dhcpd_dir']
     proxies = config['proxy']
     download(url, dhcpd_dir, proxies)
@@ -184,7 +180,7 @@ def main():
 
     if not (op_new_empty or op_download or op_regenerate):
         # Error: no operation specified
-        print >> sys.stderr, 'error: no operation specified'
+        print('error: no operation specified', file=sys.stderr)
         raise SystemExit(2)
 
 

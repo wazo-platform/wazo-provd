@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Provisioning server configuration module.
@@ -62,11 +62,10 @@ The following parameters are defined:
 """
 
 
-# XXX there's is some naming confusion between application configuration
+# XXX there is some naming confusion between application configuration
 #     and device configuration, since both used the word 'config' and
-#     raw config yet it means different thing
+#     raw config, yet they mean different things
 
-from __future__ import absolute_import
 import logging
 import json
 import os.path
@@ -89,7 +88,7 @@ _DEFAULT_CONFIG = {
         'check_compat_min': True,
         'check_compat_max': True,
         'base_storage_dir': '/var/lib/wazo-provd',
-        'plugin_server': 'http://provd.wazo.community/plugins/1/stable/',
+        'plugin_server': 'http://provd.wazo.community/plugins/2/stable/',
         'info_extractor': 'default',
         'retriever': 'default',
         'updater': 'default',
@@ -177,11 +176,8 @@ def _convert_cli_to_config(options):
 def _load_json_file(raw_value):
     # Return a dictionary representing the JSON document contained in the
     # file pointed by raw value. The file must be encoded in UTF-8.
-    fobj = open(raw_value)
-    try:
-        return json.load(fobj)
-    finally:
-        fobj.close()
+    with open(raw_value, 'r') as f:
+        return json.load(f)
 
 
 def _process_aliases(raw_config):

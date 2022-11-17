@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Manage the transfer between two host."""
@@ -7,7 +7,6 @@
 
 # TODO RFC1122 says we must use an adaptive timeout...
 
-from __future__ import absolute_import
 import struct
 import logging
 from provd.servers.tftp.packet import *
@@ -125,16 +124,16 @@ class _AbstractConnection(DatagramProtocol):
         self._send_dgram(self._last_dgram)
 
     def _handle_wrong_tid(self, addr):
-        dgram = build_dgram(err_packet(ERR_UNKNWN_TID, 'Unknown TID'))
+        dgram = build_dgram(err_packet(ERR_UNKNWN_TID, b'Unknown TID'))
         self.transport.write(dgram, addr)
 
-    def _handle_invalid_dgram(self, errmsg='Invalid datagram'):
+    def _handle_invalid_dgram(self, errmsg=b'Invalid datagram'):
         """Called when a datagram sent by the remote host could not be parsed."""
         dgram = build_dgram(err_packet(ERR_UNDEF, errmsg))
         self.transport.write(dgram, self._addr)
         self.__do_close()
 
-    def _handle_illegal_pkt(self, errmsg='Illegal TFTP operation'):
+    def _handle_illegal_pkt(self, errmsg=b'Illegal TFTP operation'):
         dgram = build_dgram(err_packet(ERR_ILL, errmsg))
         self.transport.write(dgram, self._addr)
         self.__do_close()
@@ -152,7 +151,7 @@ class _AbstractConnection(DatagramProtocol):
                 self._cancel_timeout()
                 self._send_last_dgram()
         else:
-            self._handle_illegal_pkt('Illegal block number')
+            self._handle_illegal_pkt(b'Illegal block number')
 
     def datagramReceived(self, dgram, addr):
         if not self._closed:

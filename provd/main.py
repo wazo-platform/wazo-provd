@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 import logging
 import os.path
+
+from zope.interface import implementer
+
 import provd.config
 import provd.localization
 import provd.synchronize
@@ -29,14 +30,12 @@ from twisted.python import log
 from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
-from zope.interface import implementer
 from xivo.token_renewer import TokenRenewer
-import six
 
 logger = logging.getLogger(__name__)
 
 LOG_FILE_NAME = '/var/log/wazo-provd.log'
-API_VERSION = '0.2'
+API_VERSION = b'0.2'
 
 
 # given in command line to redirect logs to standard logging
@@ -55,18 +54,19 @@ class ProvisioningService(Service):
         self._config = config
 
     def _extract_database_specific_config(self):
-        db_config = {}
-        for k, v in six.iteritems(self._config['database']):
-            if k not in ['type', 'generator']:
-                db_config[k] = v
-        return db_config
+        return {
+            k: v for k, v in self._config['database'].items()
+            if k not in ['type', 'generator']
+        }
 
     def _create_database(self):
         db_type = self._config['database']['type']
         db_generator = self._config['database']['generator']
         db_specific_config = self._extract_database_specific_config()
-        logger.info('Using %s database with %s generator and config %s',
-                    db_type, db_generator, db_specific_config)
+        logger.info(
+            'Using %s database with %s generator and config %s',
+            db_type, db_generator, db_specific_config
+        )
         db_factory = self._DB_FACTORIES[db_type]
         return db_factory.new_database(db_type, db_generator, **db_specific_config)
 
@@ -76,7 +76,7 @@ class ProvisioningService(Service):
             self._database.close()
         except Exception:
             logger.error('Error while closing database', exc_info=True)
-        logger.info('Database closed')
+        logger.info('/Database closed')
 
     def startService(self):
         self._database = self._create_database()
@@ -86,14 +86,15 @@ class ProvisioningService(Service):
             if self._config['database']['ensure_common_indexes']:
                 logger.debug('Ensuring index existence on collections')
                 try:
-                    dev_collection.ensure_index(u'mac')
-                    dev_collection.ensure_index(u'ip')
-                    dev_collection.ensure_index(u'sn')
+                    dev_collection.ensure_index('mac')
+                    dev_collection.ensure_index('ip')
+                    dev_collection.ensure_index('sn')
                 except AttributeError as e:
                     logger.warning('This type of database doesn\'t seem to support index: %s', e)
             self.app = ProvisioningApplication(cfg_collection, dev_collection, self._config)
-        except Exception:
+        except Exception as e:
             try:
+                logger.error(f'An error occurred whilst starting the server: {e}', exc_info=True)
                 raise
             finally:
                 self._close_database()
@@ -105,7 +106,7 @@ class ProvisioningService(Service):
         try:
             self.app.close()
         except Exception:
-            logger.error('Error while closing application', exc_info=True)
+            logger.error('An error occurred whilst stopping the application', exc_info=True)
         self._close_database()
 
 
@@ -114,39 +115,39 @@ class ProcessService(Service):
         self._prov_service = prov_service
         self._config = config
 
-    def _get_conffile_globals(self):
+    def _get_conf_file_globals(self):
         # Pre: hasattr(self._prov_service, 'app')
-        conffile_globals = {}
-        conffile_globals.update(ident.__dict__)
-        conffile_globals.update(pgasso.__dict__)
-        conffile_globals['app'] = self._prov_service.app
-        return conffile_globals
+        conf_file_globals = {}
+        conf_file_globals.update(ident.__dict__)
+        conf_file_globals.update(pgasso.__dict__)
+        conf_file_globals['app'] = self._prov_service.app
+        return conf_file_globals
 
     def _create_processor(self, name):
         # name is the name of the processor, for example 'info_extractor'
         dirname = self._config['general']['request_config_dir']
         config_name = self._config['general'][name]
-        filename = '%s.py.conf.%s' % (name, config_name)
+        filename = f'{name}.py.conf.{config_name}'
         pathname = os.path.join(dirname, filename)
-        conffile_globals = self._get_conffile_globals()
+        conf_file_globals = self._get_conf_file_globals()
         try:
-            with open(pathname, 'rb') as f:
-                six.exec_(compile(f.read(), pathname, 'exec'), conffile_globals)
+            with open(pathname, 'r') as f:
+                exec(compile(f.read(), pathname, 'exec'), conf_file_globals)
         except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)
             raise
-        if name not in conffile_globals:
-            raise Exception('process config file "%s" doesn\'t define a "%s" name',
-                            pathname, name)
-        return conffile_globals[name]
+        if name not in conf_file_globals:
+            raise Exception(f'process config file "{pathname}" doesn\'t define a "{name}" name')
+        return conf_file_globals[name]
 
     def startService(self):
         # Pre: hasattr(self._prov_service, 'app')
         dev_info_extractor = self._create_processor('info_extractor')
         dev_retriever = self._create_processor('retriever')
         dev_updater = self._create_processor('updater')
-        self.request_processing = ident.RequestProcessingService(self._prov_service.app, dev_info_extractor,
-                                                                 dev_retriever, dev_updater)
+        self.request_processing = ident.RequestProcessingService(
+            self._prov_service.app, dev_info_extractor, dev_retriever, dev_updater
+        )
         Service.startService(self)
 
 
@@ -230,8 +231,8 @@ class RemoteConfigurationService(Service):
 
         # /{version}/api/api.yml
         api_resource = UnsecuredResource()
-        api_resource.putChild('api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
-        server_resource.putChild('api', api_resource)
+        api_resource.putChild(b'api.yml', ResponseFile(sibpath(__file__, 'rest/api/api.yml')))
+        server_resource.putChild(b'api', api_resource)
 
         rest_site = Site(root_resource)
 
@@ -273,10 +274,9 @@ class SynchronizeService(Service):
         try:
             fun = getattr(self, name)
         except AttributeError:
-            raise ValueError('unknown sync_service_type: %s' %
-                             sync_service_type)
-        else:
-            return fun()
+            raise ValueError(f'unknown sync_service_type: {sync_service_type}')
+
+        return fun()
 
     def startService(self):
         sync_service = self._new_sync_service(self._config['general']['sync_service_type'])
@@ -290,11 +290,8 @@ class SynchronizeService(Service):
 
 
 class LocalizationService(Service):
-    def _new_l10n_service(self):
-        return provd.localization.LocalizationService()
-
     def startService(self):
-        l10n_service = self._new_l10n_service()
+        l10n_service = provd.localization.LocalizationService()
         provd.localization.register_localization_service(l10n_service)
         Service.startService(self)
 
@@ -326,7 +323,7 @@ class TokenRenewerService(Service):
 
 
 @implementer(IServiceMaker, IPlugin)
-class ProvisioningServiceMaker(object):
+class ProvisioningServiceMaker:
     tapname = 'wazo-provd'
     description = 'A provisioning server.'
     options = provd.config.Options

@@ -1,7 +1,6 @@
 # Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 from hamcrest import (
     assert_that,
     has_key,
@@ -15,7 +14,7 @@ from wazo_provd_client.exceptions import ProvdError
 
 from .helpers import fixtures
 from .helpers.fixtures import PLUGIN_TO_INSTALL
-from .helpers.base import BaseIntegrationTest
+from .helpers.base import BaseIntegrationTest, INVALID_TOKEN
 from .helpers.wait_strategy import NoWaitStrategy
 from .helpers.operation import operation_successful
 
@@ -44,7 +43,7 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_install_error_when_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.plugins.install).with_args('invalid'),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -64,7 +63,7 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_uninstall_error_when_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.plugins.uninstall).with_args('invalid_plugin'),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -75,7 +74,7 @@ class TestPlugins(BaseIntegrationTest):
         assert_that(result, has_key('pkgs'))
 
     def test_list_installed_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.plugins.list_installed),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -86,7 +85,7 @@ class TestPlugins(BaseIntegrationTest):
         assert_that(result, has_key('pkgs'))
 
     def test_list_installable_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.plugins.list_installable),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -99,7 +98,7 @@ class TestPlugins(BaseIntegrationTest):
             )
 
     def test_update_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.plugins.update),
             raises(ProvdError).matching(has_properties('status_code', 401))
@@ -116,7 +115,7 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_get_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.get).with_args(PLUGIN_TO_INSTALL),
@@ -133,7 +132,7 @@ class TestPlugins(BaseIntegrationTest):
             assert_that(result, has_key('pkgs'))
 
     def test_get_packages_installed_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.get_packages_installed).with_args(PLUGIN_TO_INSTALL),
@@ -150,7 +149,7 @@ class TestPlugins(BaseIntegrationTest):
             assert_that(result, has_key('pkgs'))
 
     def test_get_packages_installable_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.get_packages_installable).with_args(PLUGIN_TO_INSTALL),
@@ -167,7 +166,7 @@ class TestPlugins(BaseIntegrationTest):
                     )
 
     def test_install_package_error_invalid_token(self):
-        provd = self.make_provd('invalid-token')
+        provd = self.make_provd(INVALID_TOKEN)
         with fixtures.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.install_package).with_args(PLUGIN_TO_INSTALL, 'whatever'),

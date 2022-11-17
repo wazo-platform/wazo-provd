@@ -1,58 +1,66 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
+from __future__ import annotations
 
-
-from __future__ import absolute_import
 import logging
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from enum import Enum
 from operator import itemgetter
 from os.path import basename
+from typing import Dict, Union
+
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
+from provd.servers.http_site import Request
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource, NoResource, ErrorPage
 from twisted.web import rewrite
-from zope.interface import implementer, Interface
-import six
 
-REQUEST_TYPE_HTTP = 'http'
-REQUEST_TYPE_TFTP = 'tftp'
-REQUEST_TYPE_DHCP = 'dhcp'
-REQUEST_TYPES = [REQUEST_TYPE_HTTP, REQUEST_TYPE_TFTP, REQUEST_TYPE_DHCP]
+from provd.util import decode_bytes
+
+
+class RequestType(Enum):
+    HTTP = 'http'
+    TFTP = 'tftp'
+    DHCP = 'dhcp'
+
+
+DHCPRequest = Dict[str, Union[str, Dict[str, str]]]
 
 logger = logging.getLogger(__name__)
 
 
-def _get_ip_from_request(request, request_type):
-    if request_type == REQUEST_TYPE_HTTP:
+def _get_ip_from_request(request: Request, request_type: RequestType):
+    if request_type == RequestType.HTTP:
         return request.getClientIP()
-    elif request_type == REQUEST_TYPE_TFTP:
-        return request['address'][0].decode('ascii')
-    elif request_type == REQUEST_TYPE_DHCP:
-        return request[u'ip']
+    elif request_type == RequestType.TFTP:
+        return request['address'][0]
+    elif request_type == RequestType.DHCP:
+        return request['ip']
     else:
-        raise RuntimeError('invalid request_type: {}'.format(request_type))
+        raise RuntimeError(f'invalid request_type: {request_type}')
 
 
-def _get_filename_from_request(request, request_type):
-    if request_type == REQUEST_TYPE_HTTP:
-        return basename(request.path)
-    elif request_type == REQUEST_TYPE_TFTP:
+def _get_filename_from_request(request: Request, request_type: RequestType):
+    if request_type == RequestType.HTTP:
+        return basename(request.path.decode('ascii'))
+    elif request_type == RequestType.TFTP:
         return basename(request['packet']['filename'])
-    elif request_type == REQUEST_TYPE_DHCP:
+    elif request_type == RequestType.DHCP:
         return None
     else:
-        raise RuntimeError('invalid request_type: {}'.format(request_type))
+        raise RuntimeError(f'invalid request_type: {request_type}')
 
 
-class IDeviceInfoExtractor(Interface):
+class AbstractDeviceInfoExtractor(metaclass=ABCMeta):
     """A device info extractor object extract device information from
     requests. In our context, requests are either HTTP, TFTP or DHCP
     requests.
@@ -69,12 +77,13 @@ class IDeviceInfoExtractor(Interface):
     The provisioning server use them only to get information from it and update
     the corresponding device object. For example, with a valid source of DHCP
     information, we can then always make sure the IP <-> MAC for a device is
-    up to date.
+    up-to-date.
 
     """
 
-    def extract(request, request_type):
-        """Return a deferred that will fire with either an non empty
+    @abstractmethod
+    def extract(self, request, request_type: RequestType):
+        """Return a deferred that will fire with either a non-empty
         device info object or an object that evaluates to false in a boolean
         context if no information could be extracted.
 
@@ -85,8 +94,7 @@ class IDeviceInfoExtractor(Interface):
         """
 
 
-@implementer(IDeviceInfoExtractor)
-class StandardDeviceInfoExtractor(object):
+class StandardDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     """Device info extractor that return standard and readily available
     information from requests, like IP addresses, or MAC addresses for DHCP
     requests.
@@ -94,14 +102,14 @@ class StandardDeviceInfoExtractor(object):
     You SHOULD always use this extractor.
 
     """
-    def extract(self, request, request_type):
-        dev_info = {u'ip': _get_ip_from_request(request, request_type)}
-        if request_type == REQUEST_TYPE_DHCP:
-            dev_info[u'mac'] = request[u'mac']
+    def extract(self, request, request_type: RequestType):
+        dev_info = {'ip': _get_ip_from_request(request, request_type)}
+        if request_type == RequestType.DHCP:
+            dev_info['mac'] = request['mac']
         return defer.succeed(dev_info)
 
 
-class LastSeenUpdater(object):
+class LastSeenUpdater:
     """Updater for CollaboratingDeviceInfoExtractor that, on conflict, keep
     the last seen value.
 
@@ -109,11 +117,11 @@ class LastSeenUpdater(object):
     def __init__(self):
         self.dev_info = {}
 
-    def update(self, dev_info):
+    def update(self, dev_info: dict[str, str]) -> None:
         self.dev_info.update(dev_info)
 
 
-class VotingUpdater(object):
+class VotingUpdater:
     """Updater for CollaboratingDeviceInfoExtractor that will return a device
     info object such that values are the most popular one.
 
@@ -132,27 +140,26 @@ class VotingUpdater(object):
         # Pre: key_pool is non-empty
         # XXX we are not doing any conflict resolution if key_pool has
         #     a tie. What's worst is that it's not totally deterministic.
-        return max(six.iteritems(key_pool), key=itemgetter(1))[0]
+        return max(key_pool.items(), key=itemgetter(1))[0]
 
     @property
     def dev_info(self):
         dev_info = {}
-        for key, key_pool in six.iteritems(self._votes):
+        for key, key_pool in self._votes.items():
             dev_info[key] = self._get_winner(key_pool)
         return dev_info
 
     def update(self, dev_info):
-        for key, value in six.iteritems(dev_info):
+        for key, value in dev_info.items():
             self._vote(key, value)
 
 
-@implementer(IDeviceInfoExtractor)
-class CollaboratingDeviceInfoExtractor(object):
+class CollaboratingDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     """Composite device info extractor that return a device info object
     which is the composition of every device info objects returned.
 
     Takes an Updater factory to control the way the returned device info
-    object is builded.
+    object is built.
 
     An Updater is an object with an:
     - 'update' method, taking a dev_info object and returning nothing
@@ -164,7 +171,7 @@ class CollaboratingDeviceInfoExtractor(object):
         self._extractors = extractors
 
     @defer.inlineCallbacks
-    def extract(self, request, request_type):
+    def extract(self, request, request_type: RequestType):
         logging.debug('extractors: %s', self._extractors)
         dlist = defer.DeferredList([extractor.extract(request, request_type)
                                     for extractor in self._extractors])
@@ -177,8 +184,7 @@ class CollaboratingDeviceInfoExtractor(object):
         defer.returnValue(updater.dev_info)
 
 
-@implementer(IDeviceInfoExtractor)
-class AllPluginsDeviceInfoExtractor(object):
+class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     """Composite device info extractor that forward extraction requests to
     device info extractors of every loaded plugins.
 
@@ -198,16 +204,16 @@ class AllPluginsDeviceInfoExtractor(object):
         pg_mgr.attach(self._obs)
 
     def _xtor_name(self, request_type):
-        return '_%s_xtor' % request_type
+        return f'_{request_type}_xtor'
 
     def _set_xtors(self):
         logger.debug('Updating extractors for %s', self)
-        for request_type in REQUEST_TYPES:
+        for request_type in RequestType:
             pg_extractors = []
-            for pg in six.itervalues(self._pg_mgr):
-                pg_extractor = getattr(pg, request_type + '_dev_info_extractor')
+            for pg in self._pg_mgr.values():
+                pg_extractor = getattr(pg, f'{request_type.value}_dev_info_extractor')
                 if pg_extractor is not None:
-                    logger.debug('Adding %s extractor from %s', request_type, pg)
+                    logger.debug('Adding %s extractor from %s', request_type.value, pg)
                     pg_extractors.append(pg_extractor)
             xtor = self.extractor_factory(pg_extractors)
             setattr(self, self._xtor_name(request_type), xtor)
@@ -215,12 +221,12 @@ class AllPluginsDeviceInfoExtractor(object):
     def _on_plugin_load_or_unload(self, pg_id):
         self._set_xtors()
 
-    def extract(self, request, request_type):
+    def extract(self, request, request_type: RequestType):
         xtor = getattr(self, self._xtor_name(request_type))
         return xtor.extract(request, request_type)
 
 
-class IDeviceRetriever(Interface):
+class AbstractDeviceRetriever(metaclass=ABCMeta):
     """A device retriever return a device object from device information.
 
     Instances providing this interface MAY have some side effect on the
@@ -228,15 +234,15 @@ class IDeviceRetriever(Interface):
 
     """
 
-    def retrieve(dev_info):
+    @abstractmethod
+    def retrieve(self, dev_info: dict[str, str]) -> Deferred | None:
         """Return a deferred that will fire with either a device object
         or None if it can't find such object.
 
         """
 
 
-@implementer(IDeviceRetriever)
-class SearchDeviceRetriever(object):
+class SearchDeviceRetriever(AbstractDeviceRetriever):
     """Device retriever who search in the application for a device with a
     key's value the same as a device info key's value, and return the first
     one found.
@@ -252,15 +258,14 @@ class SearchDeviceRetriever(object):
         return defer.succeed(None)
 
 
-@implementer(IDeviceRetriever)
-class IpDeviceRetriever(object):
+class IpDeviceRetriever(AbstractDeviceRetriever):
     def __init__(self, app):
         self._app = app
 
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
-        if u'ip' in dev_info:
-            devices = yield self._app.dev_find({u'ip': dev_info[u'ip']})
+        if 'ip' in dev_info:
+            devices = yield self._app.dev_find({'ip': dev_info['ip']})
             matching_device = self._get_matching_device(devices, dev_info)
             defer.returnValue(matching_device)
         defer.returnValue(None)
@@ -275,19 +280,19 @@ class IpDeviceRetriever(object):
         return None
 
     def _get_candidate_devices(self, devices, dev_info):
-        devices_by_id = dict((device[u'id'], device) for device in devices)
-        self._filter_devices_by_key(devices_by_id, dev_info, u'mac')
-        self._filter_devices_by_key(devices_by_id, dev_info, u'vendor')
-        self._filter_devices_by_key(devices_by_id, dev_info, u'model')
+        devices_by_id = dict((device['id'], device) for device in devices)
+        self._filter_devices_by_key(devices_by_id, dev_info, 'mac')
+        self._filter_devices_by_key(devices_by_id, dev_info, 'vendor')
+        self._filter_devices_by_key(devices_by_id, dev_info, 'model')
         return list(devices_by_id.values())
 
     def _filter_devices_by_key(self, devices_by_id, dev_info, key):
         if key in dev_info:
             key_value = dev_info[key]
-            for device in devices_by_id.values():
+            for device in list(devices_by_id.values()):
                 if key in device:
                     if device[key] != key_value:
-                        device_id = device[u'id']
+                        device_id = device['id']
                         del devices_by_id[device_id]
 
 
@@ -296,7 +301,7 @@ def MacDeviceRetriever(app):
     object which MAC is the same as the device info object.
 
     """
-    return SearchDeviceRetriever(app, u'mac')
+    return SearchDeviceRetriever(app, 'mac')
 
 
 def SerialNumberDeviceRetriever(app):
@@ -304,7 +309,7 @@ def SerialNumberDeviceRetriever(app):
     object which serial number is the same as the device info object.
 
     """
-    return SearchDeviceRetriever(app, u'sn')
+    return SearchDeviceRetriever(app, 'sn')
 
 
 def UUIDDeviceRetriever(app):
@@ -312,11 +317,10 @@ def UUIDDeviceRetriever(app):
     object which UUID is the same as the device info object.
 
     """
-    return SearchDeviceRetriever(app, u'uuid')
+    return SearchDeviceRetriever(app, 'uuid')
 
 
-@implementer(IDeviceRetriever)
-class AddDeviceRetriever(object):
+class AddDeviceRetriever(AbstractDeviceRetriever):
     """A device retriever that does no lookup and always insert a new device
     in the application.
 
@@ -331,20 +335,19 @@ class AddDeviceRetriever(object):
     @defer.inlineCallbacks
     def retrieve(self, dev_info):
         device = dict(dev_info)
-        device[u'added'] = u'auto'
+        device['added'] = 'auto'
         try:
             device_id = yield self._app.dev_insert(device)
         except Exception:
             defer.returnValue(None)
         else:
-            device_ip = dev_info.get(u'ip')
+            device_ip = dev_info.get('ip')
             if device_ip:
                 log_security_msg('New device created automatically from %s: %s', device_ip, device_id)
             defer.returnValue(device)
 
 
-@implementer(IDeviceRetriever)
-class FirstCompositeDeviceRetriever(object):
+class FirstCompositeDeviceRetriever(AbstractDeviceRetriever):
     """Composite device retriever which return the device its first retriever
     returns.
 
@@ -362,7 +365,7 @@ class FirstCompositeDeviceRetriever(object):
         defer.returnValue(None)
 
 
-class IDeviceUpdater(Interface):
+class AbstractDeviceUpdater(metaclass=ABCMeta):
     """Update a device object device from an info object.
 
     This operation can have side effect, like updating the device. In fact,
@@ -370,7 +373,7 @@ class IDeviceUpdater(Interface):
 
     """
 
-    def update(device, dev_info, request, request_type):
+    def update(self, device, dev_info, request, request_type):
         """Update a device object, returning a deferred that will fire once
         the device object has been updated.
 
@@ -380,15 +383,13 @@ class IDeviceUpdater(Interface):
         """
 
 
-@implementer(IDeviceUpdater)
-class NullDeviceUpdater(object):
+class NullDeviceUpdater(AbstractDeviceUpdater):
     """Device updater that updates nothing."""
     def update(self, device, dev_info, request, request_type):
         return defer.succeed(None)
 
 
-@implementer(IDeviceUpdater)
-class DynamicDeviceUpdater(object):
+class DynamicDeviceUpdater(AbstractDeviceUpdater):
     """Device updater that updates zero or more of the device key with the
     value of the device info key.
 
@@ -400,9 +401,9 @@ class DynamicDeviceUpdater(object):
 
     """
     def __init__(self, keys, force_update=False):
-        # keys can either be a string (i.e. u'ip') or a list of string
-        #   (i.e. [u'ip', u'version'])
-        if isinstance(keys, six.string_types):
+        # keys can either be a string (i.e. 'ip') or a list of string
+        #   (i.e. ['ip', 'version'])
+        if isinstance(keys, str):
             keys = [keys]
         self._keys = list(keys)
         self._force_update = force_update
@@ -415,8 +416,7 @@ class DynamicDeviceUpdater(object):
         return defer.succeed(None)
 
 
-@implementer(IDeviceUpdater)
-class AddInfoDeviceUpdater(object):
+class AddInfoDeviceUpdater(AbstractDeviceUpdater):
     """Device updater that add any missing information to the device from
     the device info.
 
@@ -431,8 +431,8 @@ class AddInfoDeviceUpdater(object):
         return defer.succeed(None)
 
 
-class AutocreateConfigDeviceUpdater(object):
-    """Device updater that set an autocreated config to the device if the
+class AutocreateConfigDeviceUpdater(AbstractDeviceUpdater):
+    """Device updater that set an auto-created config to the device if the
     device has no config.
 
     """
@@ -441,29 +441,28 @@ class AutocreateConfigDeviceUpdater(object):
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        if u'config' not in device:
+        if 'config' not in device:
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
-                device[u'config'] = new_config_id
+                device['config'] = new_config_id
         defer.returnValue(None)
 
 
-class RemoveOutdatedIpDeviceUpdater(object):
+class RemoveOutdatedIpDeviceUpdater(AbstractDeviceUpdater):
     def __init__(self, app):
         self._app = app
 
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
-        if not self._app.nat and u'ip' in dev_info:
-            selector = {u'ip': dev_info[u'ip'], u'id': {'$ne': device[u'id']}}
+        if not self._app.nat and 'ip' in dev_info:
+            selector = {'ip': dev_info['ip'], 'id': {'$ne': device['id']}}
             outdated_devices = yield self._app.dev_find(selector)
             for outdated_device in outdated_devices:
-                del outdated_device[u'ip']
+                del outdated_device['ip']
                 self._app.dev_update(outdated_device)
 
 
-@implementer(IDeviceUpdater)
-class CompositeDeviceUpdater(object):
+class CompositeDeviceUpdater(AbstractDeviceUpdater):
     def __init__(self, updaters=None):
         self.updaters = [] if updaters is None else updaters
 
@@ -473,7 +472,7 @@ class CompositeDeviceUpdater(object):
             yield updater.update(device, dev_info, request, request_type)
 
 
-class RequestProcessingService(object):
+class RequestProcessingService:
     """The base object responsible for dynamically modifying the process state
     when processing a request from a device.
 
@@ -487,7 +486,7 @@ class RequestProcessingService(object):
         self._req_id = 0    # used for logging
 
     def _new_request_id(self):
-        req_id = "%d" % self._req_id
+        req_id = f"{self._req_id:d}"
         self._req_id = (self._req_id + 1) % 100
         return req_id
 
@@ -512,7 +511,7 @@ class RequestProcessingService(object):
         defer.returnValue((device, pg_id))
 
 
-class _RequestHelper(object):
+class _RequestHelper:
 
     def __init__(self, app, request, request_type, request_id):
         self._app = app
@@ -537,7 +536,7 @@ class _RequestHelper(object):
         if device is None:
             logger.info('<%s> No device retrieved', self._request_id)
         else:
-            logger.info('<%s> Retrieved device id: %s', self._request_id, device[u'id'])
+            logger.info('<%s> Retrieved device id: %s', self._request_id, device['id'])
 
         defer.returnValue(device)
 
@@ -556,13 +555,13 @@ class _RequestHelper(object):
 
     @defer.inlineCallbacks
     def _update_device_on_no_change(self, device):
-        if not device.get(u'configured'):
+        if not device.get('configured'):
             defer.returnValue(None)
 
         if not self._should_update_remote_state(device):
             defer.returnValue(None)
 
-        config = yield self._app.cfg_retrieve(device[u'config'])
+        config = yield self._app.cfg_retrieve(device['config'])
         if not config:
             defer.returnValue(None)
 
@@ -582,7 +581,7 @@ class _RequestHelper(object):
         if not filename:
             return False
 
-        plugin_id = device.get(u'plugin')
+        plugin_id = device.get('plugin')
         if not plugin_id:
             return False
 
@@ -601,7 +600,7 @@ class _RequestHelper(object):
         if trigger_filename != filename:
             return False
 
-        config_id = device.get(u'config')
+        config_id = device.get('config')
         if not config_id:
             return False
 
@@ -611,7 +610,7 @@ class _RequestHelper(object):
         if not config:
             return
 
-        if not device[u'configured']:
+        if not device['configured']:
             return
 
         self._update_remote_state_sip_username(device, config)
@@ -621,24 +620,24 @@ class _RequestHelper(object):
         if not sip_username:
             return False
 
-        if sip_username == device.get(u'remote_state_sip_username'):
+        if sip_username == device.get('remote_state_sip_username'):
             return False
 
-        device[u'remote_state_sip_username'] = sip_username
+        device['remote_state_sip_username'] = sip_username
         logger.debug('Remote state SIP username updated')
 
         return True
 
     def _get_sip_username(self, config):
-        sip_lines = config[u'raw_config'].get(u'sip_lines')
+        sip_lines = config['raw_config'].get('sip_lines')
         if not sip_lines:
             return None
 
-        sip_line = sip_lines.get(u'1')
+        sip_line = sip_lines.get('1')
         if not sip_line:
             return None
 
-        return sip_line.get(u'username')
+        return sip_line.get('username')
 
     def get_plugin_id(self, device):
         pg_id = self._get_plugin_id(device)
@@ -652,7 +651,7 @@ class _RequestHelper(object):
     def _get_plugin_id(self, device):
         if device is None:
             return None
-        return device.get(u'plugin')
+        return device.get('plugin')
 
 
 def _null_service_factory(pg_id, pg_service):
@@ -664,7 +663,7 @@ def _log_sensitive_request(plugin, request, request_type):
     if is_sensitive_filename is None:
         return
 
-    filename = _get_filename_from_request(request, request_type)
+    filename = decode_bytes(_get_filename_from_request(request, request_type))
     if is_sensitive_filename(filename):
         ip = _get_ip_from_request(request, request_type)
         log_security_msg('Sensitive file requested from %s: %s', ip, filename)
@@ -691,23 +690,25 @@ class HTTPRequestProcessingService(Resource):
     default_service = NoResource('Nowhere to route this request.')
 
     def __init__(self, process_service, pg_mgr):
-        Resource.__init__(self)
+        super().__init__()
         self._process_service = process_service
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
 
     @defer.inlineCallbacks
-    def getChild(self, path, request):
+    def getChild(self, path: bytes, request: Request):
         logger.info('Processing HTTP request: %s', request.path)
         logger.debug('HTTP request: %s', request)
         logger.debug('postpath: %s', request.postpath)
         try:
-            device, pg_id = yield self._process_service.process(request, REQUEST_TYPE_HTTP)
+            device, pg_id = yield self._process_service.process(request, RequestType.HTTP)
         except Exception:
             logger.error('Error while processing HTTP request:', exc_info=True)
-            defer.returnValue(ErrorPage(INTERNAL_SERVER_ERROR,
-                              'Internal processing error',
-                              'Internal processing error'))
+            defer.returnValue(ErrorPage(
+                INTERNAL_SERVER_ERROR,
+                'Internal processing error',
+                'Internal processing error',
+            ))
         else:
             # Here we 'inject' the device object into the request object
             request.prov_dev = device
@@ -715,7 +716,7 @@ class HTTPRequestProcessingService(Resource):
             if pg_id in self._pg_mgr:
                 plugin = self._pg_mgr[pg_id]
                 if plugin.http_service is not None:
-                    _log_sensitive_request(plugin, request, REQUEST_TYPE_HTTP)
+                    _log_sensitive_request(plugin, request, RequestType.HTTP)
                     service = self.service_factory(pg_id, plugin.http_service)
                     # If the plugin specifies a path preprocessing method, use it
                     if hasattr(service, 'path_preprocess'):
@@ -729,7 +730,7 @@ class HTTPRequestProcessingService(Resource):
 
 
 # @implementer(ITFTPReadService)
-class TFTPRequestProcessingService(object):
+class TFTPRequestProcessingService:
     """A TFTP read service that does TFTP request processing and routing to
     the TFTP read service of plugins.
 
@@ -741,9 +742,10 @@ class TFTPRequestProcessingService(object):
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: DHCPRequest, response):
         logger.info('Processing TFTP request: %s', request['packet']['filename'])
         logger.debug('TFTP request: %s', request)
+
         def callback(plugin_for_device):
             # Here we 'inject' the device object into the request object
             (device, pg_id) = plugin_for_device
@@ -753,13 +755,15 @@ class TFTPRequestProcessingService(object):
             if pg_id in self._pg_mgr:
                 plugin = self._pg_mgr[pg_id]
                 if plugin.tftp_service is not None:
-                    _log_sensitive_request(plugin, request, REQUEST_TYPE_TFTP)
+                    _log_sensitive_request(plugin, request, RequestType.TFTP)
                     service = self.service_factory(pg_id, plugin.tftp_service)
             service.handle_read_request(request, response)
+
         def errback(failure):
             logger.error('Error while processing TFTP request: %s', failure)
             response.reject(ERR_UNDEF, 'Internal processing error')
-        d = self._process_service.process(request, REQUEST_TYPE_TFTP)
+
+        d = self._process_service.process(request, RequestType.TFTP)
         d.addCallbacks(callback, errback)
 
 
@@ -774,27 +778,28 @@ class DHCPRequestProcessingService(Resource):
 
     Also, in this context, these are not real DHCP request, but more like
     DHCP transaction information objects. We use the term request for
-    homogeneity sake.
+    homogeneity’s sake.
 
     """
     def __init__(self, process_service):
         self._process_service = process_service
 
-    def handle_dhcp_request(self, request):
+    def handle_dhcp_request(self, request: DHCPRequest):
         """Handle DHCP request.
 
         DHCP requests are dictionary objects with the following keys:
-          u'ip' -- the IP address of the client who made the request, in
+          'ip' -- the IP address of the client who made the request, in
             normalized format
-          u'mac' -- the MAC address of the client who made the request, in
+          'mac' -- the MAC address of the client who made the request, in
             normalized format
-          u'options' -- a dictionary of client options, where keys are integers
+          'options' -- a dictionary of client options, where keys are integers
             representing the option code, and values are byte string
             representing the raw value of the option
         """
-        logger.info('Processing DHCP request: %s', request[u'ip'])
+        logger.info('Processing DHCP request: %s', request['ip'])
         logger.debug('DHCP request: %s', request)
+
         def errback(failure):
             logger.error('Error while processing DHCP request: %s', failure)
-        d = self._process_service.process(request, REQUEST_TYPE_DHCP)
+        d = self._process_service.process(request, RequestType.DHCP)
         d.addErrback(errback)

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization primitives for event driven systems."""
 
 
-from __future__ import absolute_import
 import logging
 from collections import deque
 from twisted.internet import defer
@@ -17,7 +16,7 @@ class InvalidLockUsage(Exception):
     pass
 
 
-class _DeferredRWLock_Base(object):
+class _DeferredRWLock_Base:
     def __init__(self, acquire_fun, release_fun):
         self._acquire_fun = acquire_fun
         self._release_fun = release_fun
@@ -43,7 +42,7 @@ class _DeferredRWLock_Base(object):
         self._release_fun()
 
 
-class DeferredRWLock(object):
+class DeferredRWLock:
     """A read-write lock for event driven systems.
     
     Instances of this class have the following attributes:

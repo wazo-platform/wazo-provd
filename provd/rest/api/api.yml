@@ -1225,7 +1225,7 @@ definitions:
         description: The plugins repository URL
     example:
       param:
-        value: "http://provd.wazo.community/plugins/1/stable/"
+        value: "http://provd.wazo.community/plugins/2/stable/"
   HttpProxy:
     title: HTTP proxy configuration
     properties:
@@ -1416,7 +1416,7 @@ definitions:
         $ref: '#/definitions/ParamObject'
     example:
       param:
-        value: "http://provd.wazo.community/plugins/1/stable"
+        value: "http://provd.wazo.community/plugins/2/stable"
   ParamObject:
     properties:
       value:

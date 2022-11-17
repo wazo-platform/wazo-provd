@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 import functools
 from twisted.web import http
+
+from provd.util import decode_bytes
 
 
 def numeric_id_generator(prefix='', start=0):
     n = start
     while True:
-        yield prefix + str(n)
+        yield f'{prefix}{n}'
         n += 1
 
 
@@ -20,7 +21,7 @@ def parse_accept(value):
 
     """
     # Take q params into account
-    tokens = [token.strip() for token in value.split(',')]
+    tokens = [token.strip() for token in decode_bytes(value).split(',')]
     return [token.split(';', 1)[0] for token in tokens]
 
 
@@ -29,16 +30,14 @@ def accept_mime_type(mime_type, request):
     for the request.
 
     """
-    if request.getHeader('Accept') is None:
+    if request.getHeader(b'Accept') is None:
         return True
-    else:
-        accept = parse_accept(request.getHeader('Accept'))
-        if mime_type in accept or '*/*' in accept:
-            return True
-        elif mime_type[:mime_type.index('/')] + '/*' in accept:
-            return True
-        else:
-            return False
+    accept = parse_accept(request.getHeader(b'Accept'))
+    if mime_type in accept or '*/*' in accept:
+        return True
+    if mime_type[:mime_type.index('/')] + '/*' in accept:
+        return True
+    return False
 
 
 def accept(mime_types):
@@ -54,9 +53,8 @@ def accept(mime_types):
                     return fun(self, request)
             else:
                 request.setResponseCode(http.NOT_ACCEPTABLE)
-                request.setHeader('Content-Type', 'text/plain; charset=UTF-8')
-                return (u"You must accept one of the following MIME type '%s'."
-                        % mime_types).encode('UTF-8')
+                request.setHeader(b'Content-Type', b'text/plain; charset=UTF-8')
+                return f"You must accept one of the following MIME type '{mime_types}'.".encode('utf-8')
         return aux
     return in_accept
 
@@ -65,13 +63,11 @@ def content_type(mime_type):
     def in_content_type(fun):
         @functools.wraps(fun)
         def aux(self, request):
-            content_type = request.getHeader('Content-Type')
-            if not content_type or content_type not in mime_type:
+            content_type = decode_bytes(request.getHeader(b'Content-Type'))
+            if not content_type or content_type not in decode_bytes(mime_type):
                 request.setResponseCode(http.UNSUPPORTED_MEDIA_TYPE)
-                request.setHeader('Content-Type', 'text/plain; charset=UTF-8')
-                return (u"Entity must be in one of these media types '%s'."
-                        % mime_type).encode('UTF-8')
-            else:
-                return fun(self, request)
+                request.setHeader(b'Content-Type', b'text/plain; charset=UTF-8')
+                return f"Entity must be in one of these media types '{mime_type}'.".encode('utf-8')
+            return fun(self, request)
         return aux
     return in_content_type

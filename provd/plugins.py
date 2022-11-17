@@ -1,19 +1,23 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
+from __future__ import annotations
+
 import contextlib
 import json
 import logging
 import operator
 import os
 import shutil
-import six
+from abc import ABCMeta, abstractmethod
+from typing import Any, Callable
+
 import tarfile
 import weakref
 from binascii import a2b_hex
 from io import open
+
+from twisted.internet.defer import Deferred
 from xivo_fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
     new_downloaders_from_handlers
 from xivo_fetchfw.package import PackageManager, InstallerController, \
@@ -29,11 +33,10 @@ from provd.localization import get_locale_and_language
 from provd.operation import OperationInProgress, OIP_PROGRESS, OIP_SUCCESS, \
     OIP_FAIL
 from provd.proxy import DynProxyHandler
-from provd.services import IInstallService, InvalidParameterError
+from provd.services import AbstractInstallationService, InvalidParameterError, AbstractConfigurationService
 from jinja2.environment import Environment
 from jinja2.exceptions import TemplateNotFound
 from twisted.internet import defer, threads
-from zope.interface import implementer, Interface
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +47,8 @@ class PluginNotLoadedError(Exception):
 
 _PLUGIN_INFO_FILENAME = 'plugin-info'
 # plugin information filename in each plugin directory.
-_PLUGIN_INFO_KEYS = [u'capabilities', u'description', u'version']
-_PLUGIN_INFO_INSTALLABLE_KEYS = _PLUGIN_INFO_KEYS + [u'dsize', u'filename', u'sha1sum']
+_PLUGIN_INFO_KEYS = ['capabilities', 'description', 'version']
+_PLUGIN_INFO_INSTALLABLE_KEYS = _PLUGIN_INFO_KEYS + ['dsize', 'filename', 'sha1sum']
 _PLUGIN_INFO_INSTALLED_KEYS = _PLUGIN_INFO_KEYS
 
 
@@ -56,51 +59,49 @@ add_xivo_phonebook_url_from_format = phonebook.add_xivo_phonebook_url_from_forma
 add_wazo_phoned_user_service_url = phoned_users.add_wazo_phoned_user_service_url
 
 
-def _check_raw_plugin_info(raw_plugin_info, id, keys):
+def _check_raw_plugin_info(raw_plugin_info, plugin_id, keys):
     # Quick and incomplete check of a raw plugin info object.
     for plugin_info_key in keys:
         if plugin_info_key not in raw_plugin_info:
-            raise ValueError('invalid plugin info: missing %s key in %s'
-                             % (plugin_info_key, id))
+            raise ValueError(f'invalid plugin info: missing {plugin_info_key} key in {plugin_id}')
 
 
 def _clean_localized_description(raw_plugin_info):
-    for key in raw_plugin_info.keys():
+    for key in list(raw_plugin_info):
         if key.startswith('description_'):
             del raw_plugin_info[key]
 
 
-def _new_localize_fun():
-    # Return a function that receive a raw plugin info and update
-    # it so it becomes localized
+def _new_localize_fun() -> Callable:
+    # Return a function that receives raw plugin info and localizes it
     locale, lang = get_locale_and_language()
     if locale is None:
         return _clean_localized_description
     else:
-        locale_name = 'description_%s' % locale
+        locale_name = f'description_{locale}'
         if locale == lang:
             def aux(raw_plugin_info):
                 try:
-                    raw_plugin_info[u'description'] = raw_plugin_info[locale_name]
+                    raw_plugin_info['description'] = raw_plugin_info[locale_name]
                 except KeyError:
                     pass
                 _clean_localized_description(raw_plugin_info)
             return aux
         else:
-            lang_name = 'description_%s' % lang
+            lang_name = f'description_{lang}'
             def aux(raw_plugin_info):
                 try:
-                    raw_plugin_info[u'description'] = raw_plugin_info[locale_name]
+                    raw_plugin_info['description'] = raw_plugin_info[locale_name]
                 except KeyError:
                     try:
-                        raw_plugin_info[u'description'] = raw_plugin_info[lang_name]
+                        raw_plugin_info['description'] = raw_plugin_info[lang_name]
                     except KeyError:
                         pass
                 _clean_localized_description(raw_plugin_info)
             return aux
 
 
-class Plugin(object):
+class Plugin(metaclass=ABCMeta):
     """Base class and entry point of every plugin.
 
     Here's some guideline every plugin should follow:
@@ -143,7 +144,7 @@ class Plugin(object):
 
     At load time, the 'execfile_' name is available in the global namespace
     of the entry file. It can be used to 'import' other files in the same or
-    sub directory of the entry plugin file. This methods is similar to
+    subdirectory of the entry plugin file. This method is similar to
     execfile, except that the working directory is changed to the plugin
     directory.
 
@@ -168,10 +169,18 @@ class Plugin(object):
             XXX should specify better
 
         """
+        self._services = {}
         self._plugin_dir = plugin_dir
 
-    def close(self):
-        """Close the plugin.
+    def load(self) -> None:
+        """Load the plugin.
+
+        This is the first step in the plugin loading system. This should initialize the plugin.
+        """
+        raise NotImplementedError
+
+    def close(self) -> None:
+        """Close (Unload) the plugin.
 
         This method is the last method called in the plugin unloading process.
 
@@ -182,10 +191,11 @@ class Plugin(object):
         """
         pass
 
-    def info(self):
+    @property
+    def info(self) -> dict[str, Any]:
         """Return a dictionary containing information about this plugin.
 
-        The dictionary MUST contains at least the following keys:
+        The dictionary MUST contain at least the following keys:
           version -- the version of the plugin
           description -- the description of the plugin
           capabilities -- a dictionary where keys are string in format
@@ -197,8 +207,8 @@ class Plugin(object):
 
         """
         plugin_info_path = os.path.join(self._plugin_dir, _PLUGIN_INFO_FILENAME)
-        with open(plugin_info_path) as fobj:
-            raw_plugin_info = json.load(fobj)
+        with open(plugin_info_path, 'r') as f:
+            raw_plugin_info = json.load(f)
         _check_raw_plugin_info(raw_plugin_info, self.id, _PLUGIN_INFO_INSTALLED_KEYS)
         localize_fun = _new_localize_fun()
         localize_fun(raw_plugin_info)
@@ -206,20 +216,25 @@ class Plugin(object):
 
     # Methods for additional plugin services
 
-    services = {}
-    """Return a dictionary where keys are service name and values are
-    service object.
+    @property
+    def services(self) -> dict[str, AbstractConfigurationService | AbstractInstallationService]:
+        """Return a dictionary where keys are service name and values are
+        service object.
 
-    This is used so that plugins can offer additional services in a
-    standard way.
+        This is used so that plugins can offer additional services in a
+        standard way.
 
-    If the service name is 'configure', the associated service object must
-    provide the IConfigureService interface.
+        If the service name is 'configure', the associated service object must
+        provide the IConfigureService interface.
 
-    If the service name is 'install', the associated service object must
-    provide the IInstallService interface.
+        If the service name is 'install', the associated service object must
+        provide the IInstallService interface.
+        """
+        return self._services
 
-    """
+    @services.setter
+    def services(self, value: dict[str, AbstractConfigurationService | AbstractInstallationService]):
+        self._services = value
 
     # Methods for TFTP/HTTP services
 
@@ -270,7 +285,7 @@ class Plugin(object):
 
     # Methods for device configuration
 
-    def configure_common(self, raw_config):
+    def configure_common(self, raw_config: dict[str, Any]) -> None:
         """Apply a non-device specific configuration to the plugin. In typical
         case, this will configure the 'common files' shared by all the devices.
 
@@ -288,7 +303,7 @@ class Plugin(object):
         """
         pass
 
-    def configure(self, device, raw_config):
+    def configure(self, device: dict[str, str], raw_config: dict[str, Any]) -> None:
         """Configure the plugin so that the raw config is applied to the
         device. This method MUST not synchronize the configuration between
         the phone and the provisioning server. This method is called only to
@@ -324,8 +339,8 @@ class Plugin(object):
         """
         pass
 
-    def deconfigure(self, device):
-        """Deconfigure the plugin so that the plugin won't configure the
+    def deconfigure(self, device: dict[str, str]) -> None:
+        """De-configure the plugin so that the plugin won't configure the
         device.
 
         This method is called when:
@@ -339,7 +354,7 @@ class Plugin(object):
         unexpected configuration for a device and to keep the plugins
         clean, without out of sync cache file in their directories.
 
-        Note that deconfigure doesn't mean you should try resetting the
+        Note that de-configure doesn't mean you should try resetting the
         device to its default value. In fact, you SHOULD NOT do this.
 
         In some rare circumstances, this method might be called more than
@@ -348,10 +363,10 @@ class Plugin(object):
 
         Pre:  device is a device object
               the method 'configure' has been called at least once with the
-                same device object since the last call to deconfigure with
-                the same device (i.e. a call to deconfigure can only follow
+                same device object since the last call to de-configure with
+                the same device (i.e. a call to de-configure can only follow
                 a call to the configure method with the same device, and there
-                must not be a call to deconfigure between these 2 calls)
+                must not be a call to de-configure between these 2 calls)
         Post: after a call to this method, if device dev does a request for
                 its configuration file, it won't be configured with an old
                 config (it's ok if the device is configured with the common
@@ -362,8 +377,8 @@ class Plugin(object):
         """
         pass
 
-    def synchronize(self, device, raw_config):
-        """Force the device to synchronize its configuration so that its the
+    def synchronize(self, device: dict[str, str], raw_config: dict[str, Any]) -> Deferred:
+        """Force the device to synchronize its configuration so that it's the
         same as the one in the raw config object.
 
         Note that an offline device can't be synchronized...
@@ -374,7 +389,7 @@ class Plugin(object):
                 call to the configure method with the same device object and
                 config object. Said differently, before this call, there has
                 been a call to configure with the same object, and there has
-                been no call to deconfigure with the same dev object between
+                been no call to de-configure with the same dev object between
                 these calls and no other call to configure with the same dev
                 object.
         Post: its config has been reloaded
@@ -386,32 +401,29 @@ class Plugin(object):
 
         The deferred will fire its errback with an Exception in the following
         case:
-          - resynchronization is not supported by this plugin.
+          - re-synchronization is not supported by this plugin.
           - not enough information to resynchronize the device.
           - the resync operation seems to have failed for another reason.
-
         """
-        return defer.fail(Exception("Resynchronization not supported"))
+        return defer.fail(Exception("Re-synchronization is not supported"))
 
-    def get_remote_state_trigger_filename(self, device):
+    def get_remote_state_trigger_filename(self, device: dict[str, str]) -> str | None:
         """Return the name of the filename for the given device that,
         when the device retrieve this file, implies that the configuration of
-        the device is the same as the the one in the plugin (i.e. the device
+        the device is the same as the one in the plugin (i.e. the device
         configuration is in sync with the plugin configuration).
 
         Return None is there's no such file or if there is not enough information
         in the device to generate the file name.
 
         Pre: device is a device object, not necessarily configured, because
-             the configuration might happens just after.
-
+             the configuration might happen just after.
         """
         return None
 
-    def is_sensitive_filename(self, filename):
+    def is_sensitive_filename(self, filename: str) -> bool:
         """Return true if the given filename could point to a file containing
         sensitive information (e.g. SIP username, password), false otherwise.
-
         """
         return False
 
@@ -419,18 +431,18 @@ class Plugin(object):
 class StandardPlugin(Plugin):
     """Abstract base class for plugin classes.
 
-    Altough this class doesn't do much at the time of writing this, you'll
+    Although this class doesn't do much at the time of writing this, you'll
     still want to inherit from it, unless you have good reason.
 
     """
     _TFTPBOOT_DIR = os.path.join('var', 'tftpboot')
 
     def __init__(self, app, plugin_dir, gen_cfg, spec_cfg):
-        Plugin.__init__(self, app, plugin_dir, gen_cfg, spec_cfg)
+        super().__init__(app, plugin_dir, gen_cfg, spec_cfg)
         self._tftpboot_dir = os.path.join(plugin_dir, self._TFTPBOOT_DIR)
 
 
-class TemplatePluginHelper(object):
+class TemplatePluginHelper:
     DEFAULT_TPL_DIR = 'templates'
     """Directory where the default templates lies."""
     CUSTOM_TPL_DIR = os.path.join('var', 'templates')
@@ -446,8 +458,8 @@ class TemplatePluginHelper(object):
         tpl_filenames = []
         if filename:
             tpl_filenames.append(filename + '.tpl')
-        if u'model' in dev:
-            tpl_filenames.append(dev[u'model'] + '.tpl')
+        if 'model' in dev:
+            tpl_filenames.append(dev['model'] + '.tpl')
         tpl_filenames.append('base.tpl')
         return self._get_first_template_from_filenames(tpl_filenames)
 
@@ -477,6 +489,7 @@ class TemplatePluginHelper(object):
 
 class AsyncInstallerController(InstallerController):
     def __init__(self, installable_pkg_sto, installed_pkg_sto, dl_oip, install_oip):
+        super().__init__(installable_pkg_sto, installed_pkg_sto)
         self._dl_oip = dl_oip
         self._install_oip = install_oip
 
@@ -514,8 +527,7 @@ def _new_handlers(proxies=None):
     return handlers
 
 
-@implementer(IInstallService)
-class FetchfwPluginHelper(object):
+class FetchfwPluginHelper(AbstractInstallationService):
     """Helper for plugins that needs to download files to really
     be able to support a certain kind of device.
 
@@ -567,37 +579,34 @@ class FetchfwPluginHelper(object):
         ed_sto = DefaultInstalledPkgStorage(installed_db_dir)
         return PackageManager(able_sto, ed_sto)
 
-    def install(self, pkg_id):
+    def install(self, pkg_id: str):
         """Install a package.
-
-        See IInstallService.install.
-
         """
         logger.info('Installing plugin-package %s', pkg_id)
         if pkg_id in self._in_install_set:
-            raise Exception('an install operation for pkg %s is already in progress' % pkg_id)
+            raise Exception(f'an install operation for pkg {pkg_id} is already in progress')
         if pkg_id not in self._pkg_mgr.installable_pkg_sto:
             raise Exception('package not found')
 
         dl_oip = OperationInProgress('download')
         install_oip = OperationInProgress('install')
-        oip = OperationInProgress('install_pkg', OIP_PROGRESS,
-                                  sub_oips=[dl_oip, install_oip])
+        oip = OperationInProgress('install_pkg', OIP_PROGRESS, sub_oips=[dl_oip, install_oip])
         ctrl_factory = AsyncInstallerController.new_factory(dl_oip, install_oip)
-        deferred = threads.deferToThread(self._pkg_mgr.install, [pkg_id],
-                                         self.root_dir, ctrl_factory)
+        deferred = threads.deferToThread(self._pkg_mgr.install, [pkg_id], self.root_dir, ctrl_factory)
         self._in_install_set.add(pkg_id)
+
         def callback(res):
             logger.info('Plugin-package %s installed', pkg_id)
             self._in_install_set.remove(pkg_id)
             oip.state = OIP_SUCCESS
             return res
+
         def errback(err):
-            logger.info('Error while installating plugin-package %s: %s',
-                        pkg_id, err.value)
+            logger.info('Error while installing plugin-package %s: %s', pkg_id, err.value)
             self._in_install_set.remove(pkg_id)
             oip.state = OIP_FAIL
             return err
+
         deferred.addCallbacks(callback, errback)
         return deferred, oip
 
@@ -620,26 +629,26 @@ class FetchfwPluginHelper(object):
         locale, lang = get_locale_and_language()
         if locale is None:
             return operator.itemgetter('description')
-        else:
-            locale_name = 'description_%s' % locale
-            if locale == lang:
-                def aux(pkg_info):
-                    try:
-                        return pkg_info[locale_name]
-                    except KeyError:
-                        return pkg_info['description']
-                return aux
-            else:
-                lang_name = 'description_%s' % lang
-                def aux(pkg_info):
-                    try:
-                        return pkg_info[locale_name]
-                    except KeyError:
-                        try:
-                            return pkg_info[lang_name]
-                        except KeyError:
-                            return pkg_info['description']
-                return aux
+
+        locale_name = f'description_{locale}'
+        if locale == lang:
+            def aux(pkg_info):
+                try:
+                    return pkg_info[locale_name]
+                except KeyError:
+                    return pkg_info['description']
+            return aux
+        lang_name = f'description_{lang}'
+
+        def aux(pkg_info):
+            try:
+                return pkg_info[locale_name]
+            except KeyError:
+                try:
+                    return pkg_info[lang_name]
+                except KeyError:
+                    return pkg_info['description']
+        return aux
 
     def list_installable(self):
         """Return a dictionary of installable packages.
@@ -649,10 +658,13 @@ class FetchfwPluginHelper(object):
         """
         localize_desc_fun = self._new_localize_description_fun()
         installable_pkg_sto = self._pkg_mgr.installable_pkg_sto
-        return dict((pkg_id, {'version': pkg.pkg_info['version'],
-                              'description': localize_desc_fun(pkg.pkg_info),
-                              'dsize': sum(rfile.size for rfile in pkg.remote_files)})
-                    for pkg_id, pkg in six.iteritems(installable_pkg_sto))
+        return {
+            pkg_id: {
+                'version': pkg.pkg_info['version'],
+                'description': localize_desc_fun(pkg.pkg_info),
+                'dsize': sum(rfile.size for rfile in pkg.remote_files)
+            } for pkg_id, pkg in installable_pkg_sto.items()
+        }
 
     def list_installed(self):
         """Return a dictionary of installed packages.
@@ -662,28 +674,33 @@ class FetchfwPluginHelper(object):
         """
         localize_desc_fun = self._new_localize_description_fun()
         installed_pkg_sto = self._pkg_mgr.installed_pkg_sto
-        return dict((pkg_id, {'version': pkg.pkg_info['version'],
-                              'description': localize_desc_fun(pkg.pkg_info)})
-                    for pkg_id, pkg in six.iteritems(installed_pkg_sto))
+        return {
+            pkg_id: {
+                'version': pkg.pkg_info['version'],
+                'description': localize_desc_fun(pkg.pkg_info)
+            } for pkg_id, pkg in installed_pkg_sto.items()
+        }
 
     def services(self):
         """Return the following dictionary: {'install': self}."""
         return {'install': self}
 
 
-class IPluginManagerObserver(Interface):
+class AbstractPluginManagerObserver(metaclass=ABCMeta):
     """Interface that objects which want to be notified of plugin
     loading/unloading MUST provide.
 
     """
-    def pg_load(pg_id):
+    @abstractmethod
+    def pg_load(self, pg_id: str) -> None:
         pass
 
-    def pg_unload(pg_id):
+    @abstractmethod
+    def pg_unload(self, pg_id: str) -> None:
         pass
 
 
-class BasePluginManagerObserver(object):
+class BasePluginManagerObserver(AbstractPluginManagerObserver):
     # Warning: don't forget to store at least 1 reference to this object
     # after attaching it to the plugin manager since observers are weakly
     # referenced by the plugin manager, so if you do not store any reference,
@@ -692,20 +709,20 @@ class BasePluginManagerObserver(object):
         self._pg_load = pg_load
         self._pg_unload = pg_unload
 
-    def pg_load(self, pg_id):
+    def pg_load(self, pg_id: str):
         if self._pg_load is not None:
             self._pg_load(pg_id)
 
-    def pg_unload(self, pg_id):
+    def pg_unload(self, pg_id: str):
         if self._pg_unload is not None:
             self._pg_unload(pg_id)
 
 
-class PluginManager(object):
+class PluginManager:
     """Manage the life cycle of plugins in the plugin ecosystem.
 
     Plugin manager objects have a 'server' attribute which represent the base
-    address of the plugins repository (ex.: http://www.example.com/provd/stable).
+    address of the plugin's repository (ex.: http://www.example.com/provd/stable).
     It can be set to None if no server is specified.
 
     """
@@ -753,8 +770,8 @@ class PluginManager(object):
         logger.info('Closing plugin manager...')
         # important not to use an iterator over self._plugins since it is
         # modified in the unload method
-        for id in self._plugins.keys():
-            self._unload_and_notify(id)
+        for plugin_id in list(self._plugins):
+            self._unload_and_notify(plugin_id)
         logger.info('Plugin manager closed')
 
     def _db_pathname(self):
@@ -776,7 +793,7 @@ class PluginManager(object):
             # XXX this is unsafe unless we have authenticated the tarfile
             tfile.extractall(self._plugins_dir)
 
-    def install(self, id):
+    def install(self, plugin_id: str):
         """Install a plugin.
 
         This does not check if the plugin is already installed and does not
@@ -784,25 +801,22 @@ class PluginManager(object):
 
         Return a tuple (deferred, operation in progress).
 
-        Raise an Exception if there's already an install/upgrade operation
-        in progress for the plugin.
+        Raise an Exception if there's already an installation/upgrade in progress for the plugin.
 
-        Raise an Exception if there's no installable plugin with the
-        specified id.
+        Raise an Exception if there's no installable plugin with the specified plugin_id.
 
         Raise an InvalidParameterError if the plugin package is not in cache
         and no 'server' param has been set.
 
         """
-        logger.info('Installing plugin %s', id)
-        if id in self._in_install:
-            logger.warning('Install operation already in progress for plugin %s', id)
-            raise Exception('an install/upgrade operation for plugin %s is already in progress' % id)
-
+        logger.info('Installing plugin %s', plugin_id)
+        if plugin_id in self._in_install:
+            logger.warning('Install operation already in progress for plugin %s', plugin_id)
+            raise Exception(f'an install/upgrade operation for plugin {plugin_id} is already in progress')
         try:
-            pg_info = self._get_installable_plugin_info(id)
+            pg_info = self._get_installable_plugin_info(plugin_id)
         except KeyError:
-            logger.error('Can\'t install plugin %s: not found', id)
+            logger.error('Can\'t install plugin %s: not found', plugin_id)
             raise
         filename = pg_info['filename']
         cache_filename = os.path.join(self._cache_dir, filename)
@@ -821,11 +835,12 @@ class PluginManager(object):
             sha1hook = SHA1Hook(a2b_hex(pg_info['sha1sum']))
             dl_deferred, dl_oip = async_download_with_oip(rfile, [sha1hook])
             dl_oip.label = self._DOWNLOAD_LABEL
-            self._in_install.add(id)
+            self._in_install.add(plugin_id)
             top_deferred = defer.Deferred()
             top_oip = OperationInProgress(self._INSTALL_LABEL, OIP_PROGRESS, sub_oips=[dl_oip])
+
             def dl_callback(_):
-                self._in_install.remove(id)
+                self._in_install.remove(plugin_id)
                 try:
                     self._extract_plugin(cache_filename)
                 except Exception as e:
@@ -837,32 +852,36 @@ class PluginManager(object):
                 finally:
                     if not self._cache_plugin:
                         os.remove(cache_filename)
+
             def dl_errback(err):
-                self._in_install.remove(id)
+                self._in_install.remove(plugin_id)
                 top_oip.state = OIP_FAIL
                 top_deferred.errback(err)
+
             # do not move this line up (see dl_callback def)
             dl_deferred.addCallbacks(dl_callback, dl_errback)
+
         def top_callback(res):
-            logger.info('Plugin %s installed', id)
+            logger.info('Plugin %s installed', plugin_id)
             return res
+
         def top_errback(err):
-            logger.error('Error while installating plugin %s: %s', id, err.value)
+            logger.error('Error while installing plugin %s: %s', plugin_id, err.value)
             return err
+
         top_deferred.addCallbacks(top_callback, top_errback)
         return top_deferred, top_oip
 
-    def upgrade(self, id):
+    def upgrade(self, plugin_id):
         """Upgrade a plugin.
 
-        Right now, there's is absolutely no difference between calling this
-        method and calling the install method.
+        Right now, there is absolutely no difference between calling this method and calling the install method.
 
         """
-        logger.info('Upgrading plugin %s', id)
-        return self.install(id)
+        logger.info('Upgrading plugin %s', plugin_id)
+        return self.install(plugin_id)
 
-    def uninstall(self, id):
+    def uninstall(self, plugin_id):
         """Uninstall a plugin.
 
         This does not unload the installed plugin.
@@ -871,12 +890,12 @@ class PluginManager(object):
         specified id.
 
         """
-        logger.info('Uninstalling plugin %s', id)
-        if not self.is_installed(id):
-            logger.error('Can\'t uninstall plugin %s: not installed', id)
+        logger.info('Uninstalling plugin %s', plugin_id)
+        if not self.is_installed(plugin_id):
+            logger.error('Can\'t uninstall plugin %s: not installed', plugin_id)
             raise Exception('plugin not found')
 
-        shutil.rmtree(os.path.join(self._plugins_dir, id))
+        shutil.rmtree(os.path.join(self._plugins_dir, plugin_id))
 
     def update(self):
         """Download a fresh copy of the plugin definition file from the server.
@@ -907,26 +926,30 @@ class PluginManager(object):
         dl_deferred, dl_oip = async_download_with_oip(rfile)
         dl_oip.label = self._UPDATE_LABEL
         self._in_update = True
+
         def callback(res):
             logger.info('Plugin definition file updated')
             return res
+
         def errback(err):
             logger.error('Error while updating plugin definition file: %s', err.value)
             return err
+
         def dl_end(v):
             self._in_update = False
             return v
+
         dl_deferred.addCallbacks(callback, errback)
         dl_deferred.addBoth(dl_end)
         return dl_deferred, dl_oip
 
-    def _get_installable_plugin_info(self, id):
-        # Return an 'installable plugin info' object from a id, or raise
+    def _get_installable_plugin_info(self, plugin_id):
+        # Return an 'installable plugin info' object from a plugin_id, or raise
         # a KeyError if no such plugin is found
         installable_plugins = self.list_installable()
-        return installable_plugins[id]
+        return installable_plugins[plugin_id]
 
-    def list_installable(self):
+    def list_installable(self) -> dict[str, Any]:
         """Return a dictionary of installable plugins, where keys are
         plugin identifier and values are dictionary of plugin information.
 
@@ -935,7 +958,7 @@ class PluginManager(object):
           version -- the version of the package
           description -- the description of the package
           dsize -- the download size of the package, in bytes
-          sha1sum -- an hex representation of the sha1sum of the package
+          sha1sum -- a hex representation of the sha1sum of the package
           capabilities -- a dictionary where keys are string in format
             "vendor, model, version" and values are capabilities dictionary.
 
@@ -948,36 +971,34 @@ class PluginManager(object):
 
         """
         try:
-            with open(self._db_pathname()) as fobj:
-                raw_plugin_infos = json.load(fobj)
+            with open(self._db_pathname(), 'r') as f:
+                all_raw_plugin_info = json.load(f)
         except IOError:
             return {}
-        else:
-            localize_fun = _new_localize_fun()
-            for plugin_id, raw_plugin_info in six.iteritems(raw_plugin_infos):
-                _check_raw_plugin_info(raw_plugin_info, plugin_id,
-                                       _PLUGIN_INFO_INSTALLABLE_KEYS)
-                localize_fun(raw_plugin_info)
-            return raw_plugin_infos
 
-    def is_installed(self, id):
-        """Return true if the plugin <id> is currently installed, else
+        localize_fun = _new_localize_fun()
+        for plugin_id, raw_plugin_info in all_raw_plugin_info.items():
+            _check_raw_plugin_info(raw_plugin_info, plugin_id, _PLUGIN_INFO_INSTALLABLE_KEYS)
+            localize_fun(raw_plugin_info)
+        return all_raw_plugin_info
+
+    def is_installed(self, plugin_id: str) -> bool:
+        """Return true if the plugin <plugin_id> is currently installed, else
         false.
 
         """
-        return id in self.list_installed()
+        return plugin_id in self.list_installed()
 
-    def _get_installed_plugin_info(self, plugin_dir):
+    def _get_installed_plugin_info(self, plugin_dir: str) -> dict[str, Any]:
         plugin_info_path = os.path.join(plugin_dir, _PLUGIN_INFO_FILENAME)
-        with open(plugin_info_path) as fobj:
-            return json.load(fobj)
+        with open(plugin_info_path, 'r') as f:
+            return json.load(f)
 
-    def list_installed(self):
+    def list_installed(self) -> dict[str, Any]:
         """Return a dictionary of installed plugins, where keys are plugin
         identifier and value are dictionary of plugin information.
 
-        See Plugin.info() method for more information on the returned
-        dictionary.
+        See Plugin.info method for more information on the returned dictionary.
 
         """
         # we can't iterate over loaded plugins (i.e. self._plugins) here
@@ -990,8 +1011,9 @@ class PluginManager(object):
             abs_plugin_dir = os.path.join(self._plugins_dir, rel_plugin_dir)
             if os.path.isdir(abs_plugin_dir):
                 raw_plugin_info = self._get_installed_plugin_info(abs_plugin_dir)
-                _check_raw_plugin_info(raw_plugin_info, rel_plugin_dir,
-                                       _PLUGIN_INFO_INSTALLED_KEYS)
+                _check_raw_plugin_info(
+                    raw_plugin_info, rel_plugin_dir, _PLUGIN_INFO_INSTALLED_KEYS,
+                )
                 localize_fun(raw_plugin_info)
                 installed_plugins[rel_plugin_dir] = raw_plugin_info
         return installed_plugins
@@ -1014,7 +1036,7 @@ class PluginManager(object):
             if not os.path.isabs(filename):
                 filename = os.path.join(plugin_dir, filename)
             with open(filename, 'rb') as f:
-                six.exec_(compile(f.read(), filename, 'exec'), globals, *args, **kwargs)
+                exec(compile(f.read(), filename, 'exec'), globals, *args, **kwargs)
         pg_globals['execfile_'] = aux
 
     def _execplugin(self, plugin_dir, pg_globals):
@@ -1022,14 +1044,14 @@ class PluginManager(object):
         self._add_execfile(pg_globals, plugin_dir)
         logger.debug('Executing plugin entry file "%s"', entry_file)
         with open(entry_file, 'rb') as f:
-            six.exec_(compile(f.read(), entry_file, 'exec'), pg_globals)
+            exec(compile(f.read(), entry_file, 'exec'), pg_globals)
 
     def attach(self, observer):
         """Attach an IPluginManagerObserver object to this plugin manager.
 
         Note that since observers are weakly referenced, you MUST keep a
         reference to each one somewhere in the application if you want them
-        not to be immediatly garbage collected.
+        not to be immediately garbage collected.
 
         """
         logger.debug('Attaching plugin manager observer %s', observer)
@@ -1046,34 +1068,34 @@ class PluginManager(object):
         except KeyError:
             logger.info('Observer %s was not attached', observer)
 
-    def _notify(self, id, action):
+    def _notify(self, plugin_id, action):
         # action is either 'load' or 'unload'
-        logger.debug('Notifying plugin manager observers: %s %s', action, id)
-        for observer in self._observers.keys():
+        logger.debug('Notifying plugin manager observers: %s %s', action, plugin_id)
+        for observer in self._observers:
             try:
                 logger.info('Notifying plugin manager observer %s', observer)
-                fun = getattr(observer, 'pg_' + action)
-                fun(id)
+                fun = getattr(observer, f'pg_{action}')
+                fun(plugin_id)
             except Exception:
                 logger.error('Error while notifying plugin manager observer %s',
                              observer, exc_info=True)
 
-    def _load_and_notify(self, id, plugin):
-        self._plugins[id] = plugin
-        self._notify(id, 'load')
+    def _load_and_notify(self, plugin_id: str, plugin: Plugin):
+        self._plugins[plugin_id] = plugin
+        self._notify(plugin_id, 'load')
 
-    def _unload_and_notify(self, id):
+    def _unload_and_notify(self, plugin_id: str):
         try:
-            plugin = self._plugins.pop(id)
+            plugin = self._plugins.pop(plugin_id)
         except KeyError:
-            raise PluginNotLoadedError(id)
-        else:
-            logger.info('Closing plugin %s', id)
-            try:
-                plugin.close()
-            except Exception:
-                logger.error('Error while closing plugin %s', id, exc_info=True)
-            self._notify(id, 'unload')
+            raise PluginNotLoadedError(plugin_id)
+
+        logger.info('Closing plugin %s', plugin_id)
+        try:
+            plugin.close()
+        except Exception:
+            logger.error('Error while closing plugin %s', plugin_id, exc_info=True)
+        self._notify(plugin_id, 'unload')
 
     @staticmethod
     def _is_plugin_class(obj):
@@ -1081,11 +1103,11 @@ class PluginManager(object):
         return isinstance(obj, type) and issubclass(obj, Plugin) and \
                hasattr(obj, 'IS_PLUGIN') and getattr(obj, 'IS_PLUGIN')
 
-    def load(self, id, gen_cfg={}, spec_cfg={}):
+    def load(self, plugin_id: str, gen_cfg: dict = None, spec_cfg: dict = None):
         """Load a plugin.
 
         Raise an Exception if the plugin is already loaded, since we offer
-        a guarantee to plugin that no more then one instance is active at any
+        a guarantee to plugins that no more than one instance is active at any
         time.
 
         Also raise an Exception if the plugin could not be loaded, either
@@ -1093,60 +1115,61 @@ class PluginManager(object):
         at plugin load time.
 
         gen_cfg -- a mapping object with general configuration parameters.
-          These parameters are the same for every plugins.
+          These parameters are the same for every plugin.
         spec_cfg -- a mapping object with plugin-specific configuration
-          parameters. These parameters are specific to every plugins.
+          parameters. These parameters are specific to every plugin.
 
         """
-        logger.info('Loading plugin %s', id)
-        if id in self._plugins:
-            raise Exception('plugin %s is already loaded' % id)
-        plugin_dir = os.path.join(self._plugins_dir, id)
+        logger.info('Loading plugin %s', plugin_id)
+        if plugin_id in self._plugins:
+            raise Exception(f'plugin {plugin_id} is already loaded')
+        plugin_dir = os.path.join(self._plugins_dir, plugin_id)
         plugin_info = self._get_installed_plugin_info(plugin_dir)
         if self._check_compat_min:
-            min_compat = plugin_info.get(u'plugin_iface_version_min')
+            min_compat = plugin_info.get('plugin_iface_version_min')
             if min_compat is not None:
                 if self.PLUGIN_IFACE_VERSION < min_compat:
                     logger.error('Plugin %s is not compatible: %s < %s',
-                                 id, self.PLUGIN_IFACE_VERSION, min_compat)
+                                 plugin_id, self.PLUGIN_IFACE_VERSION, min_compat)
                     raise Exception('plugin min compat not satisfied')
         if self._check_compat_max:
-            max_compat = plugin_info.get(u'plugin_iface_version_max')
+            max_compat = plugin_info.get('plugin_iface_version_max')
             if max_compat is not None:
                 if self.PLUGIN_IFACE_VERSION > max_compat:
-                    logger.error('Plugin %s is not compatible: %s > %s',
-                                 id, self.PLUGIN_IFACE_VERSION, max_compat)
+                    logger.error(
+                        'Plugin %s is not compatible: %s > %s', plugin_id, self.PLUGIN_IFACE_VERSION, max_compat
+                    )
                     raise Exception('plugin max compat not satisfied')
         plugin_globals = {}
         self._execplugin(plugin_dir, plugin_globals)
-        for obj in six.itervalues(plugin_globals):
+        for obj in plugin_globals.values():
             if self._is_plugin_class(obj):
                 break
         else:
-            raise Exception('plugin %s has no plugin class' % id)
+            raise Exception(f'plugin {plugin_id} has no plugin class')
         logger.debug('Creating plugin instance from class %s', obj)
         plugin = obj(self._app, plugin_dir, gen_cfg, spec_cfg)
-        plugin.id = id
-        self._load_and_notify(id, plugin)
+        plugin.id = plugin_id
+        self._load_and_notify(plugin_id, plugin)
 
-    def unload(self, id):
+    def unload(self, plugin_id: str):
         """Unload a plugin.
 
         Raise a PluginNotLoadedError if the plugin is not loaded.
 
         """
-        logger.info('Unloading plugin %s', id)
-        self._unload_and_notify(id)
+        logger.info('Unloading plugin %s', plugin_id)
+        self._unload_and_notify(plugin_id)
 
     # Dictionary-like methods for loaded plugin access
 
-    def __contains__(self, key):
+    def __contains__(self, key: str):
         return key in self._plugins
 
     def __iter__(self):
         return iter(self._plugins)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return self._plugins[key]
 
     def __len__(self):
@@ -1155,20 +1178,11 @@ class PluginManager(object):
     def get(self, key, default=None):
         return self._plugins.get(key, default)
 
-    def iterkeys(self):
-        return six.iterkeys(self._plugins)
-
-    def iteritems(self):
-        return six.iteritems(self._plugins)
-
-    def itervalues(self):
-        return six.itervalues(self._plugins)
-
     def keys(self):
-        return list(self._plugins.keys())
+        return list(self._plugins)
 
     def items(self):
-        return list(self._plugins.items())
+        yield from self._plugins.items()
 
     def values(self):
-        return list(self._plugins.values())
+        yield from self._plugins.values()

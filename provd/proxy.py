@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the urllib2 module that adds a proxy handler that can
 be modified after its creation.
 
 """
+from urllib.request import ProxyHandler
 
 
-from __future__ import absolute_import
-import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
-
-
-class DynProxyHandler(six.moves.urllib.request.ProxyHandler):
+class DynProxyHandler(ProxyHandler):
     # - this targets cpython 2.6, it might not work on a different version.
     # - this only supports proxy for http, ftp and https. I did not try to
     #   find the exact reason why, but it looks like the list of '*_open'
@@ -32,10 +28,8 @@ class DynProxyHandler(six.moves.urllib.request.ProxyHandler):
                 # just in case a race condition happens, although it should
                 # not in theory
                 return None
-            else:
-                return self.proxy_open(req, proxy, proto)
-        else:
-            return None
+            return self.proxy_open(req, proxy, proto)
+        return None
 
     def http_open(self, req):
         return self._generic_open('http', req)

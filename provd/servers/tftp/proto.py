@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-from __future__ import absolute_import
 import logging
 from provd.servers.tftp.connection import RFC2347Connection, RFC1350Connection
 from provd.servers.tftp.packet import *
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
+from provd.util import encode_bytes
+
 logger = logging.getLogger(__name__)
 
 
-class _Response(object):
+class _Response:
     def __init__(self, freject, faccept):
         self._answered = False
         self._do_reject = freject
@@ -45,27 +45,29 @@ class TFTPProtocol(DatagramProtocol):
 
     def _handle_rrq(self, pkt, addr):
         if self._service is None:
-            dgram = build_dgram(err_packet(ERR_UNDEF, 'service unavailable'))
+            dgram = build_dgram(err_packet(ERR_UNDEF, b'service unavailable'))
             self.transport.write(dgram, addr)
             return
 
         # only accept mode octet
-        if pkt['mode'] != 'octet':
+        if pkt['mode'] != b'octet':
             logger.warning('TFTP mode not supported: %s', pkt['mode'])
-            r_dgram = build_dgram(err_packet(ERR_UNDEF, 'mode not supported'))
+            r_dgram = build_dgram(err_packet(ERR_UNDEF, b'mode not supported'))
             self.transport.write(r_dgram, addr)
         else:
             def on_reject(errcode, errmsg):
                 # do not format errcode as %s since it's the raw error code
                 # sent in the TFTP packet, for example '\x00\x11'
                 logger.info('TFTP read request rejected: %s', errmsg)
-                self.transport.write(build_dgram(err_packet(errcode, errmsg)), addr)
+
+                self.transport.write(build_dgram(err_packet(errcode, encode_bytes(errmsg))), addr)
+
             def on_accept(fobj):
                 logger.info('TFTP read request accepted')
                 if 'blksize' in pkt['options']:
-                    blksize = pkt['options']['blksize']
+                    blksize: bytes = pkt['options']['blksize']
                     logger.debug('Using TFTP blksize of %s', blksize)
-                    oack_dgram = build_dgram(oack_packet({'blksize': str(blksize)}))
+                    oack_dgram = build_dgram(oack_packet({b'blksize': blksize}))
                     connection = RFC2347Connection(addr, fobj, oack_dgram)
                     connection.blksize = blksize
                 else:
@@ -78,7 +80,7 @@ class TFTPProtocol(DatagramProtocol):
     def _handle_wrq(self, pkt, addr):
         # we don't accept WRQ - send an error
         logger.info('TFTP write request not supported')
-        dgram = build_dgram(err_packet(ERR_UNDEF, 'WRQ not supported'))
+        dgram = build_dgram(err_packet(ERR_UNDEF, b'WRQ not supported'))
         self.transport.write(dgram, addr)
 
     def datagramReceived(self, dgram, addr):

@@ -1,15 +1,11 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# Copyright 2014-2021 The Wazo Authors  (see the AUTHORS file)
+#!/usr/bin/python3
+# Copyright 2014-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
-from __future__ import print_function
 import argparse
 import os
 import socket
 import subprocess
-import sys
 import time
 from itertools import chain, repeat
 
@@ -55,7 +51,7 @@ def main():
         stats.display()
 
 
-class Statistics(object):
+class Statistics:
 
     def __init__(self):
         self._rrq_success = 0
@@ -77,19 +73,19 @@ class Statistics(object):
         duration = self._end_time - self._start_time
         rrq_total = self._rrq_failure + self._rrq_success
         if rrq_total:
-            rrq_failure_pct = '%.1f%%' % (self._rrq_failure / float(rrq_total) * 100)
+            rrq_failure_pct = f'{self._rrq_failure / float(rrq_total) * 100:.1f}%'
         else:
             rrq_failure_pct = 'N/A'
-        print('Time: %.3f' % duration)
-        print('Total number of RRQ: %s' % rrq_total)
-        print('Total number of failed RRQ: %s (%s)' % (self._rrq_failure, rrq_failure_pct))
+        print(f'Time: {duration:.3f}')
+        print(f'Total number of RRQ: {rrq_total}')
+        print(f'Total number of failed RRQ: {self._rrq_failure} ({rrq_failure_pct})')
 
 
 def run_tftp_bench(hostname, loop, simult, stats):
     if simult < 1:
-        raise ValueError('invalid simult value %s' % simult)
+        raise ValueError(f'invalid simult value {simult}')
 
-    # keep reference to Popen object since they do a non blocking wait
+    # keep reference to Popen object since they do a non-blocking wait
     # when they are garbage collected, which is something we DON'T want
     process_by_pid = {}
     devnull_fd = os.open(os.devnull, os.O_RDWR)

@@ -9,7 +9,7 @@ provd-test:
 	docker build --no-cache -t wazo-provd-tests -f Dockerfile $(PROVD_DIR)
 
 test:
-	pytest -x
+	pytest -x -vvv
 
 egg-info:
 	cd $(PROVD_DIR) && python setup.py egg_info

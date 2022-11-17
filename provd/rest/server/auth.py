@@ -2,13 +2,14 @@
 # Copyright 2018-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from __future__ import absolute_import
 import logging
 import requests
 from functools import wraps
 from wazo_auth_client import Client as AuthClient
 from wazo_auth_client.exceptions import InvalidTokenException, MissingPermissionsTokenException
 from xivo import auth_verifier
+
+from provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,6 @@ def get_auth_verifier():
     global _auth_verifier
     if not _auth_verifier:
         _auth_verifier = AuthVerifier()
-
     return _auth_verifier
 
 
@@ -44,8 +44,8 @@ class AuthVerifier(auth_verifier.AuthVerifier):
                 return func(*args, **kwargs)
 
             acl_check = getattr(func, 'acl', self._fallback_acl_check)
-            token_id = request.getHeader('X-Auth-Token')
-            tenant_uuid = request.getHeader('Wazo-Tenant')
+            token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
+            tenant_uuid = decode_bytes(request.getHeader(b'Wazo-Tenant'))
             kwargs_for_required_acl = dict(kwargs)
             kwargs_for_required_acl.update(obj.__dict__)
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)

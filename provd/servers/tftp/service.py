@@ -1,21 +1,23 @@
-# -*- coding: utf-8 -*-
 # Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """TFTP service definition module."""
+from __future__ import annotations
 
-
-from __future__ import absolute_import
 import os
-from six import StringIO
-from provd.servers.tftp.packet import ERR_FNF
-from zope.interface import Interface
+from abc import ABCMeta
+from io import StringIO
+from typing import Dict, Union
+
+from provd.servers.tftp.packet import ERR_FNF, Packet
+
+TFTPRequest = Dict[str, Union[str, Packet]]
 
 
-class ITFTPReadService(Interface):
+class AbstractTFTPReadService(metaclass=ABCMeta):
     """A TFTP read service handles TFTP read requests (RRQ)."""
 
-    def handle_read_request(request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         """Handle a TFTP read request (RRQ).
 
         request is a dictionary with the following keys:
@@ -30,37 +32,37 @@ class ITFTPReadService(Interface):
             send an error packet to the client.
           ignore -- call this method if you want to silently ignore
             the request. You'll get the same behaviour if you call no
-            method of the reponse object.
+            method of the response object.
 
         Note that it's fine not to call one of the response methods before
         returning the control to the caller, i.e. for an asynchronous use.
         If you never eventually call one of the response methods, it will
-        implicitly behave like if you would have called the ignore method.
+        implicitly behave like if you had called the ignore method.
 
         """
 
 
-class TFTPNullService(object):
+class TFTPNullService:
     """A read service that always reject the requests."""
 
     def __init__(self, errcode=ERR_FNF, errmsg="File not found"):
         self.errcode = errcode
         self.errmsg = errmsg
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         response.reject(self.errcode, self.errmsg)
 
 
-class TFTPStringService(object):
+class TFTPStringService:
     """A read service that always serve the same string."""
     def __init__(self, msg):
         self._msg = msg
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         response.accept(StringIO(self._msg))
 
 
-class TFTPFileService(object):
+class TFTPFileService:
     """A read service that serve files under a path.
 
     It strips any leading path separator of the requested filename. For
@@ -74,22 +76,22 @@ class TFTPFileService(object):
     def __init__(self, path):
         self._path = os.path.abspath(path)
 
-    def handle_read_request(self, request, response):
-        rq_orig_path = request['packet']['filename']
+    def handle_read_request(self, request: TFTPRequest, response):
+        rq_orig_path = request['packet']['filename'].decode('ascii')
         rq_stripped_path = rq_orig_path.lstrip(os.sep)
         rq_final_path = os.path.normpath(os.path.join(self._path, rq_stripped_path))
         if not rq_final_path.startswith(self._path):
-            response.reject(ERR_FNF, 'Invalid filename')
+            response.reject(ERR_FNF, b'Invalid filename')
         else:
             try:
                 fobj = open(rq_final_path, 'rb')
             except IOError:
-                response.reject(ERR_FNF, 'File not found')
+                response.reject(ERR_FNF, b'File not found')
             else:
                 response.accept(fobj)
 
 
-class TFTPHookService(object):
+class TFTPHookService:
     """Base class for non-terminal read service.
 
     Services that only want to inspect the request should derive from this
@@ -99,11 +101,11 @@ class TFTPHookService(object):
     def __init__(self, service):
         self._service = service
 
-    def _pre_handle(self, request):
+    def _pre_handle(self, request: TFTPRequest):
         """This MAY be overridden in derived classes."""
         pass
 
-    def handle_read_request(self, request, response):
+    def handle_read_request(self, request: TFTPRequest, response):
         self._pre_handle(request)
         self._service.handle_read_request(request, response)
 
@@ -115,13 +117,12 @@ class TFTPLogService(TFTPHookService):
         logger -- a callable object taking a string as argument
 
         """
-        TFTPHookService.__init__(self, service)
+        super().__init__(service)
         self._logger = logger
 
-    def _pre_handle(self, request):
+    def _pre_handle(self, request: TFTPRequest):
         packet = request['packet']
-        msg = "TFTP request from %s - filename '%s' - mode '%s'" % \
-              (request['address'], packet['filename'], packet['mode'])
+        msg = f"TFTP request from {request['address']} - filename '{packet['filename']}' - mode '{packet['mode']}'"
         if packet['options']:
-            msg += "- options '%s'" % packet['options']
+            msg += f"- options '{packet['options']}'"
         self._logger(msg)

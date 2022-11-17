@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright 2011-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # NOTE: these tests are not automated (yet). You need to manually check
 #       the output of each test and compare it with the expected output...
-
-from __future__ import absolute_import
-from __future__ import print_function
 import time
 from provd.synchro import DeferredRWLock
 from twisted.internet import defer
@@ -20,11 +17,11 @@ def _time_since_load():
 class TracingDeferred(defer.Deferred):
     def __init__(self, id):
         self._id = id
-        print(u'%.4f <%2s> Constructing' % (_time_since_load(), self._id))
+        print(f'{_time_since_load():.4f} <{self._id:>2}> Constructing')
         defer.Deferred.__init__(self)
 
     def callback(self, result):
-        print(u'%.4f <%2s> Before callback' % (_time_since_load(), self._id))
+        print(f'{_time_since_load():.4f} <{self._id:>2}> Before callback')
         defer.Deferred.callback(self, result)
 
 
@@ -142,7 +139,7 @@ def rw_lock_tests():
                      rw_lock_schedule_all_readers_if_possible]:
         def wrap_test(test_fun_):
             deferred_generator = gen_incr_fixed_deferred()
-            print('\n== Starting test %s ==' % test_fun_.__name__)
+            print(f'\n== Starting test {test_fun_.__name__} ==')
             d = test_fun_(deferred_generator)
             return d
         deferreds.append(lock.run(wrap_test, test_fun))
