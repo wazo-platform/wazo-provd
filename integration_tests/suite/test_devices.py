@@ -1,4 +1,4 @@
-# Copyright 2018-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import (
@@ -44,6 +44,11 @@ class TestDevices(BaseIntegrationTest):
     def test_list(self):
         results = self._client.devices.list()
         assert_that(results, has_key('devices'))
+
+    def test_list_params(self):
+        broken_device = {'mac': 'aa:bb:cc:dd:ee:ff', 'plugin': None}
+        self._client.devices.create(broken_device)
+        results = self._client.devices.list(sort='ip', sort_ord='ASC', reverse=True)
 
     def test_add(self):
         result_add = self._add_device('10.10.10.10', '00:11:22:33:44:55', id_='1234abcdef1234')
