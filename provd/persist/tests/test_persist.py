@@ -6,7 +6,8 @@ import unittest
 from provd.persist.util import (
     _retrieve_doc_values,
     _create_pred_from_selector,
-    _new_key_fun_from_key)
+    _new_key_fun_from_key,
+)
 
 
 class TestSelectorSelectValue(unittest.TestCase):
@@ -32,8 +33,7 @@ class TestSelectorSelectValue(unittest.TestCase):
 
     def test_select_value_list(self):
         doc = {'k': ['v1', 'v2']}
-        self.assertEqual([['v1', 'v2']],
-                         list(_retrieve_doc_values('k', doc)))
+        self.assertEqual([['v1', 'v2']], list(_retrieve_doc_values('k', doc)))
 
     def test_select_value_dict_inside_list(self):
         doc = {'k': [{'kk': 'v'}]}
@@ -41,8 +41,7 @@ class TestSelectorSelectValue(unittest.TestCase):
 
     def test_select_value_dict_inside_list_multiple_values(self):
         doc = {'k': [{'kk': 'v1'}, {'kk': 'v2'}]}
-        self.assertEqual(['v1', 'v2'],
-                         list(_retrieve_doc_values('k.kk', doc)))
+        self.assertEqual(['v1', 'v2'], list(_retrieve_doc_values('k.kk', doc)))
 
 
 class TestSelectorCreatePredicate(unittest.TestCase):
@@ -98,52 +97,52 @@ class TestUtil(unittest.TestCase):
     def test_new_key_fun_from_key_field_exists(self):
         # trying to sort on a existing field (string type)
         l = [
-            {'string_field': 'b', 'none_field': None,'integer_field':5},
-            {'string_field': 'a', 'none_field': None,'integer_field':-3},
+            {'string_field': 'b', 'none_field': None, 'integer_field': 5},
+            {'string_field': 'a', 'none_field': None, 'integer_field': -3},
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            ]
+        ]
         expected_l = [
-            {'string_field': 'a', 'none_field': None,'integer_field':-3},
-            {'string_field': 'b', 'none_field': None,'integer_field':5},
+            {'string_field': 'a', 'none_field': None, 'integer_field': -3},
+            {'string_field': 'b', 'none_field': None, 'integer_field': 5},
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            ]
+        ]
         l.sort(key=_new_key_fun_from_key('string_field'))
-        self.assertListEqual(l,expected_l)
+        self.assertListEqual(l, expected_l)
 
         # trying to sort on a existing field (integer type)
         expected_l = [
-            {'string_field': 'a', 'none_field': None,'integer_field':-3},
+            {'string_field': 'a', 'none_field': None, 'integer_field': -3},
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            {'string_field': 'b', 'none_field': None,'integer_field':5},
-            ]
+            {'string_field': 'b', 'none_field': None, 'integer_field': 5},
+        ]
         l.sort(key=_new_key_fun_from_key('integer_field'))
-        self.assertListEqual(l,expected_l)
+        self.assertListEqual(l, expected_l)
 
     def test_new_key_fun_from_key_field_missed(self):
         # trying to sort on a missing field (string type)
         l = [
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            {'none_field': None,'integer_field':5},
-            {'string_field': 'a', 'none_field': None,'integer_field':3},
-            ]
+            {'none_field': None, 'integer_field': 5},
+            {'string_field': 'a', 'none_field': None, 'integer_field': 3},
+        ]
         expected_l = [
-            {'none_field': None,'integer_field':5},
-            {'string_field': 'a', 'none_field': None,'integer_field':3},
+            {'none_field': None, 'integer_field': 5},
+            {'string_field': 'a', 'none_field': None, 'integer_field': 3},
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            ]
+        ]
         l.sort(key=_new_key_fun_from_key('string_field'))
-        self.assertListEqual(l,expected_l)
+        self.assertListEqual(l, expected_l)
 
         # trying to sort on a missing field (integer type)
         l = [
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            {'string_field': 'b', 'none_field': None,'integer_field':5},
+            {'string_field': 'b', 'none_field': None, 'integer_field': 5},
             {'string_field': 'a', 'none_field': None},
-            ]
+        ]
         expected_l = [
             {'string_field': 'a', 'none_field': None},
             {'string_field': 'c', 'none_field': None, 'integer_field': 1},
-            {'string_field': 'b', 'none_field': None,'integer_field':5},
-            ]
+            {'string_field': 'b', 'none_field': None, 'integer_field': 5},
+        ]
         l.sort(key=_new_key_fun_from_key('integer_field'))
-        self.assertListEqual(l,expected_l)
+        self.assertListEqual(l, expected_l)

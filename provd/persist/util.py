@@ -73,7 +73,9 @@ def _new_in_matcher(s_value):
     # Return a matcher that returns true if there's a value in the document
     # matching the select key that is equal to one of the value in s_value
     if not isinstance(s_value, list):
-        raise ValueError(f'selector value for in matcher must be a list: {s_value} is not')
+        raise ValueError(
+            f'selector value for in matcher must be a list: {s_value} is not'
+        )
     pred = lambda doc_value: doc_value in s_value
     return _new_simple_matcher_from_pred(pred)
 
@@ -89,7 +91,9 @@ def _new_nin_matcher(s_value):
     # Return a matcher that returns true if there's no values in the document
     # matching the select key that is equal to one of the value in s_value
     if not isinstance(s_value, list):
-        raise ValueError(f'Selector value for nin matcher must be a list: {s_value} is not')
+        raise ValueError(
+            f'Selector value for nin matcher must be a list: {s_value} is not'
+        )
     pred = lambda doc_value: doc_value in s_value
     return _new_simple_inv_matcher_from_pred(pred)
 
@@ -237,7 +241,9 @@ class SimpleBackendDocumentCollection:
         try:
             document_id = document[ID_KEY]
         except KeyError:
-            return defer.fail(ValueError(f'no {ID_KEY} key found in document {document}'))
+            return defer.fail(
+                ValueError(f'no {ID_KEY} key found in document {document}')
+            )
         else:
             if document_id not in self._backend:
                 return defer.fail(InvalidIdError(document_id))
@@ -326,6 +332,7 @@ class SimpleBackendDocumentCollection:
         if not limit:
             return documents
         else:
+
             def func(limit):
                 # limit is an argument to aux, else it will raise an
                 # UnboundLocalVariable exception (since we are using python 2)
@@ -370,8 +377,7 @@ class SimpleBackendDocumentCollection:
         indexes_selector = {}
         regular_selector = {}
         for selector_key, selector_value in selector.items():
-            if (selector_key in self._indexes and
-                    not _contains_operator(selector_value)):
+            if selector_key in self._indexes and not _contains_operator(selector_value):
                 indexes_selector[selector_key] = selector_value
             else:
                 regular_selector[selector_key] = selector_value
@@ -387,7 +393,11 @@ class SimpleBackendDocumentCollection:
 
     def _do_find_unsorted(self, selector, fields, skip, limit):
         # common case optimization when only ID_KEY is present
-        if ID_KEY in selector and len(selector) == 1 and not _contains_operator(selector[ID_KEY]):
+        if (
+            ID_KEY in selector
+            and len(selector) == 1
+            and not _contains_operator(selector[ID_KEY])
+        ):
             try:
                 documents = [self._backend[selector[ID_KEY]]]
             except KeyError:
@@ -407,13 +417,19 @@ class SimpleBackendDocumentCollection:
             return self._do_find_unsorted(selector, fields, skip, limit)
 
     def find(self, selector, fields=None, skip=0, limit=0, sort=None):
-        logger.debug('Executing find in backend based collection with:\n'
-                     '  selector: %s\n'
-                     '  fields: %s\n'
-                     '  skip: %s\n'
-                     '  limit: %s\n'
-                     '  sort: %s',
-                     selector, fields, skip, limit, sort)
+        logger.debug(
+            'Executing find in backend based collection with:\n'
+            '  selector: %s\n'
+            '  fields: %s\n'
+            '  skip: %s\n'
+            '  limit: %s\n'
+            '  sort: %s',
+            selector,
+            fields,
+            skip,
+            limit,
+            sort,
+        )
         return defer.succeed(self._do_find(selector, fields, skip, limit, sort))
 
     def find_one(self, selector):
@@ -535,6 +551,7 @@ class ForwardingDocumentCollection:
 
     def __getattr__(self, name):
         return getattr(self._collection, name)
+
 
 def _new_key_fun_from_key(key):
     # Return a function usable for the key parameter of the sorted function
