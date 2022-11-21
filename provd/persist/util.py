@@ -564,9 +564,11 @@ def _new_key_fun_from_key(key):
         cur_elem = document
         try:
             for cur_key in split_key:
-                cur_elem = cur_elem.get(cur_key, '') or ''
-        except AttributeError as e:
-            return ''
-        return str(cur_elem)
+                cur_elem = cur_elem[cur_key]
+        except (KeyError, TypeError) as e:
+            return False, str(cur_elem)
+        # if the value is not a str/int/float, then return (True, str(cur_elem))
+        # as False < True, the value that is not a str/int/float is put at the end
+        return type(cur_elem) not in (str, int, float), str(cur_elem)
 
     return func
