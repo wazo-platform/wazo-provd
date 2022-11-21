@@ -139,6 +139,20 @@ class TestUtil(unittest.TestCase):
         l.sort(key=_new_key_fun_from_key('field'))
         self.assertListEqual(l, expected_l)
 
+        # trying to sort on an existing field (dict type)
+        l = [
+            {'field': {'string_field': 'b'}},
+            {'field': {'string_field': 'a'}},
+            {'field': {'string_field': 'c'}},
+        ]
+        expected_l = [
+            {'field': {'string_field': 'a'}},
+            {'field': {'string_field': 'b'}},
+            {'field': {'string_field': 'c'}},
+        ]
+        l.sort(key=_new_key_fun_from_key('field.string_field'))
+        self.assertListEqual(l, expected_l)
+
     def test_new_key_fun_from_key_field_missed(self):
         # trying to sort on a missing field (string type)
         l = [
