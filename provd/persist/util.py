@@ -265,23 +265,6 @@ class SimpleBackendDocumentCollection:
         except KeyError:
             return defer.succeed(None)
 
-    def _new_key_fun_from_key(self, key):
-        # Return a function usable for the key parameter of the sorted function
-        # from a [sort] key
-        split_key = key.split('.')
-
-        def func(document):
-            cur_elem = document
-            try:
-                for cur_key in split_key:
-                    cur_elem = cur_elem[cur_key]
-            except (KeyError, TypeError):
-                # document does not have the given key -- return ''
-                return ''
-            return cur_elem
-
-        return func
-
     def _reverse_from_direction(self, direction):
         # Return the reverse value for the reverse parameter of the sorted
         # function from a [sort] direction
@@ -296,7 +279,7 @@ class SimpleBackendDocumentCollection:
     def _do_find_sorted(self, selector, fields, skip, limit, sort):
         documents = list(self._do_find_unsorted(selector, fields, 0, 0))
         key, direction = sort
-        key_fun = self._new_key_fun_from_key(key)
+        key_fun = _new_key_fun_from_key(key)
         reverse = self._reverse_from_direction(direction)
         documents.sort(key=key_fun, reverse=reverse)
         documents = list(self._new_skip_iterator(skip, documents))
@@ -552,3 +535,19 @@ class ForwardingDocumentCollection:
 
     def __getattr__(self, name):
         return getattr(self._collection, name)
+
+def _new_key_fun_from_key(key):
+    # Return a function usable for the key parameter of the sorted function
+    # from a [sort] key
+    split_key = key.split('.')
+
+    def func(document):
+        cur_elem = document
+        try:
+            for cur_key in split_key:
+                cur_elem = cur_elem[cur_key]
+        except (KeyError, TypeError) as e:
+            return ''
+        return str(cur_elem)
+
+    return func
