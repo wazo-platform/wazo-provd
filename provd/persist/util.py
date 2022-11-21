@@ -564,8 +564,8 @@ def _new_key_fun_from_key(key):
         cur_elem = document
         try:
             for cur_key in split_key:
-                cur_elem = cur_elem[cur_key]
-        except (KeyError, TypeError) as e:
+                cur_elem = cur_elem.get(cur_key, '') or ''
+        except AttributeError as e:
             return ''
         return str(cur_elem)
 
