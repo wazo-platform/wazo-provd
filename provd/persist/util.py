@@ -554,8 +554,10 @@ class ForwardingDocumentCollection:
 
 
 def _new_key_fun_from_key(key):
-    # Return a function usable for the key parameter of the sorted function
-    # from a [sort] key
+    """
+    Return a function usable for the key parameter of the sorted function
+    from a [sort] key
+    """
     split_key = key.split('.')
 
     def func(document):
