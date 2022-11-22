@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright 2010-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
-from provd.persist.util import _retrieve_doc_values, _create_pred_from_selector
+from provd.persist.util import (
+    _retrieve_doc_values,
+    _create_pred_from_selector,
+    _new_key_fun_from_key,
+)
 
 
 class TestSelectorSelectValue(unittest.TestCase):
@@ -29,8 +33,7 @@ class TestSelectorSelectValue(unittest.TestCase):
 
     def test_select_value_list(self):
         doc = {'k': ['v1', 'v2']}
-        self.assertEqual([['v1', 'v2']],
-                         list(_retrieve_doc_values('k', doc)))
+        self.assertEqual([['v1', 'v2']], list(_retrieve_doc_values('k', doc)))
 
     def test_select_value_dict_inside_list(self):
         doc = {'k': [{'kk': 'v'}]}
@@ -38,8 +41,7 @@ class TestSelectorSelectValue(unittest.TestCase):
 
     def test_select_value_dict_inside_list_multiple_values(self):
         doc = {'k': [{'kk': 'v1'}, {'kk': 'v2'}]}
-        self.assertEqual(['v1', 'v2'],
-                         list(_retrieve_doc_values('k.kk', doc)))
+        self.assertEqual(['v1', 'v2'], list(_retrieve_doc_values('k.kk', doc)))
 
 
 class TestSelectorCreatePredicate(unittest.TestCase):
@@ -89,3 +91,95 @@ class TestSelectorCreatePredicate(unittest.TestCase):
         self.assertFalse(pred({'k': {'foo': 'bar'}}))
         self.assertFalse(pred({'k': [{'kk': 'v1'}]}))
         self.assertFalse(pred({'k': []}))
+
+
+class TestUtil(unittest.TestCase):
+    def test_new_key_fun_from_key_field_exists(self):
+        # trying to sort on an existing field (string type)
+        l = [
+            {'string_field': 'b'},
+            {'string_field': 'a'},
+            {'string_field': 'c'},
+        ]
+        expected_l = [
+            {'string_field': 'a'},
+            {'string_field': 'b'},
+            {'string_field': 'c'},
+        ]
+        l.sort(key=_new_key_fun_from_key('string_field'))
+        self.assertListEqual(l, expected_l)
+
+        # trying to sort on an existing field (integer/float type)
+        l = [
+            {'field': 5},
+            {'field': 1.5},
+            {'field': -3},
+            {'field': 1},
+            {'field': 0},
+        ]
+        expected_l = [
+            {'field': -3},
+            {'field': 0},
+            {'field': 1},
+            {'field': 1.5},
+            {'field': 5},
+        ]
+        l.sort(key=_new_key_fun_from_key('field'))
+        self.assertListEqual(l, expected_l)
+
+        # trying to sort on an existing field (None)
+        l = [
+            {'field': 'A'},
+            {'field': None},
+            {'field': 'B'},
+        ]
+        expected_l = [
+            {'field': None},
+            {'field': 'A'},
+            {'field': 'B'},
+        ]
+        l.sort(key=_new_key_fun_from_key('field'))
+        self.assertListEqual(l, expected_l)
+
+        # trying to sort on an existing field (dict type)
+        l = [
+            {'field': {'string_field': 'b'}},
+            {'field': {'string_field': 'a'}},
+            {'field': {'string_field': 'c'}},
+        ]
+        expected_l = [
+            {'field': {'string_field': 'a'}},
+            {'field': {'string_field': 'b'}},
+            {'field': {'string_field': 'c'}},
+        ]
+        l.sort(key=_new_key_fun_from_key('field.string_field'))
+        self.assertListEqual(l, expected_l)
+
+    def test_new_key_fun_from_key_field_missed(self):
+        # trying to sort on a missing field (string type)
+        l = [
+            {'string_field': 'b'},
+            {},
+            {'string_field': 'a'},
+        ]
+        expected_l = [
+            {},
+            {'string_field': 'a'},
+            {'string_field': 'b'},
+        ]
+        l.sort(key=_new_key_fun_from_key('string_field'))
+        self.assertListEqual(l, expected_l)
+
+        # trying to sort on a missing field (integer type)
+        l = [
+            {'integer_field': 5},
+            {},
+            {'integer_field': 1},
+        ]
+        expected_l = [
+            {},
+            {'integer_field': 1},
+            {'integer_field': 5},
+        ]
+        l.sort(key=_new_key_fun_from_key('integer_field'))
+        self.assertListEqual(l, expected_l)
