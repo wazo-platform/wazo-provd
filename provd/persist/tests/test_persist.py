@@ -109,20 +109,22 @@ class TestUtil(unittest.TestCase):
         l.sort(key=_new_key_fun_from_key('string_field'))
         self.assertListEqual(l, expected_l)
 
-        # trying to sort on an existing field (integer type)
+        # trying to sort on an existing field (integer/float type)
         l = [
-            {'integer_field': 5},
-            {'integer_field': -3},
-            {'integer_field': 1},
-            {'integer_field': 0},
+            {'field': 5},
+            {'field': 1.5},
+            {'field': -3},
+            {'field': 1},
+            {'field': 0},
         ]
         expected_l = [
-            {'integer_field': -3},
-            {'integer_field': 0},
-            {'integer_field': 1},
-            {'integer_field': 5},
+            {'field': -3},
+            {'field': 0},
+            {'field': 1},
+            {'field': 1.5},
+            {'field': 5},
         ]
-        l.sort(key=_new_key_fun_from_key('integer_field'))
+        l.sort(key=_new_key_fun_from_key('field'))
         self.assertListEqual(l, expected_l)
 
         # trying to sort on an existing field (None)
@@ -132,9 +134,9 @@ class TestUtil(unittest.TestCase):
             {'field': 'B'},
         ]
         expected_l = [
+            {'field': None},
             {'field': 'A'},
             {'field': 'B'},
-            {'field': None},
         ]
         l.sort(key=_new_key_fun_from_key('field'))
         self.assertListEqual(l, expected_l)
@@ -161,9 +163,9 @@ class TestUtil(unittest.TestCase):
             {'string_field': 'a'},
         ]
         expected_l = [
+            {},
             {'string_field': 'a'},
             {'string_field': 'b'},
-            {},
         ]
         l.sort(key=_new_key_fun_from_key('string_field'))
         self.assertListEqual(l, expected_l)
@@ -175,26 +177,9 @@ class TestUtil(unittest.TestCase):
             {'integer_field': 1},
         ]
         expected_l = [
+            {},
             {'integer_field': 1},
             {'integer_field': 5},
-            {},
         ]
         l.sort(key=_new_key_fun_from_key('integer_field'))
-        self.assertListEqual(l, expected_l)
-
-    def test_new_key_fun_from_key_types_not_allowed(self):
-        # trying to sort on a field having not allowed types
-        l = [
-            {'field': {}},
-            {'field': 'a'},
-            {'field': []},
-            {'field': 'b'},
-        ]
-        expected_l = [
-            {'field': 'a'},
-            {'field': 'b'},
-            {'field': []},
-            {'field': {}},
-        ]
-        l.sort(key=_new_key_fun_from_key('field'))
         self.assertListEqual(l, expected_l)
