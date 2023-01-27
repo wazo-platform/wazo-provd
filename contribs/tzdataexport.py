@@ -31,8 +31,6 @@
    - http://www.twinsun.com/tz/tz-link.htm
 """
 
-__version__ = "$Revision$ $Date$"
-
 import datetime
 import logging
 import re
@@ -568,7 +566,7 @@ if __name__ == "__main__":
         metavar="TFILE",
         help="look for FILEs into the [gz|bz2] tarfile TFILE",
     )
-    p.add_option("-v", action="count", dest="verbose", help="Verbose mode.")
+    p.add_option("-v", action="count", dest="verbose", help="Verbose mode.", default=0)
     opt, args = p.parse_args()
 
     if opt.verbose == 1:
