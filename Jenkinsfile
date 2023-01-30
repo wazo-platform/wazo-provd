@@ -20,7 +20,9 @@ pipeline {
     }
     stage('Docker build') {
       steps {
+        sh "sed -i 's/master\.zip/bullseye.zip/g' requirements.txt"
         sh "docker build -t wazoplatform/${JOB_NAME}:bullseye ."
+        sh "sed -i 's/bullseye\.zip/master.zip/g' requirements.txt"
       }
     }
     stage('Docker publish') {
