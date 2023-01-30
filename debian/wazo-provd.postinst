@@ -2,7 +2,6 @@
 
 set -e
 
-OLD_USER='xivo-provd'
 USER='wazo-provd'
 
 case "$1" in
@@ -31,10 +30,6 @@ case "$1" in
         if [[ -z "${previous_version}" ]]; then
             ln -sf /etc/nginx/locations/https-available/wazo-provd \
                    /etc/nginx/locations/https-enabled/wazo-provd
-        elif dpkg --compare-versions "${previous_version}" lt '20.09'; then
-            if getent group www-data | grep -q $USER; then
-                deluser --quiet $USER www-data
-            fi
         fi
     ;;
     abort-upgrade)
