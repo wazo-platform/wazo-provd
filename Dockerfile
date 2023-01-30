@@ -10,9 +10,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install
 ADD . /usr/src/wazo-provd
 WORKDIR /usr/src/wazo-provd
-# incremental is needed by twisted setup
-RUN pip install incremental==16.10.1 && \
-    pip install -r requirements.txt && \
+RUN pip install -r requirements.txt && \
     python setup.py install
 
 FROM python:3.9-slim-bullseye AS build-image
