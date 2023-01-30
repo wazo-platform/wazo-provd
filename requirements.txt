@@ -3,14 +3,12 @@ https://github.com/wazo-platform/wazo-amid-client/archive/master.zip
 https://github.com/wazo-platform/wazo-auth-client/archive/master.zip
 https://github.com/wazo-platform/xivo-fetchfw/archive/master.zip
 https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
-automat==0.6.0  # from twisted
-incremental==16.10.1  # from twisted
-jinja2==2.10
-markupsafe==1.1.0  # from jinja2
-pyopenssl>=21.0.0,<23.0.0
-cryptography>=2.1.4 # for pyopenssl
-pyyaml==3.13
-requests==2.21.0
-stevedore==1.29.0
-twisted==18.9.0
-zope.interface==4.7.2
+jinja2==2.11.3
+markupsafe==1.1.1 # from jinja
+pyopenssl>=21.0.0,<23.0.0  # bullseye uses 20.0.1, but only the patched debian version still works.
+cryptography>=3.3.2 # for pyopenssl
+pyyaml==5.3.1
+requests==2.25.1
+stevedore==3.2.2
+twisted==20.3.0
+zope.interface==5.2.0
