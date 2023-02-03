@@ -24,5 +24,5 @@ Things to note:
 """
 
 
-from provd.servers.tftp.proto import TFTPProtocol
-from provd.servers.tftp.service import *
+from provd.servers.tftp.proto import TFTPProtocol  # noqa
+from provd.servers.tftp.service import *  # noqa

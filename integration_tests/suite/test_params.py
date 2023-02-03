@@ -1,4 +1,4 @@
-# Copyright 2018-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import (
@@ -19,83 +19,83 @@ from .helpers.wait_strategy import NoWaitStrategy
 
 
 class TestParams(BaseIntegrationTest):
-
     asset = 'base'
     wait_strategy = NoWaitStrategy()
 
-    def test_get(self):
+    def test_get(self) -> None:
         result = self._client.params.get('locale')
         assert_that(result, has_key('value'))
 
-    def test_get_errors(self):
+    def test_get_errors(self) -> None:
         assert_that(
             calling(self._client.params.get).with_args('invalid_param'),
-            raises(ProvdError).matching(has_properties('status_code', 404))
+            raises(ProvdError).matching(has_properties('status_code', 404)),
         )
 
-    def test_get_error_invalid_token(self):
+    def test_get_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.params.get).with_args('locale'),
-            raises(ProvdError).matching(has_properties('status_code', 401))
+            raises(ProvdError).matching(has_properties('status_code', 401)),
         )
 
-    def test_list(self):
+    def test_list(self) -> None:
         result = self._client.params.list()
         assert_that(result, has_key('params'))
 
-    def test_list_error_invalid_token(self):
+    def test_list_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.params.list),
-            raises(ProvdError).matching(has_properties('status_code', 401))
+            raises(ProvdError).matching(has_properties('status_code', 401)),
         )
 
-    def test_update(self):
+    def test_update(self) -> None:
         self._client.params.update('locale', 'fr_FR')
 
-    def test_update_errors(self):
+    def test_update_errors(self) -> None:
         assert_that(
-            calling(self._client.params.update).with_args('invalid_param', 'invalid_value'),
-            raises(ProvdError).matching(has_properties('status_code', 404))
+            calling(self._client.params.update).with_args(
+                'invalid_param', 'invalid_value'
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 404)),
         )
 
-    def test_update_error_invalid_token(self):
+    def test_update_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
         self._client.params.update('locale', 'en_US')
         assert_that(
             calling(provd.params.update).with_args('locale', 'fr_FR'),
-            raises(ProvdError).matching(has_properties('status_code', 401))
+            raises(ProvdError).matching(has_properties('status_code', 401)),
         )
         result = self._client.params.get('locale')
         assert_that(result, has_entry('value', 'en_US'))
 
-    def test_delete(self):
+    def test_delete(self) -> None:
         self._client.params.delete('locale')
 
-    def test_delete_errors(self):
+    def test_delete_errors(self) -> None:
         assert_that(
             calling(self._client.params.delete).with_args('invalid_param'),
-            raises(ProvdError).matching(has_properties('status_code', 404))
+            raises(ProvdError).matching(has_properties('status_code', 404)),
         )
 
-    def test_delete_error_invalid_token(self):
+    def test_delete_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
         assert_that(
             calling(provd.params.delete).with_args('locale'),
-            raises(ProvdError).matching(has_properties('status_code', 401))
+            raises(ProvdError).matching(has_properties('status_code', 401)),
         )
 
-    def test_stable_pluign_server(self):
-        # TODO: change once the new URL repository is published. Also, why is this test dependant on an external URL?
-        stable_url = 'http://provd.wazo.community/plugins/1/stable/'
+    def test_stable_plugin_server(self) -> None:
+        stable_url = 'https://provd.wazo.community/plugins/2/stable/'
         self._client.params.update('plugin_server', stable_url)
 
         with self._client.plugins.update() as op_progress:
             until.assert_(operation_successful, op_progress, tries=10, interval=0.5)
 
-    def test_wrong_pluign_server(self):
-        wrong_url = 'http://provd.wazo.community/plugins/2/wrong/'
+    def test_wrong_pluign_server(self) -> None:
+        wrong_url = 'https://provd.wazo.community/plugins/2/wrong/'
         self._client.params.update('plugin_server', wrong_url)
 
         with self._client.plugins.update() as op_progress:

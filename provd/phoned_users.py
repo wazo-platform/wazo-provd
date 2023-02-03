@@ -3,25 +3,32 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
-SERVICE_URL_FORMAT = '{scheme}://{hostname}:{port}/0.1/{vendor}/users/{user_uuid}/services/{service}/{enabled}'
+SERVICE_URL_FORMAT = (
+    '{scheme}://{hostname}:{port}/0.1/{vendor}/'
+    'users/{user_uuid}/services/{service}/{enabled}'
+)
 
 
 def add_wazo_phoned_user_service_url(
-    raw_config,
-    vendor,
-    service_name,
-):
+    raw_config: dict[str, Any],
+    vendor: str,
+    service_name: str,
+) -> None:
     # NOTE(afournier): phoned is actually exposed as the phonebook.
     if not (hostname := raw_config.get('X_xivo_phonebook_ip')):
-        logger.warning('Not adding XX_wazo_phoned_user_service_%s_url: no hostname', service_name)
+        logger.warning(
+            'Not adding XX_wazo_phoned_user_service_%s_url: no hostname', service_name
+        )
         return
 
     if not (user_uuid := raw_config.get('X_xivo_user_uuid')):
-        logger.warning('Not adding XX_wazo_phoned_user_service_%s_url: no user uuid', service_name)
+        logger.warning(
+            'Not adding XX_wazo_phoned_user_service_%s_url: no user uuid', service_name
+        )
         return
 
     scheme = raw_config.get('X_xivo_phonebook_scheme', 'http')
@@ -59,4 +66,3 @@ def _enable_string(enabled: bool) -> Literal['enable', 'disable']:
     if enabled:
         return 'enable'
     return 'disable'
-

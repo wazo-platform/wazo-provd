@@ -7,17 +7,16 @@ import socket
 from typing import Any
 
 
-_MAC_ADDR = re.compile(r'^[\da-fA-F]{1,2}([:-]?)(?:[\da-fA-F]{1,2}\1){4}[\da-fA-F]{1,2}$')
+_MAC_ADDR = re.compile(
+    r'^[\da-fA-F]{1,2}([:-]?)(?:[\da-fA-F]{1,2}\1){4}[\da-fA-F]{1,2}$'
+)
 _NORMED_MAC = re.compile(r'^(?:[\da-f]{2}:){5}[\da-f]{2}$')
 _NORMED_UUID = re.compile(r'^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$')
 
 
 def decode_value(value: Any) -> Any:
     if isinstance(value, dict):
-        return {
-            decode_bytes(k): decode_value(v)
-            for k, v in value.items()
-        }
+        return {decode_bytes(k): decode_value(v) for k, v in value.items()}
     if isinstance(value, list):
         return [decode_value(v) for v in value]
     return decode_bytes(value)
@@ -25,7 +24,8 @@ def decode_value(value: Any) -> Any:
 
 def decode_bytes(value: Any, encoding: str = 'utf-8') -> str:
     """Take a value and if it is bytes it is a bytestring it decodes it.
-    It is helpful for ensuring values are decoded in situations where it might be a string or bytes.
+    It is helpful for ensuring values are decoded in situations
+    where it might be a string or bytes.
     """
     if isinstance(value, bytes):
         return value.decode(encoding)
@@ -34,7 +34,8 @@ def decode_bytes(value: Any, encoding: str = 'utf-8') -> str:
 
 def encode_bytes(value: str | bytes, encoding: str = 'utf-8') -> bytes:
     """Take a value and if it is a string encode it as bytes
-    It is helpful for ensuring values are encoded in situations where it might be a string or bytes.
+    It is helpful for ensuring values are encoded in situations
+    where it might be a string or bytes.
     """
     if isinstance(value, str):
         return value.encode(encoding)
@@ -100,8 +101,6 @@ def is_normed_ip(ip_string):
             return all(0 <= n <= 255 for n in digits)
 
 
-
-
 def to_mac(mac_string: str) -> str:
     """Takes a human-readable MAC address unicode string (i.e.
     '00:1a:2b:33:44:55') and return a 6-bytes string representation of it.
@@ -126,7 +125,7 @@ def to_mac(mac_string: str) -> str:
         # no separator - length must be equal to 12 in this case
         if len(mac_string) != 12:
             raise ValueError('invalid MAC string')
-        return ''.join(chr(int(mac_string[i:i + 2], 16)) for i in range(0, 12, 2))
+        return ''.join(chr(int(mac_string[i : i + 2], 16)) for i in range(0, 12, 2))
 
     tokens = mac_string.split(sep)
     return ''.join(chr(int(token, 16)) for token in tokens)
@@ -212,4 +211,5 @@ def is_normed_uuid(uuid_string: str) -> bool:
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod(verbose=True)

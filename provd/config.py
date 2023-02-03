@@ -4,7 +4,7 @@
 """Provisioning server configuration module.
 
 Read raw parameter values from different sources and return a dictionary
-with well defined values.
+with well-defined values.
 
 The following parameters are defined:
     config_file
@@ -65,27 +65,122 @@ The following parameters are defined:
 # XXX there is some naming confusion between application configuration
 #     and device configuration, since both used the word 'config' and
 #     raw config, yet they mean different things
+from __future__ import annotations
 
 import logging
 import json
 import os.path
 import socket
+from typing import Any, TypedDict, Union, cast, Literal
+
 from twisted.python import usage
 from xivo.chain_map import ChainMap
 from xivo.config_helper import parse_config_file, read_config_file_hierarchy
+
+
+class AuthCredentialDict(TypedDict):
+    username: Union[str, None]
+    password: Union[str, None]
+
+
+class AuthKeyFileDict(TypedDict):
+    auth: AuthCredentialDict
+
+
+class SyncDbConfigDict(TypedDict):
+    interval_sec: int
+    start_sec: int
+
+
+class GeneralConfig(TypedDict):
+    external_ip: str
+    listen_interface: str
+    listen_port: int
+    base_raw_config: dict[str, Any]
+    base_raw_config_file: str
+    request_config_dir: str
+    cache_dir: str
+    cache_plugin: bool
+    check_compat_min: bool
+    check_compat_max: bool
+    base_storage_dir: str
+    plugin_server: str
+    info_extractor: str
+    retriever: str
+    updater: str
+    http_port: int
+    tftp_port: int
+    base_external_url: str
+    verbose: bool
+    sync_service_type: str
+    num_http_proxies: int
+    syncdb: SyncDbConfigDict
+
+
+class RestApiConfigDict(TypedDict):
+    ip: str
+    port: int
+    ssl: bool
+    ssl_certfile: Union[str, None]
+    ssl_keyfile: Union[str, None]
+
+
+class AuthConfigDict(TypedDict):
+    host: str
+    port: int
+    prefix: Union[str, None]
+    https: bool
+    key_file: str
+
+
+class DatabaseConfigDict(TypedDict):
+    type: str
+    generator: Literal['default', 'numeric', 'uuid']
+    ensure_common_indexes: bool
+    json_db_dir: str
+
+
+class AmidConfigDict(TypedDict):
+    host: str
+    port: int
+    prefix: Union[str, None]
+    https: bool
+
+
+class BusConfigDict(TypedDict):
+    username: str
+    password: str
+    host: str
+    port: int
+    exchange_name: str
+    exchange_type: str
+
+
+class ProvdConfigDict(TypedDict):
+    config_file: str
+    extra_config_files: str
+    general: GeneralConfig
+    rest_api: RestApiConfigDict
+    auth: AuthConfigDict
+    database: DatabaseConfigDict
+    amid: AmidConfigDict
+    bus: BusConfigDict
+    plugin_config: dict[str, Any]
+
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_LISTEN_PORT = 8667
 DEFAULT_HTTP_PORT = 8667
 
-_DEFAULT_CONFIG = {
+_DEFAULT_CONFIG: ProvdConfigDict = {
     'config_file': '/etc/wazo-provd/config.yml',
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
         'external_ip': '127.0.0.1',
         'listen_interface': '0.0.0.0',
         'listen_port': DEFAULT_LISTEN_PORT,
+        'base_raw_config': {},
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
         'request_config_dir': '/etc/wazo-provd',
         'cache_dir': '/var/cache/wazo-provd',
@@ -142,6 +237,7 @@ _DEFAULT_CONFIG = {
         'exchange_name': 'wazo-headers',
         'exchange_type': 'headers',
     },
+    'plugin_config': {},
 }
 
 _OPTION_TO_PARAM_LIST = [
@@ -183,8 +279,8 @@ class Options(usage.Options):
     ]
 
 
-def _convert_cli_to_config(options):
-    raw_config = {'general': {}}
+def _convert_cli_to_config(options: Options) -> dict[str, Any]:
+    raw_config: dict[str, Any] = {'general': {}}
     for option_name, (section, param_name) in _OPTION_TO_PARAM_LIST:
         if options[option_name] is not None:
             raw_config[section][param_name] = options[option_name]
@@ -193,19 +289,20 @@ def _convert_cli_to_config(options):
     return raw_config
 
 
-def _load_json_file(raw_value):
+def _load_json_file(raw_value: str) -> dict[str, Any]:
     # Return a dictionary representing the JSON document contained in the
     # file pointed by raw value. The file must be encoded in UTF-8.
     with open(raw_value) as f:
         return json.load(f)
 
 
-def _process_aliases(raw_config):
+def _process_aliases(raw_config: ProvdConfigDict) -> None:
     if 'ip' in raw_config['general'] and 'external_ip' not in raw_config['general']:
-        raw_config['general']['external_ip'] = raw_config['general']['ip']
+        ip = raw_config['general']['ip']  # type: ignore[typeddict-item]
+        raw_config['general']['external_ip'] = ip
 
 
-def _check_and_convert_parameters(raw_config):
+def _check_and_convert_parameters(raw_config: dict[str, Any]) -> None:
     if raw_config['rest_api']['ssl']:
         if 'ssl_certfile' not in raw_config['rest_api']:
             raise ConfigError('Missing parameter "ssl_certfile"')
@@ -227,7 +324,7 @@ def _get_ip_fallback():
     return socket.gethostbyname(socket.gethostname())
 
 
-def _update_general_base_raw_config(app_raw_config):
+def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     # warning: raw_config in the function name means device raw config and
     # the app_raw_config argument means application configuration.
     base_raw_config = app_raw_config['general']['base_raw_config']
@@ -246,7 +343,7 @@ def _update_general_base_raw_config(app_raw_config):
         base_raw_config['ip'] = external_ip
 
 
-def _post_update_raw_config(raw_config):
+def _post_update_raw_config(raw_config: dict[str, Any]) -> None:
     # Update raw config after transformation/check
     _update_general_base_raw_config(raw_config)
     # update json_db_dir to absolute dir
@@ -257,7 +354,7 @@ def _post_update_raw_config(raw_config):
         )
 
 
-def _load_key_file(config):
+def _load_key_file(config: dict[str, Any]) -> AuthKeyFileDict:
     key_file = parse_config_file(config['auth']['key_file'])
     return {
         'auth': {
@@ -267,7 +364,7 @@ def _load_key_file(config):
     }
 
 
-def get_config(argv):
+def get_config(argv: Options) -> ProvdConfigDict:
     """Pull the raw parameters values from the configuration sources and
     return a config dictionary.
     """
@@ -278,4 +375,4 @@ def get_config(argv):
     _process_aliases(raw_config)
     _check_and_convert_parameters(raw_config)
     _post_update_raw_config(raw_config)
-    return raw_config
+    return cast(ProvdConfigDict, raw_config)

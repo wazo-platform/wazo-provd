@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Device and device collection module.
@@ -36,18 +36,33 @@ Non-standard keys MUST begin with 'X_'.
 Finally, device collection objects are used as a storage for device objects.
 
 """
+from __future__ import annotations
+
 import logging
+from collections.abc import Mapping
 from copy import deepcopy
+from typing import TypeVar, Any
+
 from provd.util import is_normed_mac, is_normed_ip
 from provd.persist.util import ForwardingDocumentCollection
 
 logger = logging.getLogger(__name__)
 
-_RECONF_KEYS = ['plugin', 'config', 'mac', 'uuid',
-                'vendor', 'model', 'version', 'options']
+_RECONF_KEYS = [
+    'plugin',
+    'config',
+    'mac',
+    'uuid',
+    'vendor',
+    'model',
+    'version',
+    'options',
+]
+
+T = TypeVar('T', bound=Mapping[str, Any])
 
 
-def copy(device):
+def copy(device: T) -> T:
     return deepcopy(device)
 
 

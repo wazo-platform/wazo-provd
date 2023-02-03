@@ -1,5 +1,6 @@
 # Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import functools
 from twisted.web import http
@@ -34,7 +35,7 @@ def accept_mime_type(mime_type, request):
     accept = parse_accept(request.getHeader(b'Accept'))
     if mime_type in accept or '*/*' in accept:
         return True
-    if mime_type[:mime_type.index('/')] + '/*' in accept:
+    if mime_type[: mime_type.index('/')] + '/*' in accept:
         return True
     return False
 
@@ -44,6 +45,7 @@ def accept(mime_types):
     can accept, i.e. check the Accept header value.
 
     """
+
     def in_accept(fun):
         @functools.wraps(fun)
         def aux(self, request):
@@ -54,7 +56,9 @@ def accept(mime_types):
                 request.setResponseCode(http.NOT_ACCEPTABLE)
                 request.setHeader(b'Content-Type', b'text/plain; charset=UTF-8')
                 return f"You must accept one of the following MIME type '{mime_types}'.".encode()
+
         return aux
+
     return in_accept
 
 
@@ -68,5 +72,7 @@ def content_type(mime_type):
                 request.setHeader(b'Content-Type', b'text/plain; charset=UTF-8')
                 return f"Entity must be in one of these media types '{mime_type}'.".encode()
             return fun(self, request)
+
         return aux
+
     return in_content_type

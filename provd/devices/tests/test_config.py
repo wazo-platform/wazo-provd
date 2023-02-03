@@ -1,7 +1,9 @@
 # Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import unittest
+from typing import Any
 
 from hamcrest import (
     all_of,
@@ -18,18 +20,17 @@ from ..config import DefaultConfigFactory, _remove_none_values
 
 
 class TestDefaultConfigFactory(unittest.TestCase):
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.factory = DefaultConfigFactory()
 
-    def test_sip_line(self):
-        config = {'raw_config': {}}
+    def test_sip_line(self) -> None:
+        config: dict[str, Any] = {'raw_config': {}}
 
         result = self.factory(config)
 
         assert_that(result, is_(none()))
 
-    def test_with_a_valid_sip_configuration(self):
+    def test_with_a_valid_sip_configuration(self) -> None:
         id_ = 'ap'
         username = 'anonymous'
         config = {
@@ -40,7 +41,7 @@ class TestDefaultConfigFactory(unittest.TestCase):
                         'username': username,
                     }
                 }
-            }
+            },
         }
 
         result = self.factory(config)
@@ -54,20 +55,20 @@ class TestDefaultConfigFactory(unittest.TestCase):
                 ),
                 raw_config=has_entries(
                     sip_lines=has_entries(
-                        '1', has_entries(
+                        '1',
+                        has_entries(
                             username=username,
-                        )
+                        ),
                     )
-                )
-            )
+                ),
+            ),
         )
 
 
 class TestRemoveNoneValues(unittest.TestCase):
-
-    def test_empty_dict(self):
-        empty_dict = {}
-        expected_result = {}
+    def test_empty_dict(self) -> None:
+        empty_dict: dict[str, Any] = {}
+        expected_result: dict[str, Any] = {}
 
         result = _remove_none_values(empty_dict)
         assert_that(
@@ -75,7 +76,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             is_(equal_to(expected_result)),
         )
 
-    def test_with_simple_dict(self):
+    def test_with_simple_dict(self) -> None:
         dict_with_nones = {
             'key1': None,
             'key2': '123',
@@ -95,7 +96,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             is_(equal_to(expected_result)),
         )
 
-    def test_with_nested_dict(self):
+    def test_with_nested_dict(self) -> None:
         dict_with_nones = {
             'key1': {'nkey1': 123, 'nkey2': None},
         }
@@ -110,7 +111,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             is_(equal_to(expected_result)),
         )
 
-    def test_with_list(self):
+    def test_with_list(self) -> None:
         dict_with_list = {
             'key1': [123, None],
         }
@@ -125,7 +126,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             is_(equal_to(expected_result)),
         )
 
-    def test_with_dict_in_list(self):
+    def test_with_dict_in_list(self) -> None:
         dict_with_list = {
             'key1': [{'nkey1': 123, 'nkey2': None}, {'nkey1': None, 'nkey2': '123'}],
         }

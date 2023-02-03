@@ -4,6 +4,8 @@
 """Return the current UTC offset and DST rules of arbitrary timezones.
 
 """
+from __future__ import annotations
+
 import os.path
 
 
@@ -30,10 +32,10 @@ class Time:
     @property
     def as_hms(self):
         """Return the time decomposed into hours, minutes and seconds.
-        
+
         Note that if the time is negative, only the leftmost non-zero value will be
         negative.
-        
+
         >>> Time(3602).as_hms   # 1 hour, 0 minutes and 2 seconds
         [1, 0, 2]
         >>> Time(-3602).as_hms  # -(1 hour, 0 minutes and 2 seconds)
@@ -99,15 +101,11 @@ class TextTimezoneInfoDB:
     @classmethod
     def _parse_dst_change(cls, string: str):
         tokens = string.split('/')
-        return {
-            'month': int(tokens[0]),
-            'day': tokens[1],
-            'time': Time(int(tokens[2]))
-        }
+        return {'month': int(tokens[0]), 'day': tokens[1], 'time': Time(int(tokens[2]))}
 
     def get_timezone_info(self, timezone_name):
         """Return timezone information for the timezone named timezone_name.
-        
+
         The method returns a dictionary with the following key:
         - 'utcoffset':    the offset from UTC as a Time object
         - 'dst':          a dictionary containing the DST rules, or None if the timezone has no DST
@@ -118,7 +116,7 @@ class TextTimezoneInfoDB:
           - 'end'         a dictionary containing the DST end rule
           - 'save'        an offset from standard time as a Time object
           - 'as_string'   the original DST string
-        
+
         Raise a TimezoneNotFoundError is no information for the timezone is
         found.
         """
@@ -132,11 +130,12 @@ class DefaultTimezoneInfoDB:
     """Instances of DefaultTimezoneInfoDB returns timezone information from
     another TimezoneInfoDB, or a default timezone information in the case the
     timezone can't be found.
-    
+
     >>> tz_db = DefaultTimezoneInfoDB('Europe/Paris', TextTimezoneInfoDB())
     >>> tz_db.get_timezone_info('Moon/Sea_of_Tranquility')['utcoffset'].as_hours
     1
     """
+
     def __init__(self, default_tz, db):
         self.db = db
         self.default = db.get_timezone_info(default_tz)
@@ -153,7 +152,7 @@ get_timezone_info = TextTimezoneInfoDB().get_timezone_info
 
 def week_start_on_monday(weekday: int) -> int:
     """Convert weekday so that monday is the first day of the week (instead of sunday).
-    
+
     >>> week_start_on_monday(1)  # sunday is now the last day of the week
     7
     >>> week_start_on_monday(2)  # ...and monday is the first
@@ -164,4 +163,5 @@ def week_start_on_monday(weekday: int) -> int:
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod(verbose=True)

@@ -1,6 +1,5 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
 from __future__ import annotations
 
 import contextlib
@@ -10,29 +9,44 @@ import operator
 import os
 import shutil
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable
+from typing import Any, Callable, TypedDict
 
 import tarfile
-import weakref
+from weakref import WeakKeyDictionary
 from binascii import a2b_hex
 
 from twisted.internet.defer import Deferred
-from xivo_fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
-    new_downloaders_from_handlers
-from xivo_fetchfw.package import PackageManager, InstallerController, \
-    UninstallerController
-from xivo_fetchfw.storage import DefaultRemoteFileBuilder, DefaultFilterBuilder, \
-    DefaultInstallablePkgStorage, DefaultInstallMgrFactoryBuilder, \
-    DefaultPkgBuilder, DefaultInstalledPkgStorage
+from xivo_fetchfw.download import (
+    DefaultDownloader,
+    RemoteFile,
+    SHA1Hook,
+    new_downloaders_from_handlers,
+)
+from xivo_fetchfw.package import (
+    PackageManager,
+    InstallerController,
+    UninstallerController,
+)
+from xivo_fetchfw.storage import (
+    DefaultRemoteFileBuilder,
+    DefaultFilterBuilder,
+    DefaultInstallablePkgStorage,
+    DefaultInstallMgrFactoryBuilder,
+    DefaultPkgBuilder,
+    DefaultInstalledPkgStorage,
+)
 from provd import phonebook
 from provd import phoned_users
 from provd.download import async_download_with_oip, OperationInProgressHook
 from provd.loaders import ProvdFileSystemLoader
 from provd.localization import get_locale_and_language
-from provd.operation import OperationInProgress, OIP_PROGRESS, OIP_SUCCESS, \
-    OIP_FAIL
+from provd.operation import OperationInProgress, OIP_PROGRESS, OIP_SUCCESS, OIP_FAIL
 from provd.proxy import DynProxyHandler
-from provd.services import AbstractInstallationService, InvalidParameterError, AbstractConfigurationService
+from provd.services import (
+    AbstractInstallationService,
+    InvalidParameterError,
+    AbstractConfigurationService,
+)
 from jinja2.environment import Environment, Template
 from jinja2.exceptions import TemplateNotFound
 from twisted.internet import defer, threads
@@ -42,6 +56,10 @@ logger = logging.getLogger(__name__)
 
 class PluginNotLoadedError(Exception):
     pass
+
+
+class BasePluginInfo(TypedDict):
+    description: str
 
 
 _PLUGIN_INFO_FILENAME = 'plugin-info'
@@ -62,7 +80,9 @@ def _check_raw_plugin_info(raw_plugin_info, plugin_id, keys):
     # Quick and incomplete check of a raw plugin info object.
     for plugin_info_key in keys:
         if plugin_info_key not in raw_plugin_info:
-            raise ValueError(f'invalid plugin info: missing {plugin_info_key} key in {plugin_id}')
+            raise ValueError(
+                f'invalid plugin info: missing {plugin_info_key} key in {plugin_id}'
+            )
 
 
 def _clean_localized_description(raw_plugin_info):
@@ -71,7 +91,7 @@ def _clean_localized_description(raw_plugin_info):
             del raw_plugin_info[key]
 
 
-def _new_localize_fun() -> Callable:
+def _new_localize_fun() -> Callable[[dict[str, Any]], None]:
     # Return a function that receives raw plugin info and localizes it
     locale, lang = get_locale_and_language()
     if locale is None:
@@ -79,16 +99,19 @@ def _new_localize_fun() -> Callable:
 
     locale_name = f'description_{locale}'
     if locale == lang:
-        def aux(raw_plugin_info):
+
+        def set_locale_description(raw_plugin_info: dict[str, Any]):
             try:
                 raw_plugin_info['description'] = raw_plugin_info[locale_name]
             except KeyError:
                 pass
             _clean_localized_description(raw_plugin_info)
-        return aux
+
+        return set_locale_description
 
     lang_name = f'description_{lang}'
-    def aux(raw_plugin_info):
+
+    def set_lang_description(raw_plugin_info: dict[str, Any]):
         try:
             raw_plugin_info['description'] = raw_plugin_info[locale_name]
         except KeyError:
@@ -97,7 +120,8 @@ def _new_localize_fun() -> Callable:
             except KeyError:
                 pass
         _clean_localized_description(raw_plugin_info)
-    return aux
+
+    return set_lang_description
 
 
 class Plugin(metaclass=ABCMeta):
@@ -148,6 +172,7 @@ class Plugin(metaclass=ABCMeta):
     directory.
 
     """
+
     id = None
 
     def __init__(self, app, plugin_dir, gen_cfg, spec_cfg):
@@ -216,7 +241,9 @@ class Plugin(metaclass=ABCMeta):
     # Methods for additional plugin services
 
     @property
-    def services(self) -> dict[str, AbstractConfigurationService | AbstractInstallationService]:
+    def services(
+        self,
+    ) -> dict[str, AbstractConfigurationService | AbstractInstallationService]:
         """Return a dictionary where keys are service name and values are
         service object.
 
@@ -232,7 +259,10 @@ class Plugin(metaclass=ABCMeta):
         return self._services
 
     @services.setter
-    def services(self, value: dict[str, AbstractConfigurationService | AbstractInstallationService]):
+    def services(
+        self,
+        value: dict[str, AbstractConfigurationService | AbstractInstallationService],
+    ):
         self._services = value
 
     # Methods for TFTP/HTTP services
@@ -376,7 +406,9 @@ class Plugin(metaclass=ABCMeta):
         """
         pass
 
-    def synchronize(self, device: dict[str, str], raw_config: dict[str, Any]) -> Deferred:
+    def synchronize(
+        self, device: dict[str, str], raw_config: dict[str, Any]
+    ) -> Deferred:
         """Force the device to synchronize its configuration so that it's the
         same as the one in the raw config object.
 
@@ -434,6 +466,7 @@ class StandardPlugin(Plugin):
     still want to inherit from it, unless you have good reason.
 
     """
+
     _TFTPBOOT_DIR = os.path.join('var', 'tftpboot')
 
     def __init__(self, app, plugin_dir, gen_cfg, spec_cfg):
@@ -531,6 +564,7 @@ class FetchfwPluginHelper(AbstractInstallationService):
     be able to support a certain kind of device.
 
     """
+
     PKG_DIR = 'pkgs'
     """Directory where the package definitions are stored."""
     CACHE_DIR = os.path.join('var', 'cache')
@@ -570,28 +604,35 @@ class FetchfwPluginHelper(AbstractInstallationService):
         if filter_builder is None:
             filter_builder = DefaultFilterBuilder()
         rfile_builder = DefaultRemoteFileBuilder(cache_dir, downloaders)
-        install_mgr_factory_builder = DefaultInstallMgrFactoryBuilder(filter_builder, {})
+        install_mgr_factory_builder = DefaultInstallMgrFactoryBuilder(
+            filter_builder, {}
+        )
         pkg_builder = DefaultPkgBuilder()
-        able_sto = DefaultInstallablePkgStorage(pkg_db_dir, rfile_builder,
-                                                install_mgr_factory_builder,
-                                                pkg_builder)
+        able_sto = DefaultInstallablePkgStorage(
+            pkg_db_dir, rfile_builder, install_mgr_factory_builder, pkg_builder
+        )
         ed_sto = DefaultInstalledPkgStorage(installed_db_dir)
         return PackageManager(able_sto, ed_sto)
 
     def install(self, pkg_id: str):
-        """Install a package.
-        """
+        """Install a package."""
         logger.info('Installing plugin-package %s', pkg_id)
         if pkg_id in self._in_install_set:
-            raise Exception(f'an install operation for pkg {pkg_id} is already in progress')
+            raise Exception(
+                f'an install operation for pkg {pkg_id} is already in progress'
+            )
         if pkg_id not in self._pkg_mgr.installable_pkg_sto:
             raise Exception('package not found')
 
         dl_oip = OperationInProgress('download')
         install_oip = OperationInProgress('install')
-        oip = OperationInProgress('install_pkg', OIP_PROGRESS, sub_oips=[dl_oip, install_oip])
+        oip = OperationInProgress(
+            'install_pkg', OIP_PROGRESS, sub_oips=[dl_oip, install_oip]
+        )
         ctrl_factory = AsyncInstallerController.new_factory(dl_oip, install_oip)
-        deferred = threads.deferToThread(self._pkg_mgr.install, [pkg_id], self.root_dir, ctrl_factory)
+        deferred = threads.deferToThread(
+            self._pkg_mgr.install, [pkg_id], self.root_dir, ctrl_factory
+        )
         self._in_install_set.add(pkg_id)
 
         def callback(res):
@@ -601,7 +642,9 @@ class FetchfwPluginHelper(AbstractInstallationService):
             return res
 
         def errback(err):
-            logger.info('Error while installing plugin-package %s: %s', pkg_id, err.value)
+            logger.info(
+                'Error while installing plugin-package %s: %s', pkg_id, err.value
+            )
             self._in_install_set.remove(pkg_id)
             oip.state = OIP_FAIL
             return err
@@ -624,22 +667,25 @@ class FetchfwPluginHelper(AbstractInstallationService):
         self.uninstall(pkg_id)
         return self.install(pkg_id)
 
-    def _new_localize_description_fun(self):
+    def _new_localize_description_fun(self) -> Callable[[dict[str, Any]], str]:
         locale, lang = get_locale_and_language()
         if locale is None:
             return operator.itemgetter('description')
 
         locale_name = f'description_{locale}'
         if locale == lang:
-            def aux(pkg_info):
+
+            def get_description_by_locale(pkg_info: dict[str, Any]) -> str:
                 try:
                     return pkg_info[locale_name]
                 except KeyError:
                     return pkg_info['description']
-            return aux
+
+            return get_description_by_locale
+
         lang_name = f'description_{lang}'
 
-        def aux(pkg_info):
+        def get_description_by_language(pkg_info: dict[str, Any]) -> str:
             try:
                 return pkg_info[locale_name]
             except KeyError:
@@ -647,7 +693,8 @@ class FetchfwPluginHelper(AbstractInstallationService):
                     return pkg_info[lang_name]
                 except KeyError:
                     return pkg_info['description']
-        return aux
+
+        return get_description_by_language
 
     def list_installable(self):
         """Return a dictionary of installable packages.
@@ -661,8 +708,9 @@ class FetchfwPluginHelper(AbstractInstallationService):
             pkg_id: {
                 'version': pkg.pkg_info['version'],
                 'description': localize_desc_fun(pkg.pkg_info),
-                'dsize': sum(rfile.size for rfile in pkg.remote_files)
-            } for pkg_id, pkg in installable_pkg_sto.items()
+                'dsize': sum(rfile.size for rfile in pkg.remote_files),
+            }
+            for pkg_id, pkg in installable_pkg_sto.items()
         }
 
     def list_installed(self):
@@ -676,8 +724,9 @@ class FetchfwPluginHelper(AbstractInstallationService):
         return {
             pkg_id: {
                 'version': pkg.pkg_info['version'],
-                'description': localize_desc_fun(pkg.pkg_info)
-            } for pkg_id, pkg in installed_pkg_sto.items()
+                'description': localize_desc_fun(pkg.pkg_info),
+            }
+            for pkg_id, pkg in installed_pkg_sto.items()
         }
 
     def services(self):
@@ -690,6 +739,7 @@ class AbstractPluginManagerObserver(metaclass=ABCMeta):
     loading/unloading MUST provide.
 
     """
+
     @abstractmethod
     def pg_load(self, pg_id: str) -> None:
         pass
@@ -737,8 +787,17 @@ class PluginManager:
     _DOWNLOAD_LABEL = 'download'
     _UPDATE_LABEL = 'update'
 
-    def __init__(self, app, plugins_dir, cache_dir, cache_plugin=True,
-                 check_compat_min=True, check_compat_max=True):
+    _observers: WeakKeyDictionary[AbstractPluginManagerObserver, None]
+
+    def __init__(
+        self,
+        app,
+        plugins_dir,
+        cache_dir,
+        cache_plugin=True,
+        check_compat_min=True,
+        check_compat_max=True,
+    ):
         """
         app -- a provisioning application object
         plugins_dir -- the directory where plugins are installed
@@ -756,11 +815,11 @@ class PluginManager:
         self.server = None
         self._in_update = False
         self._in_install = set()
-        self._observers = weakref.WeakKeyDictionary()
+        self._observers = WeakKeyDictionary()
         self._plugins = {}
         self._downloader = DefaultDownloader(_new_handlers(app.proxies))
 
-    def close(self):
+    def close(self) -> None:
         """Close the plugin manager.
 
         This will unload any loaded plugin.
@@ -773,10 +832,10 @@ class PluginManager:
             self._unload_and_notify(plugin_id)
         logger.info('Plugin manager closed')
 
-    def _db_pathname(self):
+    def _db_pathname(self) -> str:
         return os.path.join(self._plugins_dir, self._DB_FILENAME)
 
-    def _join_server_url(self, p):
+    def _join_server_url(self, p: str):
         server = self.server
         if server is None:
             logger.warning('Plugin manager server attribute is not set')
@@ -809,8 +868,12 @@ class PluginManager:
         """
         logger.info('Installing plugin %s', plugin_id)
         if plugin_id in self._in_install:
-            logger.warning('Install operation already in progress for plugin %s', plugin_id)
-            raise Exception(f'an install/upgrade operation for plugin {plugin_id} is already in progress')
+            logger.warning(
+                'Install operation already in progress for plugin %s', plugin_id
+            )
+            raise Exception(
+                f'an install/upgrade operation for plugin {plugin_id} is already in progress'
+            )
         try:
             pg_info = self._get_installable_plugin_info(plugin_id)
         except KeyError:
@@ -829,13 +892,17 @@ class PluginManager:
                 top_oip = OperationInProgress(self._INSTALL_LABEL, OIP_SUCCESS)
         else:
             url = self._join_server_url(filename)
-            rfile = RemoteFile.new_remote_file(cache_filename, pg_info['dsize'], url, self._downloader)
+            rfile = RemoteFile.new_remote_file(
+                cache_filename, pg_info['dsize'], url, self._downloader
+            )
             sha1hook = SHA1Hook(a2b_hex(pg_info['sha1sum']))
             dl_deferred, dl_oip = async_download_with_oip(rfile, [sha1hook])
             dl_oip.label = self._DOWNLOAD_LABEL
             self._in_install.add(plugin_id)
             top_deferred = defer.Deferred()
-            top_oip = OperationInProgress(self._INSTALL_LABEL, OIP_PROGRESS, sub_oips=[dl_oip])
+            top_oip = OperationInProgress(
+                self._INSTALL_LABEL, OIP_PROGRESS, sub_oips=[dl_oip]
+            )
 
             def dl_callback(_):
                 self._in_install.remove(plugin_id)
@@ -873,7 +940,8 @@ class PluginManager:
     def upgrade(self, plugin_id):
         """Upgrade a plugin.
 
-        Right now, there is absolutely no difference between calling this method and calling the install method.
+        Right now, there is absolutely no difference
+        between calling this method and calling the `install` method.
 
         """
         logger.info('Upgrading plugin %s', plugin_id)
@@ -976,7 +1044,9 @@ class PluginManager:
 
         localize_fun = _new_localize_fun()
         for plugin_id, raw_plugin_info in all_raw_plugin_info.items():
-            _check_raw_plugin_info(raw_plugin_info, plugin_id, _PLUGIN_INFO_INSTALLABLE_KEYS)
+            _check_raw_plugin_info(
+                raw_plugin_info, plugin_id, _PLUGIN_INFO_INSTALLABLE_KEYS
+            )
             localize_fun(raw_plugin_info)
         return all_raw_plugin_info
 
@@ -1010,7 +1080,9 @@ class PluginManager:
             if os.path.isdir(abs_plugin_dir):
                 raw_plugin_info = self._get_installed_plugin_info(abs_plugin_dir)
                 _check_raw_plugin_info(
-                    raw_plugin_info, rel_plugin_dir, _PLUGIN_INFO_INSTALLED_KEYS,
+                    raw_plugin_info,
+                    rel_plugin_dir,
+                    _PLUGIN_INFO_INSTALLED_KEYS,
                 )
                 localize_fun(raw_plugin_info)
                 installed_plugins[rel_plugin_dir] = raw_plugin_info
@@ -1035,6 +1107,7 @@ class PluginManager:
                 filename = os.path.join(plugin_dir, filename)
             with open(filename, 'rb') as f:
                 exec(compile(f.read(), filename, 'exec'), globals, *args, **kwargs)
+
         pg_globals['execfile_'] = aux
 
     def _execplugin(self, plugin_dir, pg_globals):
@@ -1044,7 +1117,7 @@ class PluginManager:
         with open(entry_file, 'rb') as f:
             exec(compile(f.read(), entry_file, 'exec'), pg_globals)
 
-    def attach(self, observer):
+    def attach(self, observer: AbstractPluginManagerObserver):
         """Attach an IPluginManagerObserver object to this plugin manager.
 
         Note that since observers are weakly referenced, you MUST keep a
@@ -1075,8 +1148,11 @@ class PluginManager:
                 fun = getattr(observer, f'pg_{action}')
                 fun(plugin_id)
             except Exception:
-                logger.error('Error while notifying plugin manager observer %s',
-                             observer, exc_info=True)
+                logger.error(
+                    'Error while notifying plugin manager observer %s',
+                    observer,
+                    exc_info=True,
+                )
 
     def _load_and_notify(self, plugin_id: str, plugin: Plugin):
         self._plugins[plugin_id] = plugin
@@ -1098,9 +1174,15 @@ class PluginManager:
     @staticmethod
     def _is_plugin_class(obj):
         # return true if obj is a plugin class with IS_PLUGIN true
-        return isinstance(obj, type) and issubclass(obj, Plugin) and getattr(obj, 'IS_PLUGIN', None)
+        return (
+            isinstance(obj, type)
+            and issubclass(obj, Plugin)
+            and getattr(obj, 'IS_PLUGIN', None)
+        )
 
-    def load(self, plugin_id: str, gen_cfg: dict = None, spec_cfg: dict = None):
+    def load(
+        self, plugin_id: str, gen_cfg: dict | None = None, spec_cfg: dict | None = None
+    ):
         """Load a plugin.
 
         Raise an Exception if the plugin is already loaded, since we offer
@@ -1126,17 +1208,24 @@ class PluginManager:
         if self._check_compat_min:
             min_compat = plugin_info.get('plugin_iface_version_min')
             if min_compat is not None and self.PLUGIN_IFACE_VERSION < min_compat:
-                logger.error('Plugin %s is not compatible: %s < %s',
-                             plugin_id, self.PLUGIN_IFACE_VERSION, min_compat)
+                logger.error(
+                    'Plugin %s is not compatible: %s < %s',
+                    plugin_id,
+                    self.PLUGIN_IFACE_VERSION,
+                    min_compat,
+                )
                 raise Exception('plugin min compat not satisfied')
         if self._check_compat_max:
             max_compat = plugin_info.get('plugin_iface_version_max')
             if max_compat is not None and self.PLUGIN_IFACE_VERSION > max_compat:
                 logger.error(
-                    'Plugin %s is not compatible: %s > %s', plugin_id, self.PLUGIN_IFACE_VERSION, max_compat
+                    'Plugin %s is not compatible: %s > %s',
+                    plugin_id,
+                    self.PLUGIN_IFACE_VERSION,
+                    max_compat,
                 )
                 raise Exception('plugin max compat not satisfied')
-        plugin_globals = {}
+        plugin_globals: dict[str, Any] = {}
         self._execplugin(plugin_dir, plugin_globals)
         for obj in plugin_globals.values():
             if self._is_plugin_class(obj):

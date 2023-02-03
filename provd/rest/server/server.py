@@ -18,6 +18,7 @@ import functools
 import json
 import logging
 from binascii import a2b_base64
+from typing import Generator, Any
 
 from provd.app import (
     InvalidIdError,
@@ -62,7 +63,7 @@ else:
     json_dumps = functools.partial(json.dumps, separators=(',', ':'))
 
 
-def new_id_generator():
+def new_id_generator() -> Generator[str, None, None]:
     return numeric_id_generator(start=1)
 
 
@@ -70,7 +71,9 @@ def json_response(data: dict) -> bytes:
     return json_dumps(data).encode('utf-8')
 
 
-def respond_no_content(request: Request, response_code=http.NO_CONTENT):
+def respond_no_content(
+    request: Request, response_code: int = http.NO_CONTENT
+) -> NOT_DONE_YET:
     request.setResponseCode(response_code)
     # next lines are tricks for twisted to omit the 'Content-Type' and 'Content-Length'
     # of 'No content' response. This is not strictly necessary per the RFC, but it certainly
@@ -80,49 +83,59 @@ def respond_no_content(request: Request, response_code=http.NO_CONTENT):
     return NOT_DONE_YET
 
 
-def respond_created_no_content(request: Request, location):
+def respond_created_no_content(request: Request, location: str) -> NOT_DONE_YET:
     request.setHeader(b'Location', location.encode('ascii'))
     return respond_no_content(request, http.CREATED)
 
 
-def respond_error(request: Request, err_msg, response_code=http.BAD_REQUEST):
+def respond_error(
+    request: Request, err_msg: str | bytes | Exception, response_code=http.BAD_REQUEST
+) -> bytes:
     request.setResponseCode(response_code)
     request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     return str(err_msg).encode('ascii')
 
 
-def respond_bad_json_entity(request: Request, err_msg=None):
+def respond_bad_json_entity(
+    request: Request, err_msg: str | Exception | None = None
+) -> bytes:
     if err_msg is None:
         err_msg = 'Missing information in received entity'
     return respond_error(request, err_msg)
 
 
-def respond_no_resource(request: Request, response_code=http.NOT_FOUND):
+def respond_no_resource(request: Request, response_code: int = http.NOT_FOUND):
     request.setResponseCode(response_code)
     request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     return b'No such resource'
 
 
-def deferred_respond_unauthorized(request: Request):
+def deferred_respond_unauthorized(request: Request) -> None:
     request.setResponseCode(http.UNAUTHORIZED)
     request.write(b'Unauthorized')
     request.finish()
 
 
-def deferred_respond_no_content(request: Request, response_code=http.NO_CONTENT):
+def deferred_respond_no_content(
+    request: Request, response_code: int = http.NO_CONTENT
+) -> None:
     request.setResponseCode(response_code)
     request.responseHeaders.removeHeader(b'Content-Type')
     request.finish()
 
 
-def deferred_respond_error(request: Request, err_msg, response_code=http.BAD_REQUEST):
+def deferred_respond_error(
+    request: Request, err_msg: str | Exception, response_code: int = http.BAD_REQUEST
+) -> None:
     request.setResponseCode(response_code)
     request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     request.write(str(err_msg).encode('utf8'))
     request.finish()
 
 
-def deferred_respond_ok(request: Request, data, response_code=http.OK):
+def deferred_respond_ok(
+    request: Request, data: str | bytes, response_code: int = http.OK
+) -> None:
     request.setResponseCode(response_code)
     if isinstance(data, str):
         data = data.encode('utf-8')
@@ -130,7 +143,9 @@ def deferred_respond_ok(request: Request, data, response_code=http.OK):
     request.finish()
 
 
-def deferred_respond_no_resource(request: Request, response_code=http.NOT_FOUND):
+def deferred_respond_no_resource(
+    request: Request, response_code: int = http.NOT_FOUND
+) -> None:
     request.setResponseCode(response_code)
     request.setHeader(b'Content-Type', b'text/plain; charset=ascii')
     request.write(b'No such resource')
@@ -268,7 +283,7 @@ def find_arguments_from_request(request: Request) -> dict[str, Any]:
     # Return a dictionary representing the different find parameters that
     # were passed in the request. The dictionary is usable as **kwargs for
     # the find method of collections.
-    result = {}
+    result: dict[str, Any] = {}
     args = decode_value(request.args)
     _add_selector_parameter(args, result)
     _add_fields_parameter(args, result)
@@ -1025,7 +1040,7 @@ class AutocreateConfigResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.cfg_mgr.autocreate.create')
-    def render_POST(self, request: Request, content):
+    def render_POST(self, request: Request, content) -> NOT_DONE_YET:
         def on_callback(config_id):
             location = uri_append_path(request.path, config_id)
             request.setHeader(b'Location', location.encode('ascii'))
@@ -1050,7 +1065,7 @@ class ConfigsResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.cfg_mgr.configs.read')
-    def render_GET(self, request: Request):
+    def render_GET(self, request: Request) -> NOT_DONE_YET:
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(configs):
@@ -1066,7 +1081,7 @@ class ConfigsResource(AuthResource):
 
     @json_request_entity
     @required_acl('provd.cfg_mgr.configs.create')
-    def render_POST(self, request: Request, content):
+    def render_POST(self, request: Request, content) -> NOT_DONE_YET:
         # XXX praise KeyError
         config = content['config']
 
@@ -1097,7 +1112,7 @@ class ConfigResource(AuthResource):
 
     @json_response_entity
     @required_acl('provd.cfg_mgr.configs.{config_id}.read')
-    def render_GET(self, request: Request):
+    def render_GET(self, request: Request) -> NOT_DONE_YET:
         def on_callback(config):
             if config is None:
                 deferred_respond_no_resource(request)

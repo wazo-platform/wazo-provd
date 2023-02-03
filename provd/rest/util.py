@@ -9,14 +9,14 @@ PROV_MIME_TYPE = 'application/vnd.proformatique.provd+json'
 
 def uri_append_path(base: bytes | str, *path: bytes | str) -> str:
     """Append path to base URI.
-    
+
     >>> uri_append_path('http://localhost/', 'foo')
     'http://localhost/foo
     >>> uri_append_path('http://localhost/bar', 'foo')
     'http://localhost/bar/foo'
     >>> uri_append_path('http://localhost/bar', 'foo', 'bar')
     'http://localhost/bar/foo/bar'
-    
+
     """
     if not path:
         return decode_bytes(base)

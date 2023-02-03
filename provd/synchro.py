@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization primitives for event driven systems."""
-
+from __future__ import annotations
 
 import logging
 from collections import deque
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,26 +45,29 @@ class _DeferredRWLock_Base:
 
 class DeferredRWLock:
     """A read-write lock for event driven systems.
-    
+
     Instances of this class have the following attributes:
       read_lock -- the read lock
       write_lock -- the write lock
-    
+
     Both locks have the same interface as the twisted.internet.defer.DeferredLock.
-    
+
     Writers are privileged. No support for re-entry, since it's impossible
     without adding explicit 'task' identifier.
-    
+
     """
+
     def __init__(self):
         self._read_waiting: deque[Deferred] = deque()
         self._write_waiting: deque[Deferred] = deque()
         self._reading = 0
         self._writing = 0
-        self.read_lock = _DeferredRWLock_Base(self._acquire_read_lock,
-                                              self._release_read_lock)
-        self.write_lock = _DeferredRWLock_Base(self._acquire_write_lock,
-                                               self._release_write_lock)
+        self.read_lock = _DeferredRWLock_Base(
+            self._acquire_read_lock, self._release_read_lock
+        )
+        self.write_lock = _DeferredRWLock_Base(
+            self._acquire_write_lock, self._release_write_lock
+        )
 
     def _acquire_read_lock(self):
         logger.debug('Waiting for read lock acquisition of RWLock %s', self)
@@ -100,7 +104,7 @@ class DeferredRWLock:
             assert not self._writing
             # someone is reading...
             if self._write_waiting:
-                # ...and someone is waiting for write 
+                # ...and someone is waiting for write
                 # do nothing
                 pass
             elif self._read_waiting:

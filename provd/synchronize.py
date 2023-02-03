@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
+
 from twisted.internet import defer, threads
 from wazo_amid_client import Client as AmidClient
 
@@ -26,14 +28,15 @@ class AMIError(Exception):
 
 
 class AsteriskAMISynchronizeService:
-
     TYPE = 'AsteriskAMI'
 
     def __init__(self, amid_client):
         self._amid = amid_client
 
     def _sip_notify(self, destination, event, extra_vars=None):
-        logger.debug('Notify %s, event %s, extra_vars: %s', destination, event, extra_vars)
+        logger.debug(
+            'Notify %s, event %s, extra_vars: %s', destination, event, extra_vars
+        )
         extra_vars = extra_vars or []
         variables = [f'Event={event}']
         if extra_vars:
@@ -76,7 +79,7 @@ def unregister_sync_service():
         logger.info('No synchronize service registered')
 
 
-def get_sync_service() -> AsteriskAMISynchronizeService:
+def get_sync_service() -> AsteriskAMISynchronizeService | None:
     """Return the globally registered synchronize service or None if no
     synchronize service has been registered.
 
@@ -88,10 +91,14 @@ class SynchronizeException(Exception):
     pass
 
 
-def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
+def standard_sip_synchronize(
+    device: dict[str, Any], event: str = 'check-sync', extra_vars=None
+):
     sync_service = _SYNC_SERVICE
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
-        return defer.fail(SynchronizeException(f'Incompatible sync service: {sync_service}'))
+        return defer.fail(
+            SynchronizeException(f'Incompatible sync service: {sync_service}')
+        )
 
     for fun in (_synchronize_by_peer, _synchronize_by_ip):
         d = fun(device, event, sync_service, extra_vars)
@@ -99,21 +106,32 @@ def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
             logger.debug('Using synchronize function %s', fun)
             return d
 
-    return defer.fail(SynchronizeException('not enough information to synchronize device'))
+    return defer.fail(
+        SynchronizeException('not enough information to synchronize device')
+    )
 
 
-def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
+def _synchronize_by_peer(
+    device: dict[str, Any], event: str, ami_sync_service, extra_vars=None
+):
     if not (peer := device.get('remote_state_sip_username')):
         return
 
-    # all devices in autoprov have the same peer starting with "ap" use the ip to avoid restarting all phones
+    # all devices in autoprov have the same peer starting with "ap"
+    # use the ip to avoid restarting all phones
     if peer.startswith('ap') and len(peer) == 10:
         return None
 
-    return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event, extra_vars)
+    return threads.deferToThread(
+        ami_sync_service.sip_notify_by_peer, peer, event, extra_vars
+    )
 
 
-def _synchronize_by_ip(device, event, ami_sync_service, extra_vars=None):
+def _synchronize_by_ip(
+    device: dict[str, Any], event: str, ami_sync_service, extra_vars=None
+):
     if not (ip := device.get('ip')):
         return None
-    return threads.deferToThread(ami_sync_service.sip_notify_by_ip, ip, event, extra_vars)
+    return threads.deferToThread(
+        ami_sync_service.sip_notify_by_ip, ip, event, extra_vars
+    )

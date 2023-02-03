@@ -5,6 +5,8 @@
 be modified after its creation.
 
 """
+from __future__ import annotations
+
 from urllib.request import ProxyHandler
 
 

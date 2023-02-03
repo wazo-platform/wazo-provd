@@ -46,9 +46,18 @@ Here's examples of valid selector and the documents the selector will match:
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Any
+from typing import Any, Literal, TypedDict, Union
+
+from twisted.internet.defer import Deferred
 
 ID_KEY = 'id'
+
+
+class BaseDocumentDict(TypedDict):
+    id: str
+
+
+Document = Union[BaseDocumentDict, dict[str, Any]]
 
 
 class InvalidIdError(Exception):
@@ -56,17 +65,16 @@ class InvalidIdError(Exception):
 
 
 class NonDeletableError(Exception):
-
-    def __init__(self, document: dict):
-        super().__init__(f'The document {document} is not deletable')
-        self.document = document
+    def __init__(self, document_id: str) -> None:
+        super().__init__(f'The document {document_id} is not deletable')
+        self.document = document_id
 
 
 class AbstractDocumentCollection(metaclass=ABCMeta):
     """A collection of documents."""
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Close the collection. This method may be called more than once, and
         if it doesn't raise an exception on the first time, it should not
         raise an exception the next times it is called.
@@ -74,7 +82,7 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def insert(self, document: dict):
+    def insert(self, document: Document) -> Deferred:
         """Store a new document in the collection and return a deferred that
         will fire with the ID of the newly added document once the document
         has been successfully inserted.
@@ -89,7 +97,7 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def update(self, document: dict):
+    def update(self, document: Document) -> Deferred:
         """Update the document with the current document and return a
         deferred that fire with None once the document has been successfully
         updated.
@@ -101,7 +109,7 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def delete(self, document_id: str):
+    def delete(self, document_id: str) -> Deferred:
         """Delete the document with the given ID and return a deferred that
         fire with None once the document with the given id has been
         successfully deleted.
@@ -112,14 +120,21 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def retrieve(self, document_id: str):
+    def retrieve(self, document_id: str) -> Document:
         """Return a deferred that will fire with the document with the given
         ID, or fire with None if there's no such document.
 
         """
 
     @abstractmethod
-    def find(self, selector: dict, fields: list[str], skip: int, limit: int, sort: tuple[str, int]):
+    def find(
+        self,
+        selector: dict,
+        fields: list[str],
+        skip: int,
+        limit: int,
+        sort: tuple[str, int],
+    ):
         """Return a deferred that will fire with an iterator over documents
         that match the selector.
 
@@ -163,6 +178,12 @@ class AbstractDocumentCollection(metaclass=ABCMeta):
         """
 
 
+class AbstractBackend(metaclass=ABCMeta):
+    """ """
+
+    pass
+
+
 class AbstractDatabase(metaclass=ABCMeta):
     """A database is a group of zero or more document collections."""
 
@@ -175,7 +196,7 @@ class AbstractDatabase(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def collection(self, collection_id: str) -> AbstractDatabase:
+    def collection(self, collection_id: str) -> AbstractDocumentCollection:
         """Return the collection with the given id.
 
         Raise a ValueError if there's no collection with the given id and/or
@@ -187,7 +208,11 @@ class AbstractDatabase(metaclass=ABCMeta):
 class AbstractDatabaseFactory(metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
-    def new_database(db_type: str, generator: str, **kwargs: Any) -> AbstractDatabase:
+    def new_database(
+        db_type: Literal['json'],
+        generator: Literal['default', 'numeric', 'uuid'],
+        **kwargs: Any,
+    ) -> AbstractDatabase:
         """Return a new database object.
 
         - type is a string identifying the type of database to create.

@@ -29,7 +29,7 @@ services:
       - "./provd/configs/default:/var/lib/wazo-provd/jsondb/configs/default"
       - "./provd/configs/defaultconfigdevice:/var/lib/wazo-provd/jsondb/configs/defaultconfigdevice"
       - "./provd/configs/autoprov:/var/lib/wazo-provd/jsondb/configs/autoprov"
-      # - "${LOCAL_GIT_REPOS}/xivo-lib-python/xivo:/opt/venv/lib/python2.7/site-packages/xivo"
+      # - "${LOCAL_GIT_REPOS}/xivo-lib-python/xivo:/opt/venv/lib/python3.9/site-packages/xivo"
     ports:
       - "8666"
       - "8667"

@@ -1,10 +1,14 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import builtins
 import logging
 import os.path
+from collections.abc import Generator
+from typing import Any, Callable, TYPE_CHECKING
 
+from twisted.internet.defer import Deferred
 from zope.interface import implementer
 
 import provd.config
@@ -34,6 +38,11 @@ from xivo.status import Status
 from xivo.token_renewer import TokenRenewer
 from xivo_bus.consumer import BusConsumer
 
+if TYPE_CHECKING:
+    from .persist.common import AbstractDatabase
+    from .config import Options, ProvdConfigDict, BusConfigDict
+
+
 logger = logging.getLogger(__name__)
 
 LOG_FILE_NAME = '/var/log/wazo-provd.log'
@@ -43,28 +52,29 @@ ONE_DAY_SEC = 86400
 
 
 # given in command line to redirect logs to standard logging
-def twistd_logs():
+def twistd_logs() -> Callable[[dict[str, Any]], None]:
     return log.PythonLoggingObserver().emit
 
 
 class ProvisioningService(Service):
     # has an 'app' attribute after starting
+    app: ProvisioningApplication
 
     _DB_FACTORIES = {
         'json': JsonDatabaseFactory(),
     }
 
-    def __init__(self, config):
+    def __init__(self, config: ProvdConfigDict) -> None:
         self._config = config
 
-    def _extract_database_specific_config(self):
+    def _extract_database_specific_config(self) -> dict[str, Any]:
         return {
             k: v
             for k, v in self._config['database'].items()
             if k not in ['type', 'generator']
         }
 
-    def _create_database(self):
+    def _create_database(self) -> AbstractDatabase:
         db_type = self._config['database']['type']
         db_generator = self._config['database']['generator']
         db_specific_config = self._extract_database_specific_config()
@@ -77,7 +87,7 @@ class ProvisioningService(Service):
         db_factory = self._DB_FACTORIES[db_type]
         return db_factory.new_database(db_type, db_generator, **db_specific_config)
 
-    def _close_database(self):
+    def _close_database(self) -> None:
         logger.info('Closing database...')
         try:
             self._database.close()
@@ -85,7 +95,7 @@ class ProvisioningService(Service):
             logger.error('Error while closing database', exc_info=True)
         logger.info('/Database closed')
 
-    def startService(self):
+    def startService(self) -> None:
         self._database = self._create_database()
         try:
             cfg_collection = ConfigCollection(self._database.collection('configs'))
@@ -114,7 +124,7 @@ class ProvisioningService(Service):
         else:
             Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> None:
         Service.stopService(self)
         try:
             self.app.close()
@@ -126,22 +136,29 @@ class ProvisioningService(Service):
 
 
 class ProcessService(Service):
-    def __init__(self, prov_service, config):
+    request_processing: ident.RequestProcessingService
+
+    def __init__(
+        self, prov_service: ProvisioningService, config: ProvdConfigDict
+    ) -> None:
         self._prov_service = prov_service
         self._config = config
 
-    def _get_conf_file_globals(self):
+    def _get_conf_file_globals(self) -> dict[str, Any]:
+        # This creates a dict of all variables, classes and methods in both the
+        # `ident` and `pgasso` module with `app` mushed in there. It would be
+        # unrealistic and unreliable to type all values. But perhaps there must be a better way.
         # Pre: hasattr(self._prov_service, 'app')
-        conf_file_globals = {}
+        conf_file_globals: dict[str, Any] = {}
         conf_file_globals |= ident.__dict__
         conf_file_globals |= pgasso.__dict__
         conf_file_globals['app'] = self._prov_service.app
         return conf_file_globals
 
-    def _create_processor(self, name):
+    def _create_processor(self, name: str) -> dict[str, Any]:
         # name is the name of the processor, for example 'info_extractor'
         dirname = self._config['general']['request_config_dir']
-        config_name = self._config['general'][name]
+        config_name = self._config['general'][name]  # type: ignore[literal-required]
         filename = f'{name}.py.conf.{config_name}'
         pathname = os.path.join(dirname, filename)
         conf_file_globals = self._get_conf_file_globals()
@@ -159,7 +176,7 @@ class ProcessService(Service):
             )
         return conf_file_globals[name]
 
-    def startService(self):
+    def startService(self) -> None:
         # Pre: hasattr(self._prov_service, 'app')
         dev_info_extractor = self._create_processor('info_extractor')
         dev_retriever = self._create_processor('retriever')
@@ -171,12 +188,17 @@ class ProcessService(Service):
 
 
 class HTTPProcessService(Service):
-    def __init__(self, prov_service, process_service, config):
+    def __init__(
+        self,
+        prov_service: ProvisioningService,
+        process_service: ProcessService,
+        config: ProvdConfigDict,
+    ) -> None:
         self._prov_service = prov_service
         self._process_service = process_service
         self._config = config
 
-    def startService(self):
+    def startService(self) -> None:
         app = self._prov_service.app
         process_service = self._process_service.request_processing
         num_http_proxies = self._config['general']['num_http_proxies']
@@ -193,26 +215,31 @@ class HTTPProcessService(Service):
         self._tcp_server.startService()
         Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> Deferred:
         Service.stopService(self)
         return self._tcp_server.stopService()
 
 
 class TFTPProcessService(Service):
-    def __init__(self, prov_service, process_service, config):
+    def __init__(
+        self,
+        prov_service: ProvisioningService,
+        process_service: ProcessService,
+        config: ProvdConfigDict,
+    ) -> None:
         self._prov_service = prov_service
         self._process_service = process_service
         self._config = config
         self._tftp_protocol = TFTPProtocol()
 
-    def privilegedStartService(self):
+    def privilegedStartService(self) -> None:
         port = self._config['general']['tftp_port']
         logger.info('Binding TFTP provisioning service to port %s', port)
         self._udp_server = internet.UDPServer(port, self._tftp_protocol)
         self._udp_server.privilegedStartService()
         Service.privilegedStartService(self)
 
-    def startService(self):
+    def startService(self) -> None:
         app = self._prov_service.app
         process_service = self._process_service.request_processing
         tftp_process_service = ident.TFTPRequestProcessingService(
@@ -221,17 +248,19 @@ class TFTPProcessService(Service):
         self._tftp_protocol.set_tftp_request_processing_service(tftp_process_service)
         Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> Deferred:
         Service.stopService(self)
         return self._udp_server.stopService()
 
 
 class DHCPProcessService(Service):
     # has a 'dhcp_request_processing_service' attribute once started
-    def __init__(self, process_service):
+    dhcp_request_processing_service: ident.DHCPRequestProcessingService
+
+    def __init__(self, process_service: ProcessService) -> None:
         self._process_service = process_service
 
-    def startService(self):
+    def startService(self) -> None:
         process_service = self._process_service.request_processing
         self.dhcp_request_processing_service = ident.DHCPRequestProcessingService(
             process_service
@@ -240,14 +269,19 @@ class DHCPProcessService(Service):
 
 
 class RemoteConfigurationService(Service):
-    def __init__(self, prov_service, dhcp_process_service, config):
+    def __init__(
+        self,
+        prov_service: ProvisioningService,
+        dhcp_process_service: DHCPProcessService,
+        config: ProvdConfigDict,
+    ) -> None:
         self._prov_service = prov_service
         self._dhcp_process_service = dhcp_process_service
         self._config = config
         auth_client = auth.get_auth_client(**self._config['auth'])
         auth.get_auth_verifier().set_client(auth_client)
 
-    def startService(self):
+    def startService(self) -> None:
         app = self._prov_service.app
         dhcp_request_processing_service = (
             self._dhcp_process_service.dhcp_request_processing_service
@@ -290,24 +324,28 @@ class RemoteConfigurationService(Service):
         self._tcp_server.startService()
         Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> Deferred:
         Service.stopService(self)
         return self._tcp_server.stopService()
 
 
 class SynchronizeService(Service):
-    def __init__(self, config):
+    def __init__(self, config: ProvdConfigDict) -> None:
         self._config = config
 
-    def _new_sync_service_asterisk_ami(self):
+    def _new_sync_service_asterisk_ami(
+        self,
+    ) -> provd.synchronize.AsteriskAMISynchronizeService:
         amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
         return provd.synchronize.AsteriskAMISynchronizeService(amid_client)
 
-    def _new_sync_service_none(self):
+    def _new_sync_service_none(self) -> None:
         return None
 
-    def _new_sync_service(self, sync_service_type):
-        name = '_new_sync_service_' + sync_service_type
+    def _new_sync_service(
+        self, sync_service_type: str
+    ) -> provd.synchronize.AsteriskAMISynchronizeService | None:
+        name = f'_new_sync_service_{sync_service_type}'
         try:
             fun = getattr(self, name)
         except AttributeError:
@@ -315,7 +353,7 @@ class SynchronizeService(Service):
 
         return fun()
 
-    def startService(self):
+    def startService(self) -> None:
         sync_service = self._new_sync_service(
             self._config['general']['sync_service_type']
         )
@@ -323,28 +361,32 @@ class SynchronizeService(Service):
             provd.synchronize.register_sync_service(sync_service)
         Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> None:
         Service.stopService(self)
         provd.synchronize.unregister_sync_service()
 
 
 class LocalizationService(Service):
-    def startService(self):
+    def startService(self) -> None:
         l10n_service = provd.localization.LocalizationService()
         provd.localization.register_localization_service(l10n_service)
         Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> None:
         Service.stopService(self)
         provd.localization.unregister_localization_service()
 
 
 class TokenRenewerService(Service):
-    def __init__(self, prov_service, config):
+    _token_renewer: TokenRenewer
+
+    def __init__(
+        self, prov_service: ProvisioningService, config: ProvdConfigDict
+    ) -> None:
         self._config = config
         self._prov_service = prov_service
 
-    def startService(self):
+    def startService(self) -> None:
         app = self._prov_service.app
         auth_client = auth.get_auth_client(**self._config['auth'])
         amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
@@ -355,17 +397,17 @@ class TokenRenewerService(Service):
         self._token_renewer.start()
         Service.startService(self)
 
-    def stopService(self):
+    def stopService(self) -> None:
         self._token_renewer.stop()
         Service.stopService(self)
 
 
 class ProvdBusConsumer(BusConsumer):
     @classmethod
-    def from_config(cls, bus_config):
+    def from_config(cls, bus_config: BusConfigDict) -> ProvdBusConsumer:
         return cls(name='wazo-provd', **bus_config)
 
-    def provide_status(self, status):
+    def provide_status(self, status: dict[str, Any]) -> None:
         status['bus_consumer']['status'] = (
             Status.ok if self.consumer_connected() else Status.fail
         )
@@ -386,13 +428,17 @@ class DevicesDeletionService(Service):
 
 
 class BusEventConsumerService(DevicesDeletionService):
+    _bus_consumer: BusConsumer | None
+
     @defer.inlineCallbacks
-    def _auth_tenant_deleted(self, event):
+    def _auth_tenant_deleted(
+        self, event: dict[str, Any]
+    ) -> Generator[Deferred, None, None]:
         logger.info("auth_tenant_deleted event consumed: %s", event)
         tenant_uuid = event['uuid']
         yield self.delete_devices(tenant_uuid)
 
-    def startService(self):
+    def startService(self) -> None:
         self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
         status.get_status_aggregator().add_provider(self._bus_consumer.provide_status)
         self._bus_consumer.subscribe('auth_tenant_deleted', self._auth_tenant_deleted)
@@ -400,24 +446,27 @@ class BusEventConsumerService(DevicesDeletionService):
         self._bus_consumer.start()
         Service.startService(self)
 
-    def stopService(self):
-        self._bus_consumer.stop()
+    def stopService(self) -> None:
+        if self._bus_consumer:
+            self._bus_consumer.stop()
         self._bus_consumer = None
         Service.stopService(self)
 
 
 class SyncdbService(DevicesDeletionService):
-    def __init__(self, prov_service, config):
+    def __init__(
+        self, prov_service: ProvisioningService, config: ProvdConfigDict
+    ) -> None:
         super().__init__(prov_service, config)
         auth_client = auth.get_auth_client(**self._config['auth'])
         auth.get_auth_verifier().set_client(auth_client)
         self._looping_call = task.LoopingCall(self.remove_devices_for_deleted_tenants)
 
-    def startService(self):
+    def startService(self) -> None:
         start_sec = int(self._config['general']['syncdb']['start_sec'])
         reactor.callLater(start_sec, self.on_service_started)
 
-    def on_service_started(self):
+    def on_service_started(self) -> None:
         interval_sec = ONE_DAY_SEC
         try:
             interval_sec = int(self._config['general']['syncdb']['interval_sec'])
@@ -444,7 +493,7 @@ class SyncdbService(DevicesDeletionService):
         for t in removed_tenants:
             yield self.delete_devices(t)
 
-    def stopService(self):
+    def stopService(self) -> None:
         try:
             self._looping_call.stop()
         except builtins.AssertionError:
@@ -458,16 +507,16 @@ class ProvisioningServiceMaker:
     description = 'A provisioning server.'
     options = provd.config.Options
 
-    def _configure_logging(self, options):
+    def _configure_logging(self, options: Options) -> None:
         setup_logging(LOG_FILE_NAME, debug=options['verbose'])
         security.setup_logging()
         silence_loggers(['amqp.connection.Connection.heartbeat_tick'], logging.INFO)
 
-    def _read_config(self, options):
+    def _read_config(self, options: Options) -> ProvdConfigDict:
         logger.info('Reading application configuration')
         return provd.config.get_config(options)
 
-    def makeService(self, options):
+    def makeService(self, options: Options) -> MultiService:
         self._configure_logging(options)
 
         config = self._read_config(options)

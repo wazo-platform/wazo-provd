@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-# Copyright 2014-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2014-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import argparse
 import os
@@ -33,26 +34,28 @@ FILENAMES = list(chain(SCCP_7912, SCCP_7940))
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--simult', type=int, default=10,
-                        help='number of simultaneous request')
-    parser.add_argument('-l', '--loop', type=int, default=10,
-                        help='number of request loop to run')
-    parser.add_argument('hostname',
-                        help='hostname')
+    parser.add_argument(
+        '-s', '--simult', type=int, default=10, help='number of simultaneous request'
+    )
+    parser.add_argument(
+        '-l', '--loop', type=int, default=10, help='number of request loop to run'
+    )
+    parser.add_argument('hostname', help='hostname')
 
     parsed_args = parser.parse_args()
 
     stats = Statistics()
     stats.on_start()
     try:
-        run_tftp_bench(parsed_args.hostname, parsed_args.loop, parsed_args.simult, stats)
+        run_tftp_bench(
+            parsed_args.hostname, parsed_args.loop, parsed_args.simult, stats
+        )
     finally:
         stats.on_end()
         stats.display()
 
 
 class Statistics:
-
     def __init__(self):
         self._rrq_success = 0
         self._rrq_failure = 0
@@ -87,7 +90,7 @@ def run_tftp_bench(hostname, loop, simult, stats):
 
     # keep reference to Popen object since they do a non-blocking wait
     # when they are garbage collected, which is something we DON'T want
-    process_by_pid = {}
+    process_by_pid: dict[int, subprocess.Popen] = {}
     devnull_fd = os.open(os.devnull, os.O_RDWR)
     hostname_ip = socket.gethostbyname(hostname)
     try:
@@ -103,7 +106,9 @@ def run_tftp_bench(hostname, loop, simult, stats):
                     del process_by_pid[pid]
                     cur_simult -= 1
             command = ['atftp', '-g', '-r', filename, '-l', os.devnull, hostname_ip]
-            p = subprocess.Popen(command, stdin=devnull_fd, stdout=devnull_fd, stderr=devnull_fd)
+            p = subprocess.Popen(
+                command, stdin=devnull_fd, stdout=devnull_fd, stderr=devnull_fd
+            )
             process_by_pid[p.pid] = p
             cur_simult += 1
     finally:

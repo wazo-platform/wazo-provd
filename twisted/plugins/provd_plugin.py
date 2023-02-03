@@ -4,8 +4,9 @@
 # Twisted Application Plugin (tap) file
 
 from twisted.internet import epollreactor
+
 epollreactor.install()
 
-from provd.main import ProvisioningServiceMaker
+from provd.main import ProvisioningServiceMaker  # noqa: E402
 
 service_maker = ProvisioningServiceMaker()
