@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization services for devices."""
@@ -36,7 +35,7 @@ class AsteriskAMISynchronizeService:
     def _sip_notify(self, destination, event, extra_vars=None):
         logger.debug('Notify %s, event %s, extra_vars: %s', destination, event, extra_vars)
         extra_vars = extra_vars or []
-        variables = ['Event={}'.format(event)]
+        variables = [f'Event={event}']
         if extra_vars:
             variables.extend(extra_vars)
 
@@ -46,7 +45,7 @@ class AsteriskAMISynchronizeService:
         self._amid.action('PJSIPNotify', params)
 
     def sip_notify_by_ip(self, ip, event, extra_vars=None):
-        destination = {'URI': 'sip:anonymous@{}'.format(ip)}
+        destination = {'URI': f'sip:anonymous@{ip}'}
         self._sip_notify(destination, event, extra_vars)
 
     def sip_notify_by_peer(self, peer, event, extra_vars=None):

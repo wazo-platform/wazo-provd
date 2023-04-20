@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import functools
@@ -54,7 +53,7 @@ def accept(mime_types):
             else:
                 request.setResponseCode(http.NOT_ACCEPTABLE)
                 request.setHeader(b'Content-Type', b'text/plain; charset=UTF-8')
-                return f"You must accept one of the following MIME type '{mime_types}'.".encode('utf-8')
+                return f"You must accept one of the following MIME type '{mime_types}'.".encode()
         return aux
     return in_accept
 
@@ -67,7 +66,7 @@ def content_type(mime_type):
             if not content_type or content_type not in decode_bytes(mime_type):
                 request.setResponseCode(http.UNSUPPORTED_MEDIA_TYPE)
                 request.setHeader(b'Content-Type', b'text/plain; charset=UTF-8')
-                return f"Entity must be in one of these media types '{mime_type}'.".encode('utf-8')
+                return f"Entity must be in one of these media types '{mime_type}'.".encode()
             return fun(self, request)
         return aux
     return in_content_type

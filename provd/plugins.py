@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from typing import Any, Callable
 import tarfile
 import weakref
 from binascii import a2b_hex
-from io import open
 
 from twisted.internet.defer import Deferred
 from xivo_fetchfw.download import DefaultDownloader, RemoteFile, SHA1Hook, \
@@ -207,7 +206,7 @@ class Plugin(metaclass=ABCMeta):
 
         """
         plugin_info_path = os.path.join(self._plugin_dir, _PLUGIN_INFO_FILENAME)
-        with open(plugin_info_path, 'r') as f:
+        with open(plugin_info_path) as f:
             raw_plugin_info = json.load(f)
         _check_raw_plugin_info(raw_plugin_info, self.id, _PLUGIN_INFO_INSTALLED_KEYS)
         localize_fun = _new_localize_fun()
@@ -971,9 +970,9 @@ class PluginManager:
 
         """
         try:
-            with open(self._db_pathname(), 'r') as f:
+            with open(self._db_pathname()) as f:
                 all_raw_plugin_info = json.load(f)
-        except IOError:
+        except OSError:
             return {}
 
         localize_fun = _new_localize_fun()
@@ -991,7 +990,7 @@ class PluginManager:
 
     def _get_installed_plugin_info(self, plugin_dir: str) -> dict[str, Any]:
         plugin_info_path = os.path.join(plugin_dir, _PLUGIN_INFO_FILENAME)
-        with open(plugin_info_path, 'r') as f:
+        with open(plugin_info_path) as f:
             return json.load(f)
 
     def list_installed(self) -> dict[str, Any]:

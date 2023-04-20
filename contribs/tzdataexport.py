@@ -99,7 +99,7 @@ def _amount_of_time_to_seconds(timestr):
     return res * sign
 
 
-class RuleLine(object):
+class RuleLine:
     """Represent a rule line from a tz source file.
 
     Each instance of this class has three attributes:
@@ -207,7 +207,7 @@ class RuleLine(object):
 
     @classmethod
     def _variable_day_to_str(cls, week, weekday):
-        return "W%s.%s" % (week, weekday)
+        return f"W{week}.{weekday}"
 
     @classmethod
     def _onfield_to_day(cls, onfield):
@@ -271,7 +271,7 @@ class RuleLine(object):
         return {"month": self.in_, "day": self.on, "time": self.at}
 
 
-class RuleSet(object):
+class RuleSet:
     """Represent a set of rules with an identical name."""
 
     def __init__(self, name):
@@ -323,7 +323,7 @@ class RuleSet(object):
         }
 
 
-class ZoneLine(object):
+class ZoneLine:
     """Represent a zone line from a tz source file.
 
     Each instance of this class has three attributes:
@@ -351,7 +351,7 @@ class ZoneLine(object):
         return _amount_of_time_to_seconds(gmtofffield)
 
 
-class LinkLine(object):
+class LinkLine:
     """Represent a link line from a tz source file.
 
     Each instance of this class has two attributes:
@@ -430,7 +430,7 @@ def _parse_tz_source_file(lines):
                 logger.debug("Adding link '%s' to links list", cur_line)
                 links.append(LinkLine(*tokens[1:]))
             else:
-                err_msg = "Invalid first token '%s' in line '%s'" % (
+                err_msg = "Invalid first token '{}' in line '{}'".format(
                     tokens[0],
                     cur_line,
                 )

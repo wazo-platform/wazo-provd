@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import copy
@@ -38,14 +38,14 @@ class InvalidIdError(Exception):
 class DeviceNotInProvdTenantError(Exception):
 
     def __init__(self, tenant_uuid):
-        super(DeviceNotInProvdTenantError, self).__init__('Device not in provd tenant')
+        super().__init__('Device not in provd tenant')
         self.tenant_uuid = tenant_uuid
 
 
 class TenantInvalidForDeviceError(Exception):
 
     def __init__(self, tenant_uuid):
-        super(TenantInvalidForDeviceError, self).__init__('Tenant invalid for device')
+        super().__init__('Tenant invalid for device')
         self.tenant_uuid = tenant_uuid
 
 

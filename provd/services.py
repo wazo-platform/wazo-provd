@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Standardized service definition and helper."""
@@ -22,7 +22,7 @@ class InvalidParameterError(Exception):
 
 
 class AbstractConfigurationService(metaclass=ABCMeta):
-    """Interface for a "configuration service".
+    r"""Interface for a "configuration service".
 
     This service offers an easy way to discover a certain number of "parameters"
     exposed by an underlying object, get the values of these parameters and
@@ -299,7 +299,7 @@ class JsonConfigPersister:
         try:
             with open(self._filename) as f:
                 self._cache = json.load(f)
-        except IOError as e:
+        except OSError as e:
             logger.debug('Could not load file %s: %s', self._filename, e)
         except ValueError as e:
             logger.warning('Invalid content in file %s: %s', self._filename, e)
