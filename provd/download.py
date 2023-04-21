@@ -1,7 +1,7 @@
 # Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Extension to the fetchfw.download module so that it's usable in an
+"""Extension to the `fetchfw.download` module so that it's usable in an
 asynchronous application.
 
 """
@@ -16,7 +16,7 @@ def async_download(remote_file, supp_hooks=None):
     """Download a file asynchronously.
         
     Return a deferred that will fire with None once the download is completed
-    or fire its errback if the download failed.
+    or fire its `errback` if the download failed.
     
     """
     return threads.deferToThread(remote_file.download, supp_hooks or [])
@@ -44,7 +44,7 @@ def async_download_with_oip(remote_file, supp_hooks=None):
     """Download a file asynchronously.
     
     Return a tuple (deferred, operation in progress). The deferred will fire
-    with None once the download is completed or fire its errback if the
+    with None once the download is completed or fire its `errback` if the
     download failed.
     
     """
@@ -65,25 +65,28 @@ def async_download_multiseq_with_oip(remote_files):
     remote_files = list(remote_files)
     top_oip = OperationInProgress(state=OIP_PROGRESS)
     top_deferred = defer.Deferred()
-    # can't use nonlocal statement since we are using python 2, so we
-    # use a list to hold the current file index
-    cur_file_idx = [-1]
+    cur_file_idx = -1
+
     def download_next_file():
-        cur_file_idx[0] += 1
-        if cur_file_idx[0] < len(remote_files):
-            remote_file = remote_files[cur_file_idx[0]]
+        nonlocal cur_file_idx
+        cur_file_idx += 1
+        if cur_file_idx < len(remote_files):
+            remote_file = remote_files[cur_file_idx]
             dl_deferred, dl_oip = async_download_with_oip(remote_file)
             top_oip.sub_oips.append(dl_oip)
             dl_deferred.addCallbacks(callback, errback)
         else:
             top_oip.state = OIP_SUCCESS
             top_deferred.callback(None)
+
     def callback(res):
         # successful download of current file
         download_next_file()
+
     def errback(err):
         # failed download of current file
         top_oip.state = OIP_FAIL
         top_deferred.errback(err)
+
     download_next_file()
     return top_deferred, top_oip

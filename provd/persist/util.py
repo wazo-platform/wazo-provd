@@ -1,6 +1,8 @@
 # Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
+import contextlib
 import logging
 
 from provd.persist.common import ID_KEY, InvalidIdError, NonDeletableError
@@ -315,34 +317,26 @@ class SimpleBackendDocumentCollection:
 
         return aux
 
-    def _new_skip_iterator(self, skip, documents):
-        try:
+    def _new_skip_iterator(self, skip: int, documents):
+        with contextlib.suppress(StopIteration):
             documents = iter(documents)
             while skip > 0:
                 skip -= 1
                 next(documents)
-        except StopIteration:
-            # skip is larger than the number of elements -- do nothing
-            pass
         return documents
 
-    def _new_limit_iterator(self, limit, documents):
+    def _new_limit_iterator(self, limit: int | None, documents):
         if not limit:
             return documents
-        else:
 
-            def func(limit):
-                # limit is an argument to aux, else it will raise an
-                # UnboundLocalVariable exception (since we are using python 2)
-                try:
-                    while limit > 0:
-                        limit -= 1
-                        yield next(documents)
-                except StopIteration:
-                    # limit is larger than the number of elements -- do nothing
-                    pass
+        def func():
+            nonlocal limit
+            with contextlib.suppress(StopIteration):
+                while limit > 0:
+                    limit -= 1
+                    yield next(documents)
 
-            return func(limit)
+        return func()
 
     def _new_iterator(self, selector, documents):
         # Return an iterator that will return every documents matching
