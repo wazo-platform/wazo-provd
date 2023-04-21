@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 from abc import ABCMeta
 from io import StringIO
-from typing import Dict, Union
+from typing import Union
 
 from provd.servers.tftp.packet import ERR_FNF, Packet
 

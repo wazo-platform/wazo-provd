@@ -9,7 +9,7 @@ A packet is a dictionary object. A dgram (datagram) is a string object.
 from __future__ import annotations
 
 
-from typing import Dict, Union
+from typing import Union
 from provd.app import logger
 
 PacketOptions = dict[bytes, bytes]

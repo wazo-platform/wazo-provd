@@ -10,7 +10,7 @@ from collections import defaultdict
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import Dict, Union
+from typing import Union
 
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
