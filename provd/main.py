@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -9,7 +9,6 @@ from zope.interface import implementer
 import provd.config
 import provd.localization
 import provd.synchronize
-from io import open
 from provd import security
 from provd.app import ProvisioningApplication
 from provd.devices.config import ConfigCollection
@@ -131,7 +130,7 @@ class ProcessService(Service):
         pathname = os.path.join(dirname, filename)
         conf_file_globals = self._get_conf_file_globals()
         try:
-            with open(pathname, 'r') as f:
+            with open(pathname) as f:
                 exec(compile(f.read(), pathname, 'exec'), conf_file_globals)
         except Exception as e:
             logger.error('error while executing process config file "%s": %s', pathname, e)

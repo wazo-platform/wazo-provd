@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Provisioning server configuration module.
@@ -176,7 +175,7 @@ def _convert_cli_to_config(options):
 def _load_json_file(raw_value):
     # Return a dictionary representing the JSON document contained in the
     # file pointed by raw value. The file must be encoded in UTF-8.
-    with open(raw_value, 'r') as f:
+    with open(raw_value) as f:
         return json.load(f)
 
 

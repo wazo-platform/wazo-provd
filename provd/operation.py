@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2011-2014 Avencall
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 OIP_WAITING = 'waiting'
@@ -44,7 +43,7 @@ class OperationInProgress:
 
 
 def format_oip(oip):
-    """Format an operation in progress to a string.
+    r"""Format an operation in progress to a string.
     
     The format is '[label|]state[;current[/end]](\(sub_oips\))*'.
     

@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
@@ -10,7 +10,7 @@ from collections import defaultdict
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import Dict, Union
+from typing import Union
 
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
@@ -33,7 +33,7 @@ class RequestType(Enum):
     DHCP = 'dhcp'
 
 
-DHCPRequest = Dict[str, Union[str, Dict[str, str]]]
+DHCPRequest = dict[str, Union[str, dict[str, str]]]
 
 logger = logging.getLogger(__name__)
 
@@ -280,7 +280,7 @@ class IpDeviceRetriever(AbstractDeviceRetriever):
         return None
 
     def _get_candidate_devices(self, devices, dev_info):
-        devices_by_id = dict((device['id'], device) for device in devices)
+        devices_by_id = {device['id']: device for device in devices}
         self._filter_devices_by_key(devices_by_id, dev_info, 'mac')
         self._filter_devices_by_key(devices_by_id, dev_info, 'vendor')
         self._filter_devices_by_key(devices_by_id, dev_info, 'model')

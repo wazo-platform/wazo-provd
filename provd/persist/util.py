@@ -1,4 +1,4 @@
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -21,16 +21,14 @@ def _retrieve_doc_values(s_key, doc):
                     yield current_doc[current_s_key]
             elif isinstance(current_doc, list):
                 for elem in current_doc:
-                    for result in func(current_s_key, elem):
-                        yield result
+                    yield from func(current_s_key, elem)
         else:
             assert pre != current_s_key
             if post is None:
                 raise ValueError(f'invalid selector key "{s_key}"')
 
             if isinstance(current_doc, dict) and pre in current_doc:
-                for result in func(post, current_doc[pre]):
-                    yield result
+                yield from func(post, current_doc[pre])
 
     return func(s_key, doc)
 

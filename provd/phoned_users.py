@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2020-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2020-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 import logging
 
@@ -47,11 +46,11 @@ def add_wazo_phoned_user_service_url(
         enabled=_enable_string(False),
     )
     raw_config[
-        'XX_wazo_phoned_user_service_{}_enabled_url'.format(service_name)
+        f'XX_wazo_phoned_user_service_{service_name}_enabled_url'
     ] = formatted_enabled_url
 
     raw_config[
-        'XX_wazo_phoned_user_service_{}_disabled_url'.format(service_name)
+        f'XX_wazo_phoned_user_service_{service_name}_disabled_url'
     ] = formatted_disabled_url
 
 

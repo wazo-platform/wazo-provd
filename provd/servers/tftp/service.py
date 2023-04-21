@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """TFTP service definition module."""
@@ -7,11 +7,11 @@ from __future__ import annotations
 import os
 from abc import ABCMeta
 from io import StringIO
-from typing import Dict, Union
+from typing import Union
 
 from provd.servers.tftp.packet import ERR_FNF, Packet
 
-TFTPRequest = Dict[str, Union[str, Packet]]
+TFTPRequest = dict[str, Union[str, Packet]]
 
 
 class AbstractTFTPReadService(metaclass=ABCMeta):
@@ -85,7 +85,7 @@ class TFTPFileService:
         else:
             try:
                 fobj = open(rq_final_path, 'rb')
-            except IOError:
+            except OSError:
                 response.reject(ERR_FNF, b'File not found')
             else:
                 response.accept(fobj)
