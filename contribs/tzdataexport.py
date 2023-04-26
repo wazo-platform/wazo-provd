@@ -430,10 +430,7 @@ def _parse_tz_source_file(lines):
                 logger.debug("Adding link '%s' to links list", cur_line)
                 links.append(LinkLine(*tokens[1:]))
             else:
-                err_msg = "Invalid first token '{}' in line '{}'".format(
-                    tokens[0],
-                    cur_line,
-                )
+                err_msg = f"Invalid first token '{tokens[0]}' in line '{cur_line}'"
                 logger.error(err_msg)
                 raise ValueError(err_msg)
     except StopIteration:
