@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def to_ip(ip_string: str) -> bytes:
     """
     try:
         return socket.inet_aton(ip_string)
-    except socket.error:
+    except OSError:
         raise ValueError("'%s' is not a valid dotted quad IPv4 address")
 
 
@@ -69,7 +69,7 @@ def from_ip(packed_ip):
     """
     try:
         return socket.inet_ntoa(packed_ip)
-    except socket.error:
+    except OSError:
         raise ValueError("'%s' is not a valid packed IPv4 address")
 
 
