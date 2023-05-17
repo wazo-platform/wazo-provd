@@ -15,6 +15,7 @@ for example. We do not support the full POSIX locale identifiers (with codeset
 and modifiers) as for now since there would be no use.
 
 """
+from __future__ import annotations
 
 import logging
 import re
@@ -22,7 +23,7 @@ import weakref
 
 logger = logging.getLogger(__name__)
 
-_L10N_SERVICE = None
+_L10N_SERVICE: LocalizationService | None = None
 _LOCALE_REGEX = re.compile(r'^[a-z]{2,3}(?:_[A-Z]{2,3})?$')
 
 # List of events
@@ -81,7 +82,7 @@ class LocalizationService:
             self._locale = locale
             self._notify(LOCALE_CHANGED, None)
 
-    def get_locale(self):
+    def get_locale(self) -> str | None:
         """Return the current locale.
         
         If no locale has been set, return None.
@@ -89,15 +90,14 @@ class LocalizationService:
         """
         return self._locale
 
-    def get_locale_and_language(self):
+    def get_locale_and_language(self) -> tuple[str, str] | tuple[None, None]:
         """Return a tuple (locale, language) of the current locale."""
         if self._locale is None:
             return None, None
-        else:
-            return self._locale, self._locale.split('_', 1)[0]
+        return self._locale, self._locale.split('_', 1)[0]
 
 
-def register_localization_service(l10n_service):
+def register_localization_service(l10n_service: LocalizationService):
     logger.info('Registering localization service: %s', l10n_service)
     global _L10N_SERVICE
     _L10N_SERVICE = l10n_service
@@ -129,8 +129,7 @@ def get_locale():
     l10n_service = _L10N_SERVICE
     if l10n_service is None:
         return None
-    else:
-        return l10n_service.get_locale()
+    return l10n_service.get_locale()
 
 
 def get_locale_and_language():
@@ -142,5 +141,4 @@ def get_locale_and_language():
     l10n_service = _L10N_SERVICE
     if l10n_service is None:
         return None
-    else:
-        return l10n_service.get_locale_and_language()
+    return l10n_service.get_locale_and_language()

@@ -119,11 +119,10 @@ def to_mac(mac_string: str) -> str:
     '\xff\xff\xff\xff\xff\xff'
 
     """
-    m = _MAC_ADDR.match(mac_string)
-    if not m:
+    if not (match := _MAC_ADDR.match(mac_string)):
         raise ValueError('invalid MAC string')
-    sep = m.group(1)
-    if not sep:
+
+    if not (sep := match.group(1)):
         # no separator - length must be equal to 12 in this case
         if len(mac_string) != 12:
             raise ValueError('invalid MAC string')
@@ -182,7 +181,7 @@ def format_mac(mac_string: str, separator: str = ':', uppercase: bool = False):
     return from_mac(to_mac(mac_string), separator, uppercase)
 
 
-def norm_uuid(uuid_string):
+def norm_uuid(uuid_string: str) -> str:
     """Return a lowercase, separated by hyphen, representation of a UUID
     string.
 

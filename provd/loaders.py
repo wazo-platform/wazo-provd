@@ -1,7 +1,10 @@
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the jinja2.loaders module."""
+from __future__ import annotations
+
+from collections.abc import Sequence
 from os import walk
 from os.path import join, getmtime, sep
 from itertools import chain
@@ -10,12 +13,12 @@ from jinja2.loaders import split_template_path, BaseLoader
 from jinja2.utils import open_if_exists
 
 
-def _new_mtime_map(directories):
+def _new_mtime_map(directories: str | Sequence[str]) -> dict[str, float]:
     # Return a dictionary where keys are pathname and values are last
     # modification times
     if isinstance(directories, str):
         directories = [directories]
-    mtime_map = {}
+    mtime_map: dict[str, float] = {}
     for directory in directories:
         for dirpath, dirnames, filenames in walk(directory):
             for pathname in chain(dirnames, filenames):
@@ -58,8 +61,8 @@ class ProvdFileSystemLoader(BaseLoader):
             return contents, filename, uptodate
         raise TemplateNotFound(template)
 
-    def list_templates(self):
-        found = set()
+    def list_templates(self) -> list[str]:
+        found: set[str] = set()
         for searchpath in self._searchpath:
             for dirpath, _, filenames in walk(searchpath):
                 for filename in filenames:

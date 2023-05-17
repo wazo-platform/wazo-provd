@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Return the current UTC offset and DST rules of arbitrary timezones.
@@ -76,28 +76,34 @@ class TextTimezoneInfoDB:
             for line in fobj:
                 if line and not line.startswith('#'):
                     name, offset, dst_rule = line.rstrip().split()
-                    self._db[name] = {'utcoffset': Time(int(offset)),
-                                      'dst': self._parse_dst_rule(dst_rule)}
+                    self._db[name] = {
+                        'utcoffset': Time(int(offset)),
+                        'dst': self._parse_dst_rule(dst_rule),
+                    }
         finally:
             fobj.close()
 
     @classmethod
-    def _parse_dst_rule(cls, str):
-        if str == '-':
+    def _parse_dst_rule(cls, string: str):
+        if string == '-':
             return None
-        else:
-            tokens = str.split(';')
-            return {'start': cls._parse_dst_change(tokens[0]),
-                    'end': cls._parse_dst_change(tokens[1]),
-                    'save': Time(int(tokens[2])),
-                    'as_string': str}
+
+        tokens = string.split(';')
+        return {
+            'start': cls._parse_dst_change(tokens[0]),
+            'end': cls._parse_dst_change(tokens[1]),
+            'save': Time(int(tokens[2])),
+            'as_string': string,
+        }
 
     @classmethod
-    def _parse_dst_change(cls, str):
-        tokens = str.split('/')
-        return {'month': int(tokens[0]),
-                'day': tokens[1],
-                'time': Time(int(tokens[2]))}
+    def _parse_dst_change(cls, string: str):
+        tokens = string.split('/')
+        return {
+            'month': int(tokens[0]),
+            'day': tokens[1],
+            'time': Time(int(tokens[2]))
+        }
 
     def get_timezone_info(self, timezone_name):
         """Return timezone information for the timezone named timezone_name.
@@ -145,7 +151,7 @@ class DefaultTimezoneInfoDB:
 get_timezone_info = TextTimezoneInfoDB().get_timezone_info
 
 
-def week_start_on_monday(weekday):
+def week_start_on_monday(weekday: int) -> int:
     """Convert weekday so that monday is the first day of the week (instead of sunday).
     
     >>> week_start_on_monday(1)  # sunday is now the last day of the week

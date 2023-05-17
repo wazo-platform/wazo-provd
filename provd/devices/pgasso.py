@@ -1,4 +1,4 @@
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Automatic plugin association."""
@@ -50,8 +50,7 @@ class AbstractPluginAssociator(metaclass=ABCMeta):
 
 class BasePgAssociator(AbstractPluginAssociator):
     def associate(self, dev_info: dict[str, str]) -> DeviceSupport | int:
-        vendor = dev_info.get('vendor')
-        if vendor is None:
+        if (vendor := dev_info.get('vendor')) is None:
             return DeviceSupport.UNKNOWN
         model = dev_info.get('model')
         version = dev_info.get('version')
@@ -89,35 +88,28 @@ class PluginAssociatorDeviceUpdater(AbstractDeviceUpdater):
 
     def update(self, dev, dev_info, request, request_type):
         if self.force_update or 'plugin' not in dev:
-            pg_id = self._do_update(dev_info)
-            if pg_id:
+            if pg_id := self._do_update(dev_info):
                 dev['plugin'] = pg_id
         return defer.succeed(False)
 
     def _do_update(self, dev_info):
-        pg_scores = self._get_scores(dev_info)
-        if pg_scores:
+        if pg_scores := self._get_scores(dev_info):
             max_score, pg_ids = max(pg_scores.items(), key=itemgetter(0))
             if max_score >= self.min_level:
                 assert pg_ids
                 if len(pg_ids) == 1:
                     return pg_ids[0]
-                else:
-                    pg_id = self._solver.solve(pg_ids)
-                    if pg_id:
-                        return pg_id
-                    else:
-                        logger.warning('Conflict resolution yielded nothing for plugins: %s',
-                                       pg_ids)
+                if pg_id := self._solver.solve(pg_ids):
+                    return pg_id
+                logger.warning('Conflict resolution yielded nothing for plugins: %s', pg_ids)
         return None
 
     def _get_scores(self, dev_info):
         pg_scores = defaultdict(list)
         for pg_id, pg in self._pg_mgr.items():
-            sstor = pg.pg_associator
-            if sstor is not None:
+            if (associator := pg.pg_associator) is not None:
                 try:
-                    score = sstor.associate(dev_info)
+                    score = associator.associate(dev_info)
                     logger.debug('Associator: %s = score %s', pg_id, score)
                 except Exception:
                     logger.error('Error during plugin association for plugin %s',

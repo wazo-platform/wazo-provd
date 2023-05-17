@@ -7,8 +7,8 @@ from __future__ import annotations
 import json
 import logging
 from abc import ABCMeta, abstractmethod
-from copy import copy
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from twisted.internet.defer import Deferred
@@ -182,7 +182,7 @@ class AttrConfigurationServiceParameter(AbstractConfigurationServiceParameter):
         self._name = name
         self.description = description
         self._check_fun = check_fun
-        self.__dict__.update(kwargs)
+        self.__dict__ |= kwargs
         super().__init__()
 
     def get(self):
@@ -197,13 +197,20 @@ class AttrConfigurationServiceParameter(AbstractConfigurationServiceParameter):
 class DictConfigurationServiceParameter(AbstractConfigurationServiceParameter):
     # Note that this deletes the key from the dict when setting a None valueIInstallService
 
-    def __init__(self, data: dict, key: str, description: str = None, check_fun: Callable = None, **kwargs: Any):
+    def __init__(
+        self,
+        data: dict,
+        key: str,
+        description: str | None = None,
+        check_fun: Callable[[Any], NoReturn] | None = None,
+        **kwargs: Any
+    ):
         # kwargs is used to set localized description, for example "description_fr='bonjour'"
         self._dict = data
         self._key = key
         self.description = description
         self._check_fun = check_fun
-        self.__dict__.update(kwargs)
+        self.__dict__ |= kwargs
 
     def get(self) -> Any:
         return self._dict.get(self._key)
@@ -292,7 +299,7 @@ class PersistentConfigurationServiceDecorator:
 class JsonConfigPersister:
     def __init__(self, filename: str) -> None:
         self._filename = filename
-        self._cache = {}
+        self._cache: dict[str, Any] = {}
         self._load()
 
     def _load(self):
@@ -311,7 +318,7 @@ class JsonConfigPersister:
     def params(self) -> dict:
         # Return every persisted parameter as a dictionary of parameters
         # names and values.
-        return dict(self._cache)
+        return {**self._cache}
 
     def update(self, name: str, value: Any) -> None:
         self._cache[name] = value

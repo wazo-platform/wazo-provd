@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Small utility to download and update the configuration files of the DHCP
@@ -106,17 +106,18 @@ def _read_config_from_file(config):
     config_parser = RawConfigParser()
     with open(config_file) as fobj:
         config_parser.read_file(fobj)
+
     # create config dictionary out of it
-    result = {}
-    for section in config_parser.sections():
-        result[section] = dict(config_parser.items(section))
-    return result
+    return {
+        section: dict(config_parser.items(section))
+        for section in config_parser.sections()
+    }
 
 
 def _update_config(config, new_config):
     for key in new_config:
         if key in config:
-            config[key].update(new_config[key])
+            config[key] |= new_config[key]
         else:
             config[key] = new_config[key]
 
@@ -165,17 +166,15 @@ def _do_regenerate(config):
 
 def main():
     config = read_config()
+    general = config['general']
 
-    op_new_empty = config['general'].get('new_empty') == 'yes'
-    if op_new_empty:
+    if op_new_empty := general.get('new_empty') == 'yes':
         _do_new_empty(config)
 
-    op_download = config['general'].get('download') == 'yes'
-    if op_download:
+    if op_download := (general.get('download') == 'yes'):
         _do_download(config)
 
-    op_regenerate = config['general'].get('regenerate') == 'yes'
-    if op_regenerate:
+    if op_regenerate := (general.get('regenerate') == 'yes'):
         _do_regenerate(config)
 
     if not (op_new_empty or op_download or op_regenerate):

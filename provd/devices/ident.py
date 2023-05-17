@@ -43,12 +43,11 @@ def _get_ip_from_request(request: Request, request_type: RequestType):
         if not request.num_http_proxies:
             return request.getClientIP()
         return _get_ip_from_http_request_with_proxies(request, request.num_http_proxies)
-    elif request_type == RequestType.TFTP:
+    if request_type == RequestType.TFTP:
         return request['address'][0]
-    elif request_type == RequestType.DHCP:
+    if request_type == RequestType.DHCP:
         return request['ip']
-    else:
-        raise RuntimeError(f'invalid request_type: {request_type}')
+    raise RuntimeError(f'invalid request_type: {request_type}')
 
 
 def _get_ip_from_http_request_with_proxies(request: Request, num_http_proxies: int):
@@ -72,12 +71,11 @@ def _get_ip_from_http_request_with_proxies(request: Request, num_http_proxies: i
 def _get_filename_from_request(request: Request, request_type: RequestType):
     if request_type == RequestType.HTTP:
         return basename(request.path.decode('ascii'))
-    elif request_type == RequestType.TFTP:
+    if request_type == RequestType.TFTP:
         return basename(request['packet']['filename'])
-    elif request_type == RequestType.DHCP:
+    if request_type == RequestType.DHCP:
         return None
-    else:
-        raise RuntimeError(f'invalid request_type: {request_type}')
+    raise RuntimeError(f'invalid request_type: {request_type}')
 
 
 class AbstractDeviceInfoExtractor(metaclass=ABCMeta):
@@ -138,7 +136,7 @@ class LastSeenUpdater:
         self.dev_info = {}
 
     def update(self, dev_info: dict[str, str]) -> None:
-        self.dev_info.update(dev_info)
+        self.dev_info |= dev_info
 
 
 class VotingUpdater:

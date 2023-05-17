@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Synchronization services for devices."""
-
+from __future__ import annotations
 
 import logging
 from twisted.internet import defer, threads
@@ -10,11 +10,11 @@ from wazo_amid_client import Client as AmidClient
 
 logger = logging.getLogger(__name__)
 
-_SYNC_SERVICE = None
-_AMID_client = None
+_SYNC_SERVICE: AsteriskAMISynchronizeService | None = None
+_AMID_client: AmidClient | None = None
 
 
-def get_AMID_client(**config):
+def get_AMID_client(**config) -> AmidClient:
     global _AMID_client
     if not _AMID_client:
         _AMID_client = AmidClient(**config)
@@ -38,11 +38,7 @@ class AsteriskAMISynchronizeService:
         variables = [f'Event={event}']
         if extra_vars:
             variables.extend(extra_vars)
-
-        params = {'Variable': variables}
-        params.update(destination)
-
-        self._amid.action('PJSIPNotify', params)
+        self._amid.action('PJSIPNotify', {'Variable': variables, **destination})
 
     def sip_notify_by_ip(self, ip, event, extra_vars=None):
         destination = {'URI': f'sip:anonymous@{ip}'}
@@ -56,7 +52,7 @@ class AsteriskAMISynchronizeService:
     sip_notify = sip_notify_by_ip
 
 
-def register_sync_service(sync_service):
+def register_sync_service(sync_service: AsteriskAMISynchronizeService) -> None:
     """Register a synchronize service globally."""
     logger.info('Registering synchronize service: %s', sync_service)
     global _SYNC_SERVICE
@@ -80,7 +76,7 @@ def unregister_sync_service():
         logger.info('No synchronize service registered')
 
 
-def get_sync_service():
+def get_sync_service() -> AsteriskAMISynchronizeService:
     """Return the globally registered synchronize service or None if no
     synchronize service has been registered.
 
@@ -97,7 +93,7 @@ def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
     if sync_service is None or sync_service.TYPE != 'AsteriskAMI':
         return defer.fail(SynchronizeException(f'Incompatible sync service: {sync_service}'))
 
-    for fun in [_synchronize_by_peer, _synchronize_by_ip]:
+    for fun in (_synchronize_by_peer, _synchronize_by_ip):
         d = fun(device, event, sync_service, extra_vars)
         if d is not None:
             logger.debug('Using synchronize function %s', fun)
@@ -107,21 +103,17 @@ def standard_sip_synchronize(device, event='check-sync', extra_vars=None):
 
 
 def _synchronize_by_peer(device, event, ami_sync_service, extra_vars=None):
-    peer = device.get('remote_state_sip_username')
-    if not peer:
+    if not (peer := device.get('remote_state_sip_username')):
         return
 
-    is_autoprov = peer.startswith('ap') and len(peer) == 10
     # all devices in autoprov have the same peer starting with "ap" use the ip to avoid restarting all phones
-    if is_autoprov:
+    if peer.startswith('ap') and len(peer) == 10:
         return None
 
     return threads.deferToThread(ami_sync_service.sip_notify_by_peer, peer, event, extra_vars)
 
 
 def _synchronize_by_ip(device, event, ami_sync_service, extra_vars=None):
-    ip = device.get('ip')
-    if not ip:
+    if not (ip := device.get('ip')):
         return None
-
     return threads.deferToThread(ami_sync_service.sip_notify_by_ip, ip, event, extra_vars)

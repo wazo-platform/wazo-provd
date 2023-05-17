@@ -33,7 +33,7 @@ from provd.operation import OperationInProgress, OIP_PROGRESS, OIP_SUCCESS, \
     OIP_FAIL
 from provd.proxy import DynProxyHandler
 from provd.services import AbstractInstallationService, InvalidParameterError, AbstractConfigurationService
-from jinja2.environment import Environment
+from jinja2.environment import Environment, Template
 from jinja2.exceptions import TemplateNotFound
 from twisted.internet import defer, threads
 
@@ -76,28 +76,28 @@ def _new_localize_fun() -> Callable:
     locale, lang = get_locale_and_language()
     if locale is None:
         return _clean_localized_description
-    else:
-        locale_name = f'description_{locale}'
-        if locale == lang:
-            def aux(raw_plugin_info):
-                try:
-                    raw_plugin_info['description'] = raw_plugin_info[locale_name]
-                except KeyError:
-                    pass
-                _clean_localized_description(raw_plugin_info)
-            return aux
-        else:
-            lang_name = f'description_{lang}'
-            def aux(raw_plugin_info):
-                try:
-                    raw_plugin_info['description'] = raw_plugin_info[locale_name]
-                except KeyError:
-                    try:
-                        raw_plugin_info['description'] = raw_plugin_info[lang_name]
-                    except KeyError:
-                        pass
-                _clean_localized_description(raw_plugin_info)
-            return aux
+
+    locale_name = f'description_{locale}'
+    if locale == lang:
+        def aux(raw_plugin_info):
+            try:
+                raw_plugin_info['description'] = raw_plugin_info[locale_name]
+            except KeyError:
+                pass
+            _clean_localized_description(raw_plugin_info)
+        return aux
+
+    lang_name = f'description_{lang}'
+    def aux(raw_plugin_info):
+        try:
+            raw_plugin_info['description'] = raw_plugin_info[locale_name]
+        except KeyError:
+            try:
+                raw_plugin_info['description'] = raw_plugin_info[lang_name]
+            except KeyError:
+                pass
+        _clean_localized_description(raw_plugin_info)
+    return aux
 
 
 class Plugin(metaclass=ABCMeta):
@@ -351,7 +351,7 @@ class Plugin(metaclass=ABCMeta):
         static pull type plugins. This is the right time to delete any device
         specific configuration related to the device. This is to prevent
         unexpected configuration for a device and to keep the plugins
-        clean, without out of sync cache file in their directories.
+        clean, without out-of-sync cache files in their directories.
 
         Note that de-configure doesn't mean you should try resetting the
         device to its default value. In fact, you SHOULD NOT do this.
@@ -473,7 +473,7 @@ class TemplatePluginHelper:
                 pass
         raise TemplateNotFound(tpl_filename)
 
-    def get_template(self, name):
+    def get_template(self, name: str) -> Template:
         return self._env.get_template(name)
 
     def dump(self, template, context, filename, encoding='UTF-8', errors='strict'):
@@ -784,8 +784,7 @@ class PluginManager:
         else:
             if server.endswith('/'):
                 return server + p
-            else:
-                return server + '/' + p
+            return server + '/' + p
 
     def _extract_plugin(self, cache_filename):
         with contextlib.closing(tarfile.open(cache_filename)) as tfile:
@@ -1099,8 +1098,7 @@ class PluginManager:
     @staticmethod
     def _is_plugin_class(obj):
         # return true if obj is a plugin class with IS_PLUGIN true
-        return isinstance(obj, type) and issubclass(obj, Plugin) and \
-               hasattr(obj, 'IS_PLUGIN') and getattr(obj, 'IS_PLUGIN')
+        return isinstance(obj, type) and issubclass(obj, Plugin) and getattr(obj, 'IS_PLUGIN', None)
 
     def load(self, plugin_id: str, gen_cfg: dict = None, spec_cfg: dict = None):
         """Load a plugin.
@@ -1122,23 +1120,22 @@ class PluginManager:
         logger.info('Loading plugin %s', plugin_id)
         if plugin_id in self._plugins:
             raise Exception(f'plugin {plugin_id} is already loaded')
+
         plugin_dir = os.path.join(self._plugins_dir, plugin_id)
         plugin_info = self._get_installed_plugin_info(plugin_dir)
         if self._check_compat_min:
             min_compat = plugin_info.get('plugin_iface_version_min')
-            if min_compat is not None:
-                if self.PLUGIN_IFACE_VERSION < min_compat:
-                    logger.error('Plugin %s is not compatible: %s < %s',
-                                 plugin_id, self.PLUGIN_IFACE_VERSION, min_compat)
-                    raise Exception('plugin min compat not satisfied')
+            if min_compat is not None and self.PLUGIN_IFACE_VERSION < min_compat:
+                logger.error('Plugin %s is not compatible: %s < %s',
+                             plugin_id, self.PLUGIN_IFACE_VERSION, min_compat)
+                raise Exception('plugin min compat not satisfied')
         if self._check_compat_max:
             max_compat = plugin_info.get('plugin_iface_version_max')
-            if max_compat is not None:
-                if self.PLUGIN_IFACE_VERSION > max_compat:
-                    logger.error(
-                        'Plugin %s is not compatible: %s > %s', plugin_id, self.PLUGIN_IFACE_VERSION, max_compat
-                    )
-                    raise Exception('plugin max compat not satisfied')
+            if max_compat is not None and self.PLUGIN_IFACE_VERSION > max_compat:
+                logger.error(
+                    'Plugin %s is not compatible: %s > %s', plugin_id, self.PLUGIN_IFACE_VERSION, max_compat
+                )
+                raise Exception('plugin max compat not satisfied')
         plugin_globals = {}
         self._execplugin(plugin_dir, plugin_globals)
         for obj in plugin_globals.values():
