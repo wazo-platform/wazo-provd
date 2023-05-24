@@ -3,6 +3,14 @@ info:
   title: wazo-provd
   description: Provisioning application REST API
   version: '0.2'
+  contact:
+    name: Wazo Dev Team
+    url: https://wazo-platform.org/
+    email: dev@wazo.community
+  x-logo:
+    url: "https://wazo-platform.org/images/logo-black.svg"
+    backgroundColor: "#FAFAFA"
+    altText: "Wazo Logo"
 schemes:
 - https
 basePath: /api/provd/0.2
