@@ -40,13 +40,33 @@ logger = logging.getLogger(__name__)
 
 def _get_ip_from_request(request: Request, request_type: RequestType):
     if request_type == RequestType.HTTP:
-        return request.getClientIP()
+        if not request.num_http_proxies:
+            return request.getClientIP()
+        return _get_ip_from_http_request_with_proxies(request, request.num_http_proxies)
     elif request_type == RequestType.TFTP:
         return request['address'][0]
     elif request_type == RequestType.DHCP:
         return request['ip']
     else:
         raise RuntimeError(f'invalid request_type: {request_type}')
+
+
+def _get_ip_from_http_request_with_proxies(request: Request, num_http_proxies: int):
+    if num_http_proxies <= 0:
+        raise RuntimeError('This function must be used with at least one expected proxy')
+    # Example with num_http_proxies = 2
+    # X-Forwarded-For:   W.W.W.W,   X.X.X.X,     Y.Y.Y.Y,       Z.Z.Z.Z
+    # X-Forwarded-For: untrusted, untrusted, entry proxy, backend proxy
+    untrusted_forwarded_for = request.getHeader('X-Forwarded-For') or ''
+    untrusted_forwarded_for = [client_ip.strip() for client_ip in untrusted_forwarded_for.split(',')]
+    trusted_forwarded_for = untrusted_forwarded_for[-num_http_proxies:]
+    proxied_client_ip = trusted_forwarded_for[0]
+    if not proxied_client_ip:
+        raise RuntimeError(
+            f'Invalid client IP address "{proxied_client_ip}" from header '
+            f'"X-Forwarded-For: {untrusted_forwarded_for}"'
+        )
+    return str(proxied_client_ip)
 
 
 def _get_filename_from_request(request: Request, request_type: RequestType):
@@ -689,17 +709,22 @@ class HTTPRequestProcessingService(Resource):
     """
     default_service = NoResource('Nowhere to route this request.')
 
-    def __init__(self, process_service, pg_mgr):
+    def __init__(self, process_service, pg_mgr, num_http_proxies):
         super().__init__()
         self._process_service = process_service
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
+        self._num_http_proxies = num_http_proxies
 
     @defer.inlineCallbacks
     def getChild(self, path: bytes, request: Request):
         logger.info('Processing HTTP request: %s', request.path)
         logger.debug('HTTP request: %s', request)
         logger.debug('postpath: %s', request.postpath)
+
+        # Inject the number of trusted HTTP proxies
+        request.num_http_proxies = self._num_http_proxies
+
         try:
             device, pg_id = yield self._process_service.process(request, RequestType.HTTP)
         except Exception:
