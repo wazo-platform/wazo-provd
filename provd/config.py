@@ -92,7 +92,7 @@ _DEFAULT_CONFIG = {
         'info_extractor': 'default',
         'retriever': 'default',
         'updater': 'default',
-        'http_port': 8667,
+        'http_port': 18667,
         'tftp_port': 69,
         'verbose': False,
         'sync_service_type': 'none',
