@@ -1,5 +1,15 @@
 # Changelog
 
+## 23.12
+
+* New configuration has been added to configure number of HTTP proxies ahead of this
+  service to get the right client IP address
+
+  ```
+  general:
+    num_http_proxies: 0
+  ```
+
 ## 20.09
 
 * Deprecate SSL configuration

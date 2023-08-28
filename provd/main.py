@@ -159,7 +159,8 @@ class HTTPProcessService(Service):
     def startService(self):
         app = self._prov_service.app
         process_service = self._process_service.request_processing
-        http_process_service = ident.HTTPRequestProcessingService(process_service, app.pg_mgr)
+        num_http_proxies = self._config['general']['num_http_proxies']
+        http_process_service = ident.HTTPRequestProcessingService(process_service, app.pg_mgr, num_http_proxies)
         site = Site(http_process_service)
         port = self._config['general']['http_port']
         logger.info('Binding HTTP provisioning service to port %s', port)

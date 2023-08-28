@@ -29,6 +29,7 @@ The following parameters are defined:
         verbose
         sync_service_type
         asterisk_ami_servers
+        num_http_proxies
     rest_api:
         ip
         port
@@ -95,6 +96,7 @@ _DEFAULT_CONFIG = {
         'tftp_port': 69,
         'verbose': False,
         'sync_service_type': 'none',
+        'num_http_proxies': 0,
     },
     'rest_api': {
         'ip': '127.0.0.1',

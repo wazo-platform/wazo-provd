@@ -1,11 +1,18 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import assert_that, equal_to, has_entry
 from unittest.mock import Mock, patch
 from provd.devices import ident
-from provd.devices.ident import LastSeenUpdater, VotingUpdater, _RequestHelper, \
-    RemoveOutdatedIpDeviceUpdater, AddDeviceRetriever, RequestType
+from provd.devices.ident import (
+    AddDeviceRetriever,
+    LastSeenUpdater,
+    RemoveOutdatedIpDeviceUpdater,
+    RequestType,
+    VotingUpdater,
+    _get_ip_from_http_request_with_proxies,
+    _RequestHelper,
+)
 from twisted.internet import defer
 from twisted.trial import unittest
 
@@ -322,6 +329,7 @@ class TestLogSensitiveRequest(unittest.TestCase):
         self.filename = 'foobar.cfg'
         self.request_type = ident.RequestType.HTTP
         self.request = Mock()
+        self.request.num_http_proxies = 0
         self.request.getClientIP.return_value = self.ip
         self.request.path = f'/{self.filename}'.encode('ascii')
         self.plugin = Mock()
@@ -343,3 +351,33 @@ class TestLogSensitiveRequest(unittest.TestCase):
         self.plugin.is_sensitive_filename.assert_called_once_with(self.filename)
         mock_log_security_msg.assert_called_once_with('Sensitive file requested from %s: %s',
                                                       self.ip, self.filename)
+
+
+class TestGetIPFromHTTPRequestWithProxies(unittest.TestCase):
+    def setUp(self):
+        self.request = Mock()
+
+    def test_get_ip_without_proxy_in_request(self):
+        self.request.getHeader.return_value = None
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 1)
+
+    def test_get_ip_with_one_proxy_in_request(self):
+        self.request.getHeader.return_value = 'proxied_client_ip'
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
+        assert _get_ip_from_http_request_with_proxies(self.request, 1) == 'proxied_client_ip'
+        assert _get_ip_from_http_request_with_proxies(self.request, 2) == 'proxied_client_ip'
+
+    def test_get_ip_with_two_proxies_in_request(self):
+        self.request.getHeader.return_value = 'proxied_client_ip, proxied_proxy_ip'
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
+        assert _get_ip_from_http_request_with_proxies(self.request, 1) == 'proxied_proxy_ip'
+        assert _get_ip_from_http_request_with_proxies(self.request, 2) == 'proxied_client_ip'
+        assert _get_ip_from_http_request_with_proxies(self.request, 3) == 'proxied_client_ip'
+
+    def test_get_ip_with_invalid_ip_address(self):
+        self.request.getHeader.return_value = ', proxied_proxy_ip'
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
+        assert _get_ip_from_http_request_with_proxies(self.request, 1) == 'proxied_proxy_ip'
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 2)
+        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 3)

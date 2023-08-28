@@ -3,6 +3,9 @@ general:
   http_port: 8667
   tftp_port: 69
   sync_service_type: 'asterisk_ami'
+  # num_http_proxies before wazo-provd. used to detect the device's IP address
+  # if 0 X-Forwarded-For header will be ignored
+  # num_http_proxies: 0
 rest_api:
   ip: 127.0.0.1
   port: 8666
