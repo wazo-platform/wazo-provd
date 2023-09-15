@@ -76,6 +76,8 @@ from xivo.config_helper import parse_config_file, read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_HTTP_PORT = 18667
+
 _DEFAULT_CONFIG = {
     'config_file': '/etc/wazo-provd/config.yml',
     'extra_config_files': '/etc/wazo-provd/conf.d',
@@ -92,8 +94,9 @@ _DEFAULT_CONFIG = {
         'info_extractor': 'default',
         'retriever': 'default',
         'updater': 'default',
-        'http_port': 8667,
+        'http_port': 18667,
         'tftp_port': 69,
+        'base_external_url': f'http://localhost:{DEFAULT_HTTP_PORT}',
         'verbose': False,
         'sync_service_type': 'none',
         'num_http_proxies': 0,
@@ -213,6 +216,7 @@ def _update_general_base_raw_config(app_raw_config):
     update_list = {
         'http_port': app_raw_config['general']['http_port'],
         'tftp_port': app_raw_config['general']['tftp_port'],
+        'base_external_url': app_raw_config['general']['base_external_url'],
     }
     base_raw_config.update(update_list)
 
