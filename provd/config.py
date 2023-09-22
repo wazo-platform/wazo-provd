@@ -83,7 +83,7 @@ _DEFAULT_CONFIG = {
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
         'external_ip': '127.0.0.1',
-        'listen_ip': '127.0.0.1',
+        'listen_interface': '127.0.0.1',
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
         'request_config_dir': '/etc/wazo-provd',
         'cache_dir': '/var/cache/wazo-provd',
