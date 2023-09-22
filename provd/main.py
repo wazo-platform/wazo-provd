@@ -162,9 +162,10 @@ class HTTPProcessService(Service):
         num_http_proxies = self._config['general']['num_http_proxies']
         http_process_service = ident.HTTPRequestProcessingService(process_service, app.pg_mgr, num_http_proxies)
         site = Site(http_process_service)
+        interface = self._config['general']['listen_interface']
         port = self._config['general']['http_port']
         logger.info('Binding HTTP provisioning service to port %s', port)
-        self._tcp_server = internet.TCPServer(port, site, backlog=128)
+        self._tcp_server = internet.TCPServer(port, site, backlog=128, interface=interface)
         self._tcp_server.startService()
         Service.startService(self)
 

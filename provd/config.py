@@ -83,6 +83,7 @@ _DEFAULT_CONFIG = {
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
         'external_ip': '127.0.0.1',
+        'listen_interface': '127.0.0.1',
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
         'request_config_dir': '/etc/wazo-provd',
         'cache_dir': '/var/cache/wazo-provd',
@@ -94,12 +95,12 @@ _DEFAULT_CONFIG = {
         'info_extractor': 'default',
         'retriever': 'default',
         'updater': 'default',
-        'http_port': 18667,
+        'http_port': DEFAULT_HTTP_PORT,
         'tftp_port': 69,
         'base_external_url': f'http://localhost:{DEFAULT_HTTP_PORT}',
         'verbose': False,
         'sync_service_type': 'none',
-        'num_http_proxies': 0,
+        'num_http_proxies': 1,
     },
     'rest_api': {
         'ip': '127.0.0.1',
