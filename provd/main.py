@@ -9,7 +9,7 @@ from zope.interface import implementer
 import provd.config
 import provd.localization
 import provd.synchronize
-from provd import security
+from provd import security, status
 from provd.app import ProvisioningApplication
 from provd.devices.config import ConfigCollection
 from provd.devices.device import DeviceCollection
@@ -22,14 +22,16 @@ from provd.persist.json_backend import JsonDatabaseFactory
 from provd.rest.server.server import new_authenticated_server_resource
 from twisted.application.service import IServiceMaker, Service, MultiService
 from twisted.application import internet
-from twisted.internet import ssl
+from twisted.internet import ssl, defer
 from twisted.web.resource import Resource as UnsecuredResource
 from twisted.plugin import IPlugin
 from twisted.python import log
 from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
 from xivo.xivo_logging import setup_logging
+from xivo.status import Status
 from xivo.token_renewer import TokenRenewer
+from xivo_bus.consumer import BusConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -323,6 +325,51 @@ class TokenRenewerService(Service):
         Service.stopService(self)
 
 
+class ProvdBusConsumer(BusConsumer):
+
+    @classmethod
+    def from_config(cls, bus_config):
+        return cls(name='wazo-provd', **bus_config)
+
+    def provide_status(self, status):
+        status['bus_consumer']['status'] = (
+            Status.ok if self.consumer_connected() else Status.fail
+        )
+
+
+class BusEventConsumerService(Service):
+
+    def __init__(self, prov_service, config):
+        self._prov_service = prov_service
+        self._config = config
+        self._bus_consumer = ProvdBusConsumer.from_config(config['bus'])
+        self._bus_consumer.start()
+
+    @defer.inlineCallbacks
+    def _auth_tenant_deleted(self, event):
+        logger.info("_auth_tenant_deleted event consumed: %s", event)
+        tenant_uuid = event['uuid']
+        app = self._prov_service.app
+        find_arguments={'selector':{'tenant_uuid': tenant_uuid}}
+        devices = yield app.dev_find(**find_arguments)
+        for device in devices:
+            yield app.dev_delete(device['id'])
+
+    def startService(self):
+        self._bus_consumer.subscribe('auth_tenant_deleted',
+                                     self._auth_tenant_deleted)
+        status.get_status_aggregator().add_provider(self._bus_consumer.provide_status)
+        Service.startService(self)
+
+    def stopService(self):
+        self._bus_consumer.stop()
+        Service.stopService(self)
+        try:
+            self.app.close()
+        except Exception:
+            logger.error('An error occurred whilst stopping the application', exc_info=True)
+
+
 @implementer(IServiceMaker, IPlugin)
 class ProvisioningServiceMaker:
     tapname = 'wazo-provd'
@@ -373,5 +420,8 @@ class ProvisioningServiceMaker:
 
         remote_config_service = RemoteConfigurationService(prov_service, dhcp_process_service, config)
         remote_config_service.setServiceParent(top_service)
+
+        consumer_service = BusEventConsumerService(prov_service, config)
+        consumer_service.setServiceParent(top_service)
 
         return top_service

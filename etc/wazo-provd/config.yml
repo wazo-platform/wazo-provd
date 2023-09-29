@@ -22,3 +22,9 @@ amid:
   port: 9491
   prefix: null
   https: false
+bus:
+    username: guest
+    password: guest
+    host: localhost
+    port: 5672
+    exchange_name: wazo-headers

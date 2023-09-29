@@ -26,13 +26,19 @@ from .helpers.base import (
     SUB_TENANT_1,
     SUB_TENANT_2,
 )
-from .helpers.wait_strategy import NoWaitStrategy
+from .helpers.bus import BusClient, setup_bus
 from .helpers.operation import operation_successful
-
+from .helpers.wait_strategy import EverythingOkWaitStrategy
 
 class TestDevices(BaseIntegrationTest):
     asset = 'base'
-    wait_strategy = NoWaitStrategy()
+    wait_strategy = EverythingOkWaitStrategy()
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.wait_strategy.wait(cls)
+        setup_bus(host='localhost', port=cls.service_port(5672, 'rabbitmq'))
 
     def _add_device(self, ip, mac, provd=None, plugin='', id_=None, tenant_uuid=None):
         device = {'ip': ip, 'mac': mac, 'plugin': plugin}
@@ -363,3 +369,21 @@ class TestDevices(BaseIntegrationTest):
             self._client.devices.update({'id': device['id'], 'is_new': False})
             result = self._client.devices.get(device['id'])
             assert_that(result, has_entry('is_new', True))
+
+    def test_delete_when_tenant_deleted_event(self):
+        with (fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device1,
+              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device2,
+              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_2) as device3):
+
+            BusClient.send_tenant_deleted(SUB_TENANT_1, 'slug')
+
+            assert_that(
+                calling(self._client.devices.get).with_args(device1['id'], tenant_uuid=SUB_TENANT_1),
+                raises(ProvdError).matching(has_properties('status_code', 404))
+            )
+            assert_that(
+                calling(self._client.devices.get).with_args(device2['id'], tenant_uuid=SUB_TENANT_1),
+                raises(ProvdError).matching(has_properties('status_code', 404))
+            )
+            result = self._client.devices.get(device3['id'])
+            assert_that(result, has_entry('id', device3['id']))

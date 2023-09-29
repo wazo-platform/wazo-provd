@@ -33,6 +33,7 @@ from provd.rest.util import PROV_MIME_TYPE, uri_append_path
 from provd.servers.http_site import AuthResource, Request
 from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.services import InvalidParameterError
+from provd.status import get_status_aggregator
 from provd.util import norm_mac, norm_ip, decode_bytes, decode_value
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
@@ -1296,7 +1297,9 @@ class StatusResource(AuthResource):
     @json_response_entity
     @required_acl('provd.status.read')
     def render_GET(self, request: Request):
-        return json_response({'rest_api': 'ok'})
+        all_status=get_status_aggregator().status()
+        all_status['rest_api']='ok'
+        return json_response(all_status)
 
 
 def new_authenticated_server_resource(app, dhcp_request_processing_service):

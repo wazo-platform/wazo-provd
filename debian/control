@@ -17,6 +17,7 @@ Depends:
     ${misc:Depends},
     adduser,
     python3-jinja2,
+    python3-kombu,
     python3-openssl,
     python3-twisted,
     rename,
@@ -25,6 +26,7 @@ Depends:
     unzip,
     wazo-amid-client-python3,
     wazo-auth-client-python3,
+    xivo-bus-python3,
     xivo-lib-fetchfw-python3,
     xivo-lib-python-python3
 Description: Wazo provisioning daemon
