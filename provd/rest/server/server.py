@@ -1,4 +1,4 @@
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -17,6 +17,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import traceback
 from binascii import a2b_base64
 
 from provd.app import (
@@ -817,7 +818,11 @@ class DevicesResource(AuthResource):
     def render_GET(self, request: Request):
         find_arguments = find_arguments_from_request(request)
 
-        def on_callback(devices):
+        def on_tenants_callback(tenant_uuids):
+            find_arguments['selector']['tenant_uuid'] = {'$in': tenant_uuids}
+            return self._app.dev_find(**find_arguments)
+
+        def on_devices_callback(devices):
             data = json_dumps({'devices': list(devices)})
             deferred_respond_ok(request, data)
 
@@ -825,10 +830,10 @@ class DevicesResource(AuthResource):
             deferred_respond_error(request, failure.value)
 
         recurse = self._extract_recurse(request)
-        tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
-        find_arguments['selector']['tenant_uuid'] = {'$in': tenant_uuids}
-        d = self._app.dev_find(**find_arguments)
-        d.addCallbacks(on_callback, on_errback)
+
+        d = self._build_tenant_list_from_request(request, recurse=recurse)
+        d.addCallbacks(on_tenants_callback, on_errback)
+        d.addCallbacks(on_devices_callback, on_errback)
         return NOT_DONE_YET
 
     @json_request_entity
@@ -869,7 +874,12 @@ class DeviceResource(AuthResource):
     @json_response_entity
     @required_acl('provd.dev_mgr.devices.{device_id}.read')
     def render_GET(self, request: Request):
-        def on_callback(device):
+        def on_tenants_callback(tenant_uuids):
+            return self._app.dev_find_one(
+                {'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}}
+            )
+
+        def on_device_callback(device):
             if device is None:
                 deferred_respond_no_resource(request)
             else:
@@ -879,9 +889,9 @@ class DeviceResource(AuthResource):
         def on_error(failure):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
-        tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
-        d = self._app.dev_find_one({'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}})
-        d.addCallbacks(on_callback, on_error)
+        d = self._build_tenant_list_from_request(request, recurse=True)
+        d.addCallbacks(on_tenants_callback, on_error)
+        d.addCallbacks(on_device_callback, on_error)
         return NOT_DONE_YET
 
     @json_request_entity

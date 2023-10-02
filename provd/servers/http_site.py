@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import logging
 
-from twisted.internet import defer
+from twisted.internet import defer, threads
 from twisted.web import http
 from twisted.web import server
 from twisted.web import resource
@@ -19,7 +19,7 @@ from twisted.web.error import UnsupportedMethod
 
 from provd.rest.server import auth
 from provd.rest.server.helpers.tenants import Tenant, Tokens
-from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
+from provd.app import DeviceNotInProvdTenantError, ProvisioningApplication, TenantInvalidForDeviceError
 from requests.exceptions import HTTPError
 
 from provd.util import decode_bytes
@@ -60,19 +60,22 @@ class Request(server.Request):
 
 
 class AuthResource(resource.Resource):
-
+    @defer.inlineCallbacks
     def render(self, request: Request):
         render_method = self._extract_render_method(request)
         decorated_render_method = auth_verifier.verify_token(self, request, render_method)
         try:
-            return decorated_render_method(request)
+            d = decorated_render_method(request)
+            logger.critical('AFDEBUG: %s', d)
+            result = yield d
+            defer.returnValue(result)
         except (
             auth.auth_verifier.Unauthorized,
             auth.auth_verifier.InvalidTokenAPIException,
             auth.auth_verifier.MissingPermissionsTokenAPIException,
         ):
             request.setResponseCode(http.UNAUTHORIZED)
-            return b'Unauthorized'
+            defer.returnValue(b'Unauthorized')
 
     def _extract_render_method(self, request: Request):
         # from twisted.web.resource.Resource
@@ -89,41 +92,48 @@ class AuthResource(resource.Resource):
         logging.error(f'REQUEST: {request.getAllHeaders()}')
         return b''
 
+    @defer.inlineCallbacks
     def _extract_tenant_uuid(self, request: Request):
         auth_client = auth.get_auth_client()
 
         tokens = Tokens(auth_client)
-        return Tenant.autodetect(request, tokens).uuid
+        tenant = yield threads.deferToThread(Tenant.autodetect, request, tokens)
+        defer.returnValue(tenant.uuid)
 
+    @defer.inlineCallbacks
     def _build_tenant_list(self, tenant_uuid=None, recurse=False):
         auth_client = auth.get_auth_client()
 
         if not recurse:
-            return [tenant_uuid]
+            defer.returnValue([tenant_uuid])
         try:
-            tenants = auth_client.tenants.list(tenant_uuid=tenant_uuid)['items']
+            deferred_result = yield threads.deferToThread(auth_client.tenants.list, tenant_uuid=tenant_uuid)
+            logger.critical('AFDEBUG: deferred tenant results: %s', deferred_result)
+            tenants = deferred_result['items']
         except HTTPError as e:
             response = getattr(e, 'response', None)
             status_code = getattr(response, 'status_code', None)
             if status_code == 401:
                 logger.debug('Tenant listing got a 401, returning %s', [tenant_uuid])
-                return [tenant_uuid]
+                defer.returnValue([tenant_uuid])
             raise
 
-        return [t['uuid'] for t in tenants]
-
-    def _build_tenant_list_from_request(self, request, recurse=False):
-        tenant_uuid = self._extract_tenant_uuid(request)
-        return self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=recurse)
+        defer.returnValue([t['uuid'] for t in tenants])
 
     @defer.inlineCallbacks
-    def _is_tenant_valid_for_device(self, app, device_id, tenant_uuid):
+    def _build_tenant_list_from_request(self, request, recurse=False):
+        tenant_uuid = yield self._extract_tenant_uuid(request)
+        tenant_list = yield self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=recurse)
+        defer.returnValue(tenant_list)
+
+    @defer.inlineCallbacks
+    def _is_tenant_valid_for_device(self, app: ProvisioningApplication, device_id, tenant_uuid):
         device = yield app._dev_get_or_raise(device_id)
 
         if device['tenant_uuid'] == tenant_uuid:
             defer.returnValue(tenant_uuid)
 
-        tenant_uuids = self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
+        tenant_uuids = yield self._build_tenant_list(tenant_uuid=tenant_uuid, recurse=True)
 
         if device['tenant_uuid'] in tenant_uuids:
             defer.returnValue(tenant_uuid)
@@ -132,8 +142,8 @@ class AuthResource(resource.Resource):
 
     @defer.inlineCallbacks
     def _verify_tenant(self, request: Request):
-        tenant_uuid = self._extract_tenant_uuid(request)
-        yield defer.returnValue(tenant_uuid)
+        tenant_uuid = yield self._extract_tenant_uuid(request)
+        defer.returnValue(tenant_uuid)
 
     @defer.inlineCallbacks
     def _is_device_in_provd_tenant(self, app, device_id, tenant_uuid):
