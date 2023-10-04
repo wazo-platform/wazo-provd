@@ -102,7 +102,7 @@ _DEFAULT_CONFIG = {
         'base_external_url': f'http://localhost:{DEFAULT_HTTP_PORT}',
         'verbose': False,
         'sync_service_type': 'none',
-        'num_http_proxies': 1,
+        'num_http_proxies': 0,
     },
     'rest_api': {
         'ip': '127.0.0.1',

@@ -8,7 +8,7 @@ general:
   # Number of trusted HTTP reverse-proxies before a phone can reach
   # wazo-provd. This is used to detect the device's IP address.
   # If 0, then the HTTP header X-Forwarded-For will be ignored.
-  num_http_proxies: 1
+  num_http_proxies: 0
 rest_api:
   ip: 127.0.0.1
   port: 8666
