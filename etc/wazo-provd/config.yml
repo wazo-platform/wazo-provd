@@ -1,7 +1,8 @@
 general:
   external_ip: 127.0.0.1
-  http_port: 18667
-  listen_interface: 127.0.0.1
+  http_port: 8667
+  listen_interface: 0.0.0.0
+  listen_port: 8667
   tftp_port: 69
   sync_service_type: 'asterisk_ami'
   # Number of trusted HTTP reverse-proxies before a phone can reach

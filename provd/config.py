@@ -76,7 +76,7 @@ from xivo.config_helper import parse_config_file, read_config_file_hierarchy
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LISTEN_PORT = 18667
+DEFAULT_LISTEN_PORT = 8667
 DEFAULT_HTTP_PORT = 8667
 
 _DEFAULT_CONFIG = {
@@ -84,7 +84,7 @@ _DEFAULT_CONFIG = {
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
         'external_ip': '127.0.0.1',
-        'listen_interface': '127.0.0.1',
+        'listen_interface': '0.0.0.0',
         'listen_port': DEFAULT_LISTEN_PORT,
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
         'request_config_dir': '/etc/wazo-provd',
