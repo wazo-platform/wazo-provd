@@ -22,7 +22,12 @@ class BusClientWrapper:
         self._bus = None
 
     def _create_client(self):
-        if not self.port or not self.host or  not self.exchange_name or not self.exchange_type:
+        if (
+            not self.port
+            or not self.host
+            or not self.exchange_name
+            or not self.exchange_type
+        ):
             return None
         return bus.BusClient.from_connection_fields(
             host=self.host,

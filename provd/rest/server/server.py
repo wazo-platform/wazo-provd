@@ -147,16 +147,18 @@ def json_response_entity(fun):
     to respond with a different content.
 
     """
+
     @functools.wraps(fun)
     def aux(self, request: Request):
         if not accept_mime_type(PROV_MIME_TYPE, request):
             return respond_error(
                 request,
                 f'You must accept the "{PROV_MIME_TYPE}" MIME type.',
-                http.NOT_ACCEPTABLE
+                http.NOT_ACCEPTABLE,
             )
         request.setHeader(b'Content-Type', PROV_MIME_TYPE.encode('ascii'))
         return fun(self, request)
+
     return aux
 
 
@@ -168,6 +170,7 @@ def json_request_entity(fun):
     render function.
 
     """
+
     @functools.wraps(fun)
     def aux(self, request: Request):
         content_type = decode_bytes(request.getHeader(b'Content-Type'))
@@ -175,7 +178,7 @@ def json_request_entity(fun):
             return respond_error(
                 request,
                 f'Entity must be in media type "{PROV_MIME_TYPE}".',
-                http.UNSUPPORTED_MEDIA_TYPE
+                http.UNSUPPORTED_MEDIA_TYPE,
             )
         try:
             content = json.loads(request.content.getvalue())
@@ -183,6 +186,7 @@ def json_request_entity(fun):
             logger.info('Received invalid JSON document: %s', e)
             return respond_error(request, f'Invalid JSON document: {e}'.encode())
         return fun(self, request, content)
+
     return aux
 
 
@@ -279,6 +283,7 @@ def _return_value(value):
     # arguments. This can be useful when working with deferred.
     def aux(*args, **kwargs):
         return value
+
     return aux
 
 
@@ -332,11 +337,19 @@ class IntermediaryResource(AuthResource):
 class ServerResource(IntermediaryResource):
     def __init__(self, app, dhcp_request_processing_service):
         links = [
-            ('dev', 'dev_mgr', DeviceManagerResource(app, dhcp_request_processing_service)),
+            (
+                'dev',
+                'dev_mgr',
+                DeviceManagerResource(app, dhcp_request_processing_service),
+            ),
             ('cfg', 'cfg_mgr', ConfigManagerResource(app)),
             ('pg', 'pg_mgr', PluginManagerResource(app)),
             ('status', 'status', StatusResource()),
-            (REL_CONFIGURE_SRV, 'configure', ConfigureServiceResource(app.configure_service)),
+            (
+                REL_CONFIGURE_SRV,
+                'configure',
+                ConfigureServiceResource(app.configure_service),
+            ),
         ]
         super().__init__(links)
 
@@ -405,12 +418,14 @@ class ConfigureServiceResource(AuthResource):
         for key, description in description_list:
             value = self._cfg_srv.get(key)
             href = uri_append_path(request.path, key)
-            params.append({
-                'id': key,
-                'description': description,
-                'value': value,
-                'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}]
-            })
+            params.append(
+                {
+                    'id': key,
+                    'description': description,
+                    'value': value,
+                    'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}],
+                }
+            )
         return json_response({'params': params})
 
 
@@ -466,9 +481,21 @@ class PluginInstallServiceResource(IntermediaryResource):
         self.plugin_id = decode_bytes(plugin_id)
         links = [
             (REL_INSTALL, 'install', PackageInstallResource(install_srv, plugin_id)),
-            (REL_UNINSTALL, 'uninstall', PackageUninstallResource(install_srv, plugin_id)),
-            (REL_INSTALLED, 'installed', PackageInstalledResource(install_srv, plugin_id)),
-            (REL_INSTALLABLE, 'installable', PackageInstallableResource(install_srv, plugin_id)),
+            (
+                REL_UNINSTALL,
+                'uninstall',
+                PackageUninstallResource(install_srv, plugin_id),
+            ),
+            (
+                REL_INSTALLED,
+                'installed',
+                PackageInstalledResource(install_srv, plugin_id),
+            ),
+            (
+                REL_INSTALLABLE,
+                'installable',
+                PackageInstallableResource(install_srv, plugin_id),
+            ),
         ]
         super().__init__(links)
 
@@ -492,6 +519,7 @@ class _OipInstallResource(AuthResource):
                 del self.children[path.encode('ascii')]
             except KeyError:
                 logger.warning('ID "%s" has already been removed', path)
+
         op_in_progress_res = OperationInProgressResource(oip, on_delete)
         self.putChild(path.encode('ascii'), op_in_progress_res)
         return uri_append_path(request.path, path)
@@ -678,7 +706,11 @@ class DeviceManagerResource(IntermediaryResource):
         links = [
             ('dev.synchronize', 'synchronize', DeviceSynchronizeResource(app)),
             ('dev.reconfigure', 'reconfigure', DeviceReconfigureResource(app)),
-            ('dev.dhcpinfo', 'dhcpinfo', DeviceDHCPInfoResource(app, dhcp_request_processing_service)),
+            (
+                'dev.dhcpinfo',
+                'dhcpinfo',
+                DeviceDHCPInfoResource(app, dhcp_request_processing_service),
+            ),
             ('dev.devices', 'devices', DevicesResource(app)),
         ]
         super().__init__(links)
@@ -701,8 +733,11 @@ class DeviceSynchronizeResource(_OipInstallResource):
         except KeyError:
             return respond_bad_json_entity(request, 'Missing "id" key')
         else:
+
             def on_valid_tenant(tenant_uuid):
-                return self._is_tenant_valid_for_device(self._app, device_id, tenant_uuid)
+                return self._is_tenant_valid_for_device(
+                    self._app, device_id, tenant_uuid
+                )
 
             def on_tenant_valid_for_device(tenant_uuid):
                 deferred = self._app.dev_synchronize(device_id)
@@ -712,10 +747,14 @@ class DeviceSynchronizeResource(_OipInstallResource):
                 return respond_created_no_content(request, location)
 
             def on_errback(failure):
-                if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
+                if failure.check(
+                    InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+                ):
                     deferred_respond_no_resource(request)
                 else:
-                    deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+                    deferred_respond_error(
+                        request, failure.value, http.INTERNAL_SERVER_ERROR
+                    )
 
             d = self._verify_tenant(request)
             d.addCallback(on_valid_tenant)
@@ -737,8 +776,11 @@ class DeviceReconfigureResource(AuthResource):
         except KeyError:
             return respond_bad_json_entity(request, 'Missing "id" key')
         else:
+
             def on_valid_tenant(tenant_uuid):
-                return self._is_tenant_valid_for_device(self._app, device_id, tenant_uuid)
+                return self._is_tenant_valid_for_device(
+                    self._app, device_id, tenant_uuid
+                )
 
             def on_tenant_valid_for_device(tenant_uuid):
                 return self._app.dev_reconfigure(device_id)
@@ -758,6 +800,7 @@ class DeviceReconfigureResource(AuthResource):
 
 class DeviceDHCPInfoResource(AuthResource):
     """Resource for pushing DHCP information into the provisioning server."""
+
     def __init__(self, app, dhcp_request_processing_service):
         super().__init__()
         self._app = app
@@ -767,9 +810,7 @@ class DeviceDHCPInfoResource(AuthResource):
         options = {}
         for raw_option in raw_options:
             code = int(raw_option[:3], 10)
-            value = ''.join(
-                chr(int(token, 16)) for token in raw_option[3:].split('.')
-            )
+            value = ''.join(chr(int(token, 16)) for token in raw_option[3:].split('.'))
             options[code] = value
         return options
 
@@ -800,7 +841,6 @@ class DeviceDHCPInfoResource(AuthResource):
 
 
 class DevicesResource(AuthResource):
-
     def __init__(self, app):
         super().__init__()
         self._app = app
@@ -881,7 +921,9 @@ class DeviceResource(AuthResource):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
-        d = self._app.dev_find_one({'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}})
+        d = self._app.dev_find_one(
+            {'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}}
+        )
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
@@ -894,7 +936,9 @@ class DeviceResource(AuthResource):
         device[ID_KEY] = self.device_id
 
         def on_valid_tenant(tenant_uuid):
-            return self._is_device_in_provd_tenant(self._app, self.device_id, tenant_uuid)
+            return self._is_device_in_provd_tenant(
+                self._app, self.device_id, tenant_uuid
+            )
 
         def on_device_in_provd_tenant(tenant_uuid):
             device['tenant_uuid'] = tenant_uuid
@@ -903,7 +947,9 @@ class DeviceResource(AuthResource):
         def on_device_not_in_provd_tenant(failure):
             failure.trap(DeviceNotInProvdTenantError)
             tenant_uuid = failure.value.tenant_uuid
-            return self._is_tenant_valid_for_device(self._app, self.device_id, tenant_uuid)
+            return self._is_tenant_valid_for_device(
+                self._app, self.device_id, tenant_uuid
+            )
 
         def on_tenant_valid_for_device(tenant_uuid):
             return self._app.dev_update(device)
@@ -912,11 +958,15 @@ class DeviceResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
+            if failure.check(
+                InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+            ):
                 deferred_respond_no_resource(request)
             else:
                 logger.error('Unknown error: %s', failure)
-                deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._verify_tenant(request)
         d.addCallback(on_valid_tenant)
@@ -928,7 +978,9 @@ class DeviceResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.{device_id}.delete')
     def render_DELETE(self, request: Request):
         def on_valid_tenant(tenant_uuid):
-            return self._is_tenant_valid_for_device(self._app, self.device_id, tenant_uuid)
+            return self._is_tenant_valid_for_device(
+                self._app, self.device_id, tenant_uuid
+            )
 
         def on_tenant_valid_for_device(tenant_uuid):
             return self._app.dev_delete(self.device_id)
@@ -937,10 +989,14 @@ class DeviceResource(AuthResource):
             deferred_respond_no_content(request)
 
         def on_errback(failure):
-            if failure.check(InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant):
+            if failure.check(
+                InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+            ):
                 deferred_respond_no_resource(request)
             else:
-                deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._verify_tenant(request)
         d.addCallbacks(on_valid_tenant)
@@ -978,6 +1034,7 @@ class AutocreateConfigResource(AuthResource):
 
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
+
         d = self._app.cfg_create_new()
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1002,6 +1059,7 @@ class ConfigsResource(AuthResource):
 
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
+
         d = self._app.cfg_find(**find_arguments)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1020,6 +1078,7 @@ class ConfigsResource(AuthResource):
 
         def on_errback(failure):
             deferred_respond_error(request, failure.value)
+
         d = self._app.cfg_insert(config)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1068,7 +1127,10 @@ class ConfigResource(AuthResource):
             if failure.check(InvalidIdError, UnauthorizedTenant):
                 deferred_respond_no_resource(request)
             else:
-                deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
+
         d = self._app.cfg_update(config)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1084,7 +1146,10 @@ class ConfigResource(AuthResource):
             elif failure.check(NonDeletableError):
                 deferred_respond_error(request, failure.value, http.FORBIDDEN)
             else:
-                deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
+
         d = self._app.cfg_delete(self.config_id)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1206,8 +1271,7 @@ class PluginsResource(AuthResource):
         super().__init__()
         self._pg_mgr = pg_mgr
         self._children = {
-            pg_id: PluginResource(pg) for
-            pg_id, pg in self._pg_mgr.items()
+            pg_id: PluginResource(pg) for pg_id, pg in self._pg_mgr.items()
         }
         # observe plugin loading/unloading and keep a reference to the weakly
         # referenced observer
@@ -1231,12 +1295,21 @@ class PluginsResource(AuthResource):
     @json_response_entity
     @required_acl('provd.pg_mgr.plugins.read')
     def render_GET(self, request: Request):
-        return json_response({
-            'plugins': {
-                pg_id: {'links': [{'rel': 'pg.plugin', 'href': uri_append_path(request.path, pg_id)}]}
-                for pg_id in self._pg_mgr
+        return json_response(
+            {
+                'plugins': {
+                    pg_id: {
+                        'links': [
+                            {
+                                'rel': 'pg.plugin',
+                                'href': uri_append_path(request.path, pg_id),
+                            }
+                        ]
+                    }
+                    for pg_id in self._pg_mgr
+                }
             }
-        })
+        )
 
 
 class PluginReloadResource(AuthResource):
@@ -1281,10 +1354,22 @@ class PluginResource(IntermediaryResource):
         links = [('pg.info', 'info', PluginInfoResource(plugin))]
         if 'install' in plugin.services:
             install_srv = plugin.services['install']
-            links.append((REL_INSTALL_SRV, 'install', PluginInstallServiceResource(install_srv, plugin.id)))
+            links.append(
+                (
+                    REL_INSTALL_SRV,
+                    'install',
+                    PluginInstallServiceResource(install_srv, plugin.id),
+                )
+            )
         if 'configure' in plugin.services:
             configure_srv = plugin.services['configure']
-            links.append((REL_CONFIGURE_SRV, 'configure', PluginConfigureServiceResource(configure_srv, plugin.id)))
+            links.append(
+                (
+                    REL_CONFIGURE_SRV,
+                    'configure',
+                    PluginConfigureServiceResource(configure_srv, plugin.id),
+                )
+            )
         super().__init__(links)
 
     @required_acl('provd.pg_mgr.plugins.{plugin_id}.read')
@@ -1293,12 +1378,11 @@ class PluginResource(IntermediaryResource):
 
 
 class StatusResource(AuthResource):
-
     @json_response_entity
     @required_acl('provd.status.read')
     def render_GET(self, request: Request):
-        all_status=get_status_aggregator().status()
-        all_status['rest_api']='ok'
+        all_status = get_status_aggregator().status()
+        all_status['rest_api'] = 'ok'
         return json_response(all_status)
 
 

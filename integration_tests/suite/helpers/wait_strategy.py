@@ -8,20 +8,18 @@ from hamcrest import assert_that, has_entries
 from wazo_test_helpers import until
 from wazo_test_helpers.wait_strategy import WaitStrategy as DefaultWaitStrategy
 
-class WaitStrategy:
 
+class WaitStrategy:
     def wait(self, setupd):
         raise NotImplementedError()
 
 
 class NoWaitStrategy(WaitStrategy):
-
     def wait(self, provd):
         pass
 
 
 class EverythingOkWaitStrategy(DefaultWaitStrategy):
-
     def wait(self, integration_test):
         def is_ready():
             try:

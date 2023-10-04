@@ -19,8 +19,9 @@ SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
 
 
 class BaseIntegrationTest(AssetLaunchingTestCase):
-
-    assets_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
+    assets_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', 'assets')
+    )
     service = 'provd'
     wait_strategy = WaitStrategy()
 
