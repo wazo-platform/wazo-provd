@@ -103,6 +103,10 @@ _DEFAULT_CONFIG = {
         'verbose': False,
         'sync_service_type': 'none',
         'num_http_proxies': 0,
+        'syncdb': {
+            'interval_sec': 86400,
+            'start_sec': 60,
+        },
     },
     'rest_api': {
         'ip': '127.0.0.1',

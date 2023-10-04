@@ -413,11 +413,17 @@ class SyncdbService(DevicesDeletionService):
         self._looping_call = task.LoopingCall(self.remove_devices_for_deleted_tenants)
 
     def startService(self):
-        reactor.callLater(5, self.on_service_started)
+        start_sec = int(self._config['general']['syncdb']['start_sec'])
+        reactor.callLater(start_sec, self.on_service_started)
 
     def on_service_started(self):
+        interval_sec = ONE_DAY_SEC
+        try:
+            interval_sec = int(self._config['general']['syncdb']['interval_sec'])
+        except KeyError:
+            pass
         self._looping_call.start(
-            int(self._config.get('syncdb', {}).get('interval_sec', ONE_DAY_SEC)),
+            interval_sec,
             now=True,
         )
 
