@@ -1,4 +1,4 @@
-# Copyright 2017-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2017-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
@@ -27,6 +27,10 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.set_client()
+
+    @classmethod
+    def set_client(cls):
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     @classmethod

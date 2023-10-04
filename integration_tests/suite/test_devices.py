@@ -27,18 +27,109 @@ from .helpers.base import (
     SUB_TENANT_2,
 )
 from .helpers.bus import BusClient, setup_bus
+from .helpers.filesystem import FileSystemClient
 from .helpers.operation import operation_successful
 from .helpers.wait_strategy import EverythingOkWaitStrategy
+
+from contextlib import contextmanager
+from wazo_test_helpers.auth import (
+    MockUserToken,
+    AuthClient as MockAuthClient,
+)
+
+TOKEN = '00000000-0000-4000-9000-000000070435'
+TOKEN_SUB_TENANT = '00000000-0000-4000-9000-000000000222'
+DELETED_TENANT = '66666666-6666-4666-8666-666666666666'
+USER_UUID = 'd1534a6c-3e35-44db-b4df-0e2957cdea77'
+DEFAULT_TENANTS = [
+    {
+        'uuid': MAIN_TENANT,
+        'name': 'name1',
+        'slug': 'slug1',
+        'parent_uuid': MAIN_TENANT,
+    },
+    {
+        'uuid': SUB_TENANT_1,
+        'name': 'name2',
+        'slug': 'slug2',
+        'parent_uuid': MAIN_TENANT,
+    },
+    {
+        'uuid': SUB_TENANT_2,
+        'name': 'name4',
+        'slug': 'slug4',
+        'parent_uuid': MAIN_TENANT,
+    },
+]
+ALL_TENANTS = DEFAULT_TENANTS + [
+    {
+        'uuid': DELETED_TENANT,
+        'name': 'name3',
+        'slug': 'slug3',
+        'parent_uuid': MAIN_TENANT,
+    }
+]
+
 
 class TestDevices(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = EverythingOkWaitStrategy()
+    filesystem: FileSystemClient
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.wait_strategy.wait(cls)
+        cls.setup_token()
         setup_bus(host='localhost', port=cls.service_port(5672, 'rabbitmq'))
+        cls.filesystem = cls.make_filesystem()
+
+    @classmethod
+    def setup_token(cls):
+        cls.mock_auth = MockAuthClient('127.0.0.1', cls.service_port(9497, 'auth'))
+        token = MockUserToken(
+            TOKEN,
+            'user_uuid',
+            metadata={'uuid': USER_UUID, 'tenant_uuid': MAIN_TENANT},
+        )
+        cls.mock_auth.set_token(token)
+        token = MockUserToken(
+            TOKEN_SUB_TENANT,
+            'user_uuid',
+            metadata={'uuid': 'user_uuid', 'tenant_uuid': SUB_TENANT_1 },
+        )
+        cls.mock_auth.set_token(token)
+        cls._reset_auth_tenants()
+
+    @classmethod
+    def _create_auth_tenant(cls):
+        cls.mock_auth.set_tenants(*DEFAULT_TENANTS)
+
+    @classmethod
+    def _delete_auth_tenant(cls):
+        cls.mock_auth.set_tenants(*DEFAULT_TENANTS)
+
+    @classmethod
+    def _reset_auth_tenants(cls):
+        cls.mock_auth.set_tenants(*ALL_TENANTS)
+
+    @classmethod
+    @contextmanager
+    def delete_auth_tenant(cls, tenant_uuid):  # tenant_uuid improve readability
+        cls._delete_auth_tenant()
+        yield
+        cls._reset_auth_tenants()
+
+    @classmethod
+    @contextmanager
+    def create_auth_tenant(cls, tenant_uuid):  # tenant_uuid improve readability
+        cls._create_auth_tenant()
+        yield
+        cls._reset_auth_tenants()
+
+    @classmethod
+    def make_filesystem(cls):
+        return FileSystemClient(execute=cls.docker_exec)
 
     def _add_device(self, ip, mac, provd=None, plugin='', id_=None, tenant_uuid=None):
         device = {'ip': ip, 'mac': mac, 'plugin': plugin}
@@ -371,19 +462,51 @@ class TestDevices(BaseIntegrationTest):
             assert_that(result, has_entry('is_new', True))
 
     def test_delete_when_tenant_deleted_event(self):
-        with (fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device1,
-              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device2,
-              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_2) as device3):
+        with (fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT) as device1,
+              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT) as device2,
+              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device3):
 
-            BusClient.send_tenant_deleted(SUB_TENANT_1, 'slug')
+            BusClient.send_tenant_deleted(DELETED_TENANT, 'slug')
 
             assert_that(
-                calling(self._client.devices.get).with_args(device1['id'], tenant_uuid=SUB_TENANT_1),
+                calling(self._client.devices.get).with_args(device1['id'], tenant_uuid=DELETED_TENANT),
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
             assert_that(
-                calling(self._client.devices.get).with_args(device2['id'], tenant_uuid=SUB_TENANT_1),
+                calling(self._client.devices.get).with_args(device2['id'], tenant_uuid=DELETED_TENANT),
                 raises(ProvdError).matching(has_properties('status_code', 404))
             )
             result = self._client.devices.get(device3['id'])
             assert_that(result, has_entry('id', device3['id']))
+
+    def test_delete_when_tenant_deleted_syncdb(self):
+        self.filesystem.create_file(
+            '/etc/wazo-provd/conf.d/01-syncdb.yml',
+            content='syncdb: {start_sec: 0, interval_sec: 0.1}',
+        )
+        self.restart_service('provd')
+        self.set_client()
+        self.wait_strategy.wait(self)
+
+        with (fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT) as device1,
+              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT) as device2,
+              fixtures.Device(self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1) as device3,
+
+              ):
+
+            def test_devices():
+                with TestDevices.delete_auth_tenant(DELETED_TENANT):
+                    # to be able to access to the provd API, the auth tenants are recreated
+                    TestDevices._reset_auth_tenants()
+                    assert_that(
+                        calling(self._client.devices.get).with_args(device1['id'], tenant_uuid=DELETED_TENANT),
+                        raises(ProvdError).matching(has_properties('status_code', 404))
+                    )
+                    assert_that(
+                        calling(self._client.devices.get).with_args(device2['id'], tenant_uuid=DELETED_TENANT),
+                        raises(ProvdError).matching(has_properties('status_code', 404))
+                    )
+                    result = self._client.devices.get(device3['id'])
+                    assert_that(result, has_entry('id', device3['id']))
+
+            until.assert_(test_devices, tries=10, interval=5)

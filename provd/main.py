@@ -1,6 +1,7 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import builtins
 import logging
 import os.path
 
@@ -22,7 +23,7 @@ from provd.persist.json_backend import JsonDatabaseFactory
 from provd.rest.server.server import new_authenticated_server_resource
 from twisted.application.service import IServiceMaker, Service, MultiService
 from twisted.application import internet
-from twisted.internet import ssl, defer
+from twisted.internet import ssl, defer, task, reactor
 from twisted.web.resource import Resource as UnsecuredResource
 from twisted.plugin import IPlugin
 from twisted.python import log
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 LOG_FILE_NAME = '/var/log/wazo-provd.log'
 API_VERSION = b'0.2'
 
+ONE_DAY_SEC = 86400
 
 # given in command line to redirect logs to standard logging
 def twistd_logs():
@@ -337,23 +339,33 @@ class ProvdBusConsumer(BusConsumer):
         )
 
 
-class BusEventConsumerService(Service):
+class DevicesDeletionService(Service):
 
     def __init__(self, prov_service, config):
         self._prov_service = prov_service
         self._config = config
-        self._bus_consumer = ProvdBusConsumer.from_config(config['bus'])
-        self._bus_consumer.start()
 
     @defer.inlineCallbacks
-    def _auth_tenant_deleted(self, event):
-        logger.info("_auth_tenant_deleted event consumed: %s", event)
-        tenant_uuid = event['uuid']
+    def delete_devices(self, tenant_uuid):
         app = self._prov_service.app
         find_arguments={'selector':{'tenant_uuid': tenant_uuid}}
         devices = yield app.dev_find(**find_arguments)
         for device in devices:
             yield app.dev_delete(device['id'])
+
+
+class BusEventConsumerService(DevicesDeletionService):
+
+    def __init__(self, prov_service, config):
+        super().__init__(prov_service, config)
+        self._bus_consumer = ProvdBusConsumer.from_config(config['bus'])
+        self._bus_consumer.start()
+
+    @defer.inlineCallbacks
+    def _auth_tenant_deleted(self, event):
+        logger.info("auth_tenant_deleted event consumed: %s", event)
+        tenant_uuid = event['uuid']
+        yield self.delete_devices(tenant_uuid)
 
     def startService(self):
         self._bus_consumer.subscribe('auth_tenant_deleted',
@@ -364,10 +376,43 @@ class BusEventConsumerService(Service):
     def stopService(self):
         self._bus_consumer.stop()
         Service.stopService(self)
+
+
+class SyncdbService(DevicesDeletionService):
+
+    def __init__(self, prov_service, config):
+        super().__init__(prov_service,config)
+        auth_client = auth.get_auth_client(**self._config['auth'])
+        auth.get_auth_verifier().set_client(auth_client)
+        self._looping_call = task.LoopingCall(self.remove_devices_for_deleted_tenants)
+
+    def startService(self):
+        reactor.callLater(5, self.on_service_started)
+
+    def on_service_started(self):
+        self._looping_call.start(
+            int(self._config.get('syncdb', {}).get('interval_sec', ONE_DAY_SEC)), now=True)
+
+    @defer.inlineCallbacks
+    def remove_devices_for_deleted_tenants(self):
+        app = self._prov_service.app
+        auth_client = auth.get_auth_client()
+        auth_tenants = set(tenant['uuid'] for tenant in auth_client.tenants.list()['items'])
+
+        find_arguments = {'selector': { 'tenant_uuid':  {'$nin':list(auth_tenants)}}}
+        devices = yield app.dev_find(**find_arguments)
+        provd_tenants = set(device['tenant_uuid'] for device in devices)
+        removed_tenants = provd_tenants - auth_tenants
+
+        for t in removed_tenants:
+            yield self.delete_devices(t)
+
+    def stopService(self):
         try:
-            self.app.close()
-        except Exception:
-            logger.error('An error occurred whilst stopping the application', exc_info=True)
+            self._looping_call.stop()
+        except builtins.AssertionError:
+            logger.warning('Cannot stop looping call')
+        Service.stopService(self)
 
 
 @implementer(IServiceMaker, IPlugin)
@@ -423,5 +468,8 @@ class ProvisioningServiceMaker:
 
         consumer_service = BusEventConsumerService(prov_service, config)
         consumer_service.setServiceParent(top_service)
+
+        syncdb_service = SyncdbService(prov_service, config)
+        syncdb_service.setServiceParent(top_service)
 
         return top_service

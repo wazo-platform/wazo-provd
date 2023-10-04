@@ -28,3 +28,6 @@ bus:
     host: localhost
     port: 5672
     exchange_name: wazo-headers
+syncdb:
+    interval_sec: 86400
+    start_sec: 60
