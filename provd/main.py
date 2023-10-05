@@ -29,7 +29,7 @@ from twisted.plugin import IPlugin
 from twisted.python import log
 from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
-from xivo.xivo_logging import setup_logging
+from xivo.xivo_logging import setup_logging, silence_loggers
 from xivo.status import Status
 from xivo.token_renewer import TokenRenewer
 from xivo_bus.consumer import BusConsumer
@@ -461,6 +461,7 @@ class ProvisioningServiceMaker:
     def _configure_logging(self, options):
         setup_logging(LOG_FILE_NAME, debug=options['verbose'])
         security.setup_logging()
+        silence_loggers(['amqp.connection.Connection.heartbeat_tick'], logging.INFO)
 
     def _read_config(self, options):
         logger.info('Reading application configuration')
