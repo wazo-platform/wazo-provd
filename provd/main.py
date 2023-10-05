@@ -187,7 +187,9 @@ class HTTPProcessService(Service):
         interface = self._config['general']['listen_interface']
         port = self._config['general']['http_port']
         logger.info('Binding HTTP provisioning service to port %s', port)
-        self._tcp_server = internet.TCPServer(port, site, backlog=128, interface=interface)
+        self._tcp_server = internet.TCPServer(
+            port, site, backlog=128, interface=interface
+        )
         self._tcp_server.startService()
         Service.startService(self)
 
@@ -384,11 +386,6 @@ class DevicesDeletionService(Service):
 
 
 class BusEventConsumerService(DevicesDeletionService):
-    def __init__(self, prov_service, config):
-        super().__init__(prov_service, config)
-        self._bus_consumer = ProvdBusConsumer.from_config(config['bus'])
-        self._bus_consumer.start()
-
     @defer.inlineCallbacks
     def _auth_tenant_deleted(self, event):
         logger.info("auth_tenant_deleted event consumed: %s", event)
@@ -396,12 +393,16 @@ class BusEventConsumerService(DevicesDeletionService):
         yield self.delete_devices(tenant_uuid)
 
     def startService(self):
-        self._bus_consumer.subscribe('auth_tenant_deleted', self._auth_tenant_deleted)
+        self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
         status.get_status_aggregator().add_provider(self._bus_consumer.provide_status)
+        self._bus_consumer.subscribe('auth_tenant_deleted', self._auth_tenant_deleted)
+
+        self._bus_consumer.start()
         Service.startService(self)
 
     def stopService(self):
         self._bus_consumer.stop()
+        self._bus_consumer = None
         Service.stopService(self)
 
 
