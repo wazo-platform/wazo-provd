@@ -216,12 +216,11 @@ def _update_general_base_raw_config(app_raw_config):
     # warning: raw_config in the function name means device raw config and
     # the app_raw_config argument means application configuration.
     base_raw_config = app_raw_config['general']['base_raw_config']
-    update_list = {
+    base_raw_config |= {
         'http_port': app_raw_config['general']['http_port'],
         'tftp_port': app_raw_config['general']['tftp_port'],
         'base_external_url': app_raw_config['general']['base_external_url'],
     }
-    base_raw_config.update(update_list)
 
     if 'ip' not in base_raw_config:
         if 'external_ip' in app_raw_config['general']:

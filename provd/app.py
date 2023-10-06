@@ -249,8 +249,7 @@ class ProvisioningApplication:
         # Return a deferred that will fire with a tuple (plugin, raw_config)
         # associated with the device, or fire with the tuple (None, None) if
         # there's at least one without etc etc
-        plugin = self._dev_get_plugin(device)
-        if plugin is not None:
+        if (plugin := self._dev_get_plugin(device)) is not None:
             raw_config = yield self._dev_get_raw_config(device)
             if raw_config is not None:
                 defer.returnValue((plugin, raw_config))
@@ -302,11 +301,9 @@ class ProvisioningApplication:
     def _dev_deconfigure_if_possible(self, device):
         # Return true if the device has been successfully configured (i.e.
         # no exception were raised), else false.
-        plugin = self._dev_get_plugin(device)
-        if plugin is None:
+        if (plugin := self._dev_get_plugin(device)) is None:
             return False
-        else:
-            return self._dev_deconfigure(device, plugin)
+        return self._dev_deconfigure(device, plugin)
 
     def _dev_synchronize(self, device, plugin, raw_config):
         # Return a deferred that will fire with None once the device
@@ -325,16 +322,16 @@ class ProvisioningApplication:
             # the plugin used by the device is not installed/loaded. This
             # is often caused by a manual plugin uninstallation
             raise Exception(f'Plugin {device.get("plugin")} is not installed/loaded')
-        else:
-            yield self._dev_synchronize(device, plugin, raw_config)
+
+        yield self._dev_synchronize(device, plugin, raw_config)
 
     @defer.inlineCallbacks
     def _dev_get_or_raise(self, device_id):
         device = yield self._dev_collection.retrieve(device_id)
         if device is None:
             raise InvalidIdError(f'invalid device ID "{device_id}"')
-        else:
-            defer.returnValue(device)
+
+        defer.returnValue(device)
 
     @_wlock
     @defer.inlineCallbacks
@@ -979,6 +976,7 @@ class ProvisioningApplication:
 
         devices = yield self._dev_collection.find({'plugin': plugin_id})
         devices = list(devices)
+
         # unload plugin
         if plugin_id in self.pg_mgr:
             plugin = self.pg_mgr[plugin_id]
@@ -986,6 +984,7 @@ class ProvisioningApplication:
                 if device['configured']:
                     self._dev_deconfigure(device, plugin)
             self._pg_unload(plugin_id)
+
         # load plugin
         try:
             self._pg_load(plugin_id)
@@ -997,13 +996,13 @@ class ProvisioningApplication:
                     device['configured'] = False
                     yield self._dev_collection.update(device)
             raise
-        else:
-            # reconfigure every device
-            for device in devices:
-                configured = yield self._dev_configure_if_possible(device)
-                if device['configured'] != configured:
-                    device['configured'] = configured
-                    yield self._dev_collection.update(device)
+
+        # reconfigure every device
+        for device in devices:
+            configured = yield self._dev_configure_if_possible(device)
+            if device['configured'] != configured:
+                device['configured'] = configured
+                yield self._dev_collection.update(device)
 
     def pg_retrieve(self, plugin_id):
         return self.pg_mgr[plugin_id]
@@ -1017,11 +1016,11 @@ def _check_is_server_url(value):
         parse_result = urlparse(value)
     except Exception as e:
         raise InvalidParameterError(e)
-    else:
-        if not parse_result.scheme:
-            raise InvalidParameterError(f'no scheme: {value}')
-        if not parse_result.hostname:
-            raise InvalidParameterError(f'no hostname: {value}')
+
+    if not parse_result.scheme:
+        raise InvalidParameterError(f'no scheme: {value}')
+    if not parse_result.hostname:
+        raise InvalidParameterError(f'no hostname: {value}')
 
 
 def _check_is_proxy(value):
@@ -1032,13 +1031,13 @@ def _check_is_proxy(value):
         parse_result = urlparse(value)
     except Exception as e:
         raise InvalidParameterError(e)
-    else:
-        if not parse_result.scheme:
-            raise InvalidParameterError(f'No scheme: {value}')
-        if not parse_result.hostname:
-            raise InvalidParameterError(f'No hostname: {value}')
-        if parse_result.path:
-            raise InvalidParameterError(f'Path: {value}')
+
+    if not parse_result.scheme:
+        raise InvalidParameterError(f'No scheme: {value}')
+    if not parse_result.hostname:
+        raise InvalidParameterError(f'No hostname: {value}')
+    if parse_result.path:
+        raise InvalidParameterError(f'Path: {value}')
 
 
 def _check_is_https_proxy(value):
@@ -1051,9 +1050,9 @@ def _check_is_https_proxy(value):
         parse_result = urlparse(value)
     except Exception as e:
         raise InvalidParameterError(e)
-    else:
-        if parse_result.scheme and parse_result.hostname:
-            raise InvalidParameterError(f'scheme and hostname: {value}')
+
+    if parse_result.scheme and parse_result.hostname:
+        raise InvalidParameterError(f'scheme and hostname: {value}')
 
 
 class ApplicationConfigureService:
@@ -1067,12 +1066,7 @@ class ApplicationConfigureService:
         if l10n_service is None:
             logger.info('No localization service registered')
             return None
-        else:
-            value = l10n_service.get_locale()
-            if value is None:
-                return None
-            else:
-                return value
+        return l10n_service.get_locale()
 
     def _set_param_locale(self, value):
         l10n_service = get_localization_service()

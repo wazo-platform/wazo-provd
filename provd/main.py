@@ -117,8 +117,8 @@ class ProcessService(Service):
     def _get_conf_file_globals(self):
         # Pre: hasattr(self._prov_service, 'app')
         conf_file_globals = {}
-        conf_file_globals.update(ident.__dict__)
-        conf_file_globals.update(pgasso.__dict__)
+        conf_file_globals |= ident.__dict__
+        conf_file_globals |= pgasso.__dict__
         conf_file_globals['app'] = self._prov_service.app
         return conf_file_globals
 

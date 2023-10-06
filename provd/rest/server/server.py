@@ -1,4 +1,4 @@
-# Copyright 2011-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -180,7 +180,7 @@ def json_request_entity(fun):
             content = json.loads(request.content.getvalue())
         except ValueError as e:
             logger.info('Received invalid JSON document: %s', e)
-            return respond_error(request, b'Invalid JSON document: %s' % e)
+            return respond_error(request, f'Invalid JSON document: {e}'.encode())
         return fun(self, request, content)
     return aux
 

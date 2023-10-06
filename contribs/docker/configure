@@ -25,7 +25,7 @@ class HTTPRequest:
             'Accept': 'text/plain'
         }
         if headers:
-            self._headers.update(headers)
+            self._headers |= headers
         self._opener = self._build_opener(username, password)
 
     def run(self, uri='', qry=None, data=None):

@@ -45,8 +45,7 @@ class AuthVerifier(auth_verifier.AuthVerifier):
             acl_check = getattr(func, 'acl', self._fallback_acl_check)
             token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
             tenant_uuid = decode_bytes(request.getHeader(b'Wazo-Tenant'))
-            kwargs_for_required_acl = dict(kwargs)
-            kwargs_for_required_acl.update(obj.__dict__)
+            kwargs_for_required_acl = kwargs | obj.__dict__
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
             try:
                 token_is_valid = self.client().token.check(token_id, required_acl, tenant=tenant_uuid)

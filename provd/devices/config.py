@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Config and config collection module.
 
@@ -19,8 +19,8 @@ Config objects have the following standardized keys:
       updater.
   transient -- a boolean indicating if the config is transient (boolean).
     A transient config will be automatically deleted if no device depends on
-    it. Note that you MUST not used a transient config as a parent of another
-    config or you'll get undefined behaviour.
+    it. Note that you MUST not use a transient config as a parent of another
+    config, or you'll get undefined behaviour.
 
 Config collection objects are used as a storage for config objects.
 
@@ -505,10 +505,9 @@ def _remove_none_values_for_device(config):
 def _remove_none_values(config):
     if isinstance(config, list):
         return [_remove_none_values(x) for x in config]
-    elif isinstance(config, dict):
+    if isinstance(config, dict):
         return {k: _remove_none_values(v) for k, v in config.items() if v is not None}
-    else:
-        return config
+    return config
 
 
 class ConfigCollection(ForwardingDocumentCollection):
@@ -703,5 +702,4 @@ class DefaultConfigFactory:
             sip_line_1 = config['raw_config']['sip_lines']['1']
         except KeyError:
             return None
-        else:
-            return self._new_config(config['id'], sip_line_1['username'])
+        return self._new_config(config['id'], sip_line_1['username'])

@@ -7,6 +7,7 @@
 import logging
 from collections import deque
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,8 @@ class DeferredRWLock:
     
     """
     def __init__(self):
-        self._read_waiting = deque()
-        self._write_waiting = deque()
+        self._read_waiting: deque[Deferred] = deque()
+        self._write_waiting: deque[Deferred] = deque()
         self._reading = 0
         self._writing = 0
         self.read_lock = _DeferredRWLock_Base(self._acquire_read_lock,
@@ -105,7 +106,7 @@ class DeferredRWLock:
             elif self._read_waiting:
                 assert not self._write_waiting
                 # ...and no one is waiting for write yet some are waiting for read
-                # It might looks like an error, but we need to consider how lock
+                # It might look like an error, but we need to consider how lock
                 # acquisition is done, i.e. by queuing and calling this method
                 self._unlock_all_readers()
             else:

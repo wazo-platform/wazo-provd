@@ -172,7 +172,7 @@ class RuleLine:
                 return i + 1
         else:
             raise ValueError(
-                "'%s' is not an unambiguous month name abbreviation" % infield
+                f"'{infield}' is an ambiguous month name abbreviation"
             )
 
     @classmethod
@@ -184,13 +184,13 @@ class RuleLine:
             elif last_char in "ugz":
                 time_type = "z"
             else:
-                raise ValueError("'%s' is not a valid 'AT' field value" % atfield)
+                raise ValueError(f"'{atfield}' is not a valid 'AT' field value")
             atfield = atfield[:-1]
         else:
             time_type = "w"
 
         if not _is_amount_of_time(atfield):
-            raise ValueError("'%s' is not a valid 'AT' field value" % atfield)
+            raise ValueError(f"'{atfield}' is not a valid 'AT' field value")
         return _amount_of_time_to_seconds(atfield), time_type
 
     @classmethod
@@ -198,12 +198,12 @@ class RuleLine:
         if savefield == "-":
             return 0
         if not _is_amount_of_time(savefield, accept_neg=True):
-            raise ValueError("'%s' is not a valid 'SAVE' field value" % savefield)
+            raise ValueError(f"'{savefield}' is not a valid 'SAVE' field value")
         return _amount_of_time_to_seconds(savefield)
 
     @classmethod
     def _fixed_day_to_str(cls, day):
-        return "D%s" % day
+        return f"D{day}"
 
     @classmethod
     def _variable_day_to_str(cls, week, weekday):
@@ -217,22 +217,22 @@ class RuleLine:
         onfield = onfield.lower()
         if onfield.isalpha():
             if not onfield.startswith("last"):
-                raise ValueError("'%s' is not a valid 'ON' field value" % onfield)
+                raise ValueError(f"'{onfield}' is not a valid 'ON' field value")
             weekday_idx = find_word_from_abbrv(onfield[4:], cls._WEEKDAY_CONTEXT, True)
             if weekday_idx is None:
                 raise ValueError(
-                    "'%s' is not a valid 'ON' field value (ambiguous)" % onfield
+                    f"'{onfield}' is not a valid 'ON' field value (ambiguous)"
                 )
             return cls._variable_day_to_str(5, weekday_idx + 1)
 
         mobj = re.match(r"^([a-z]+)([<>]=?)(\d{1,2})$", onfield, re.I)
         if mobj is None:
-            raise ValueError("'%s' is not a valid 'ON' field value" % onfield)
+            raise ValueError(f"'{onfield}' is not a valid 'ON' field value")
         weekday, op, num = mobj.groups()
         weekday_idx = find_word_from_abbrv(weekday, cls._WEEKDAY_CONTEXT, True)
         if weekday_idx is None:
             raise ValueError(
-                "'%s' is not a valid 'ON' field value (ambiguous)" % onfield
+                f"'{onfield}' is not a valid 'ON' field value (ambiguous)"
             )
         num = int(num)
         if op[0] == ">":
@@ -241,18 +241,19 @@ class RuleLine:
             q, r = divmod(num - 1, 7)
             if r != 0:
                 logger.info(
-                    "'%s' is not a well supported 'ON' field value (%d %% 7 != 0)"
-                    % (onfield, num)
+                    "'%s' is not a well supported 'ON' field value (%d %% 7 != 0)",
+                    onfield,
+                    num
                 )
             weeknum = q + 1
             return cls._variable_day_to_str(weeknum, weekday_idx + 1)
         else:
             assert op[0] == "<"
-            # XXX As of 2010, no Rule use this facility, so I didn't took the time
+            # XXX As of 2010, no Rule use this facility, so I didn't take the time
             # to implement it. Also, most phones doesn't have good support for this kind
             # of DST rule
             logger.info(
-                "'%s' is not a well supported 'ON' field value (use of <)" % onfield
+                "'%s' is not a well supported 'ON' field value (use of <)", onfield
             )
             return cls._variable_day_to_str(5, weekday_idx + 1)
 
@@ -281,8 +282,7 @@ class RuleSet:
     def add_rule(self, rule):
         if rule.name != self.name:
             raise ValueError(
-                "Rule name ('%s') is different from rule set name ('%s')"
-                % (rule.name, self.name)
+                f"Rule name ('{rule.name}') is different from rule set name ('{self.name}')"
             )
         self._rules.append(rule)
 
@@ -307,14 +307,14 @@ class RuleSet:
 
         if not dst_start_rules or not dst_end_rules:
             logger.debug(
-                "The '%s' rule set doesn't have currently applicable DST rules"
-                % self.name
+                "The '%s' rule set doesn't have currently applicable DST rules",
+                self.name
             )
             return None
         if len(dst_start_rules) > 1 or len(dst_end_rules) > 1:
             raise NotImplementedError(
-                "The '%s' rule set has too much DST information (%d start, %d end)"
-                % (self.name, len(dst_start_rules), len(dst_end_rules))
+                f"The '{self.name}' rule set has too much DST information "
+                f"({len(dst_start_rules)} start, {len(dst_end_rules)} end)"
             )
         return {
             "start": dst_start_rules[0].as_rule(),
@@ -347,7 +347,7 @@ class ZoneLine:
     @classmethod
     def _gmtofffield_to_seconds(cls, gmtofffield):
         if not _is_amount_of_time(gmtofffield, accept_neg=True):
-            raise ValueError("'%s' is not a valid 'GMTOFF' field value" % gmtofffield)
+            raise ValueError(f"'{gmtofffield}' is not a valid 'GMTOFF' field value")
         return _amount_of_time_to_seconds(gmtofffield)
 
 
@@ -486,21 +486,18 @@ def export_model_to_text_file(fobj, model):
     for zone_name in sorted(model.keys()):
         zone_info = model[zone_name]
         if zone_info["dst"] is None:
-            print("%-34s%10s    -" % (zone_name, zone_info["utcoffset"]), file=fobj)
+            print(f"{zone_name:<34}{zone_info['utcoffset']:>10}    -", file=fobj)
         else:
             print(
-                "%-34s%10s    %s"
-                % (zone_name, zone_info["utcoffset"], _format_dst(zone_info["dst"])),
+                f"{zone_name:<34}{zone_info['utcoffset']:>10}    {_format_dst(zone_info['dst'])}",
                 file=fobj,
             )
 
 
 def _format_dst(dst_dict):
-    return "%s;%s;%d" % (
-        _format_dst_change(dst_dict["start"]),
-        _format_dst_change(dst_dict["end"]),
-        dst_dict["save"],
-    )
+    start = _format_dst_change(dst_dict["start"])
+    end = _format_dst_change(dst_dict["end"])
+    return f"{start};{end};{dst_dict['save']}"
 
 
 def _format_dst_change(change):
@@ -513,7 +510,6 @@ if __name__ == "__main__":
     import sys
     import tarfile
     import tempfile
-    import time
 
     STD_SOURCE_FILES = [
         "africa",
@@ -563,7 +559,7 @@ if __name__ == "__main__":
 
     if opt.tarfile is not None:
         if not tarfile.is_tarfile(opt.tarfile):
-            logger.error('error: file "%s" is not a valid tarfile' % opt.tarfile)
+            logger.error('error: file "%s" is not a valid tarfile', opt.tarfile)
             sys.exit(1)
         tfile = tarfile.open(opt.tarfile, "r")
         tempdir = tempfile.mkdtemp()
@@ -574,9 +570,10 @@ if __name__ == "__main__":
     if not args:
         logger.error("error: tool takes at least one argument")
         sys.exit(1)
+
     for file in args:
         if not os.path.isfile(file):
-            logger.error('error: "%s" is not a file' % file)
+            logger.error('error: "%s" is not a file', file)
             sys.exit(1)
 
     if opt.outfile is None:
@@ -587,8 +584,8 @@ if __name__ == "__main__":
     try:
         model = create_model_from_files(args)
         out.write(
-            "# This file was automatically generated on %s by the tzdataexport tool\n"
-            % time.strftime("%Y-%m-%d")
+            "# This file was automatically generated on "
+            f"{datetime.datetime.now():%Y-%m-%d} by the tzdataexport tool\n"
         )
         export_model_to_text_file(out, model)
     finally:
