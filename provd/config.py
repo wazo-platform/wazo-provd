@@ -103,6 +103,10 @@ _DEFAULT_CONFIG = {
         'verbose': False,
         'sync_service_type': 'none',
         'num_http_proxies': 0,
+        'syncdb': {
+            'interval_sec': 86400,
+            'start_sec': 60,
+        },
     },
     'rest_api': {
         'ip': '127.0.0.1',
@@ -130,6 +134,14 @@ _DEFAULT_CONFIG = {
         'prefix': None,
         'https': False,
     },
+    'bus': {
+        'username': 'guest',
+        'password': 'guest',
+        'host': 'localhost',
+        'port': 5672,
+        'exchange_name': 'wazo-headers',
+        'exchange_type': 'headers',
+    },
 }
 
 _OPTION_TO_PARAM_LIST = [
@@ -144,6 +156,7 @@ _OPTION_TO_PARAM_LIST = [
 
 class ConfigError(Exception):
     """Raise when an error occur while getting configuration."""
+
     pass
 
 
@@ -157,16 +170,16 @@ class Options(usage.Options):
     ]
 
     optParameters = [
-        ('config-file', 'f', None,
-         'The configuration file'),
-        ('config-dir', 'c', None,
-         'The directory where request processing configuration file can be found'),
-        ('http-port', None, None,
-         'The HTTP port to listen on.'),
-        ('tftp-port', None, None,
-         'The TFTP port to listen on.'),
-        ('rest-port', None, None,
-         'The port to listen on.'),
+        ('config-file', 'f', None, 'The configuration file'),
+        (
+            'config-dir',
+            'c',
+            None,
+            'The directory where request processing configuration file can be found',
+        ),
+        ('http-port', None, None, 'The HTTP port to listen on.'),
+        ('tftp-port', None, None, 'The TFTP port to listen on.'),
+        ('rest-port', None, None, 'The port to listen on.'),
     ]
 
 
@@ -202,7 +215,9 @@ def _check_and_convert_parameters(raw_config):
     # load base_raw_config_file JSON document
     # XXX maybe we should put this in a separate method since it's more or less
     #     a check and not really a convert...
-    raw_config['general']['base_raw_config'] = _load_json_file(raw_config['general']['base_raw_config_file'])
+    raw_config['general']['base_raw_config'] = _load_json_file(
+        raw_config['general']['base_raw_config_file']
+    )
 
 
 def _get_ip_fallback():
@@ -236,14 +251,20 @@ def _post_update_raw_config(raw_config):
     _update_general_base_raw_config(raw_config)
     # update json_db_dir to absolute dir
     if 'json_db_dir' in raw_config['database']:
-        raw_config['database']['json_db_dir'] = os.path.join(raw_config['general']['base_storage_dir'],
-                                                             raw_config['database']['json_db_dir'])
+        raw_config['database']['json_db_dir'] = os.path.join(
+            raw_config['general']['base_storage_dir'],
+            raw_config['database']['json_db_dir'],
+        )
 
 
 def _load_key_file(config):
     key_file = parse_config_file(config['auth']['key_file'])
-    return {'auth': {'username': key_file.get('service_id'),
-                     'password': key_file.get('service_key')}}
+    return {
+        'auth': {
+            'username': key_file.get('service_id'),
+            'password': key_file.get('service_key'),
+        }
+    }
 
 
 def get_config(argv):

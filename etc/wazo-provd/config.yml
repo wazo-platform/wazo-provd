@@ -9,6 +9,9 @@ general:
   # wazo-provd. This is used to detect the device's IP address.
   # If 0, then the HTTP header X-Forwarded-For will be ignored.
   num_http_proxies: 0
+  syncdb:
+    interval_sec: 86400
+    start_sec: 60
 rest_api:
   ip: 127.0.0.1
   port: 8666
@@ -22,3 +25,9 @@ amid:
   port: 9491
   prefix: null
   https: false
+bus:
+    username: guest
+    password: guest
+    host: localhost
+    port: 5672
+    exchange_name: wazo-headers

@@ -1,4 +1,4 @@
-# Copyright 2017-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2017-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
@@ -19,14 +19,19 @@ SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
 
 
 class BaseIntegrationTest(AssetLaunchingTestCase):
-
-    assets_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
+    assets_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', 'assets')
+    )
     service = 'provd'
     wait_strategy = WaitStrategy()
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.set_client()
+
+    @classmethod
+    def set_client(cls):
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     @classmethod

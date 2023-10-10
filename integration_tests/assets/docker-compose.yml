@@ -10,6 +10,15 @@ services:
     ports:
       - "9497"
 
+  rabbitmq:
+    image: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672"
+    volumes:
+      - type: tmpfs
+        target: /var/lib/rabbitmq
+
   provd:
     image: wazo-provd-tests
     volumes:

@@ -1,9 +1,11 @@
 https://github.com/wazo-platform/wazo-lib-rest-client/archive/master.zip
 https://github.com/wazo-platform/wazo-amid-client/archive/master.zip
 https://github.com/wazo-platform/wazo-auth-client/archive/master.zip
+https://github.com/wazo-platform/xivo-bus/archive/master.zip
 https://github.com/wazo-platform/xivo-fetchfw/archive/master.zip
 https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
 jinja2==2.11.3
+kombu==5.0.2 # for xivo-bus
 markupsafe==1.1.1 # from jinja
 pyopenssl>=21.0.0,<23.0.0  # bullseye uses 20.0.1, but only the patched debian version still works.
 cryptography>=3.3.2 # for pyopenssl
