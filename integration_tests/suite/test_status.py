@@ -1,10 +1,12 @@
-# Copyright 2020-2021 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2020-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import (
     assert_that,
     has_entries,
 )
+
+from wazo_test_helpers import until
 
 from .helpers.base import BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
@@ -15,5 +17,11 @@ class TestConfigs(BaseIntegrationTest):
     wait_strategy = NoWaitStrategy()
 
     def test_list(self):
-        results = self._client.status.get()
-        assert_that(results, has_entries(rest_api='ok'))
+        def is_ready():
+            status = self._client.status.get()
+            assert_that(
+                status,
+                has_entries(rest_api='ok', bus_consumer=has_entries(status='ok'))
+            )
+
+        until.assert_(is_ready, tries=60)
