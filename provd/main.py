@@ -220,6 +220,34 @@ class HTTPProcessService(Service):
         return self._tcp_server.stopService()
 
 
+class HTTPProxiedProcessService(Service):
+    def __init__(self, prov_service, process_service, config):
+        self._prov_service = prov_service
+        self._process_service = process_service
+        self._config = config
+
+    def startService(self):
+        app = self._prov_service.app
+        process_service = self._process_service.request_processing
+        trusted_proxies_count = self._config['general']['http_proxied_trusted_proxies_count']
+        http_process_service = ident.HTTPRequestProcessingService(
+            process_service, app.pg_mgr, trusted_proxies_count
+        )
+        site = Site(http_process_service)
+        interface = self._config['general']['http_proxied_listen_interface']
+        port = self._config['general']['http_proxied_listen_port']
+        logger.info('Binding HTTP-proxied provisioning service to port %s', port)
+        self._tcp_server = internet.TCPServer(
+            port, site, backlog=128, interface=interface
+        )
+        self._tcp_server.startService()
+        Service.startService(self)
+
+    def stopService(self):
+        Service.stopService(self)
+        return self._tcp_server.stopService()
+
+
 class TFTPProcessService(Service):
     def __init__(
         self,
@@ -567,6 +595,9 @@ class ProvisioningServiceMaker:
 
         http_process_service = HTTPProcessService(prov_service, process_service, config)
         http_process_service.setServiceParent(top_service)
+
+        http_proxied_process_service = HTTPProxiedProcessService(prov_service, process_service, config)
+        http_proxied_process_service.setServiceParent(top_service)
 
         tftp_process_service = TFTPProcessService(prov_service, process_service, config)
         tftp_process_service.setServiceParent(top_service)
