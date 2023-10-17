@@ -206,6 +206,27 @@ paths:
         '415':
           $ref: '#/responses/UnsupportedMediaError'
 
+  /configure/provisioning_key:
+    put:
+      summary: Update the tenant provisioning key
+      description: '**Required ACL:** `provd.configure.{tenant_uuid}.provisioning_key.update`'
+      tags:
+        - provd
+      parameters:
+        - name: body
+          in: body
+          description: Configuration parameter body definition
+          schema:
+            $ref: '#/definitions/Param'
+        - $ref: '#/parameters/TenantUUID'
+      responses:
+        '204':
+          $ref: '#/responses/NoContentResponse'
+        '404':
+          $ref: '#/responses/NoSuchResourceError'
+        '415':
+          $ref: '#/responses/UnsupportedMediaError'
+
   /dev_mgr:
     get:
       summary: Get the Device Manager resource

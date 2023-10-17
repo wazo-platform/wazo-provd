@@ -23,6 +23,7 @@ from typing import Generator, Any
 from provd.app import (
     InvalidIdError,
     DeviceNotInProvdTenantError,
+    ProvisioningApplication,
     TenantInvalidForDeviceError,
     NonDeletableError,
 )
@@ -350,7 +351,7 @@ class IntermediaryResource(AuthResource):
 
 
 class ServerResource(IntermediaryResource):
-    def __init__(self, app, dhcp_request_processing_service):
+    def __init__(self, app: ProvisioningApplication, dhcp_request_processing_service):
         links = [
             (
                 'dev',
@@ -431,7 +432,7 @@ class ConfigureServiceResource(AuthResource):
         description_list = self._get_localized_description_list()
         params = []
         for key, description in description_list:
-            value = self._cfg_srv.get(key)
+            value = self._cfg_srv.get(key, tenant_uuid=self.tenant_uuid)
             href = uri_append_path(request.path, key)
             params.append(
                 {
@@ -462,17 +463,17 @@ class ConfigureParameterResource(AuthResource):
         self._cfg_srv = cfg_srv
         self.param_id = decode_bytes(key)
 
-    @required_acl('provd.configure.{param_id}.read')
+    @required_acl('provd.configure.{tenant_uuid}.{param_id}.read')
     @json_response_entity
     def render_GET(self, request: Request):
         try:
-            value = self._cfg_srv.get(self.param_id)
+            value = self._cfg_srv.get(self.param_id, tenant_uuid=self.tenant_uuid)
         except KeyError:
             logger.info('Invalid/unknown key: %s', self.param_id)
             return respond_no_resource(request)
         return json_response({'param': {'value': value}})
 
-    @required_acl('provd.configure.{param_id}.update')
+    @required_acl('provd.configure.{tenant_uuid}.{param_id}.update')
     @json_request_entity
     def render_PUT(self, request: Request, content):
         try:
@@ -481,7 +482,7 @@ class ConfigureParameterResource(AuthResource):
             return respond_error(request, 'Wrong information in entity')
 
         try:
-            self._cfg_srv.set(self.param_id, value)
+            self._cfg_srv.set(self.param_id, value, tenant_uuid=self.tenant_uuid)
         except InvalidParameterError as e:
             logger.info('Invalid value for key %s: %r', self.param_id, value)
             return respond_error(request, e)
