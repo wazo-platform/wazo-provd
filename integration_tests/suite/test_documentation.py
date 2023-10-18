@@ -15,11 +15,10 @@ logger.setLevel(logging.INFO)
 
 
 class TestDocumentation(BaseIntegrationTest):
-
     asset = 'documentation'
     wait_strategy = NoWaitStrategy()
 
-    def test_documentation_errors(self):
+    def test_documentation_errors(self) -> None:
         port = self.service_port(8666, 'provd')
         api_url = f'http://127.0.0.1:{port}/0.2/api/api.yml'
         api = requests.get(api_url)

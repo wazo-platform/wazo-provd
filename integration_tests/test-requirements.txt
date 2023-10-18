@@ -6,3 +6,4 @@ openapi-spec-validator<0.6.0  # dependency conflict on requests version (>2.31.0
 pyhamcrest
 pytest
 requests
+service-identity

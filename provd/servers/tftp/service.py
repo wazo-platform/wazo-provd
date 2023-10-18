@@ -6,18 +6,26 @@ from __future__ import annotations
 
 import os
 from abc import ABCMeta
-from io import StringIO
-from typing import Union
+from collections.abc import Callable
+from io import BytesIO
+from typing import TYPE_CHECKING, TypedDict
 
-from provd.servers.tftp.packet import ERR_FNF, Packet
+from ...servers.tftp.packet import ERR_FNF, RequestPacket
 
-TFTPRequest = dict[str, Union[str, Packet]]
+if TYPE_CHECKING:
+    from ...servers.tftp.proto import _Response
+
+
+class TFTPRequest(TypedDict):
+    # Comments say it should be `tuple[str, int]`, but it seems to always receive a string
+    address: str
+    packet: RequestPacket
 
 
 class AbstractTFTPReadService(metaclass=ABCMeta):
     """A TFTP read service handles TFTP read requests (RRQ)."""
 
-    def handle_read_request(self, request: TFTPRequest, response):
+    def handle_read_request(self, request: TFTPRequest, response: _Response) -> None:
         """Handle a TFTP read request (RRQ).
 
         request is a dictionary with the following keys:
@@ -42,27 +50,30 @@ class AbstractTFTPReadService(metaclass=ABCMeta):
         """
 
 
-class TFTPNullService:
+class TFTPNullService(AbstractTFTPReadService):
     """A read service that always reject the requests."""
 
-    def __init__(self, errcode=ERR_FNF, errmsg="File not found"):
+    def __init__(
+        self, errcode: bytes = ERR_FNF, errmsg: str = "File not found"
+    ) -> None:
         self.errcode = errcode
         self.errmsg = errmsg
 
-    def handle_read_request(self, request: TFTPRequest, response):
+    def handle_read_request(self, request: TFTPRequest, response: _Response):
         response.reject(self.errcode, self.errmsg)
 
 
-class TFTPStringService:
+class TFTPStringService(AbstractTFTPReadService):
     """A read service that always serve the same string."""
-    def __init__(self, msg):
+
+    def __init__(self, msg: str) -> None:
         self._msg = msg
 
-    def handle_read_request(self, request: TFTPRequest, response):
-        response.accept(StringIO(self._msg))
+    def handle_read_request(self, request: TFTPRequest, response: _Response) -> None:
+        response.accept(BytesIO(self._msg.encode()))
 
 
-class TFTPFileService:
+class TFTPFileService(AbstractTFTPReadService):
     """A read service that serve files under a path.
 
     It strips any leading path separator of the requested filename. For
@@ -73,10 +84,11 @@ class TFTPFileService:
     will be rejected even if 'foo.txt' exist in the parent directory.
 
     """
-    def __init__(self, path):
+
+    def __init__(self, path: str) -> None:
         self._path = os.path.abspath(path)
 
-    def handle_read_request(self, request: TFTPRequest, response):
+    def handle_read_request(self, request: TFTPRequest, response: _Response) -> None:
         rq_orig_path = request['packet']['filename'].decode('ascii')
         rq_stripped_path = rq_orig_path.lstrip(os.sep)
         rq_final_path = os.path.normpath(os.path.join(self._path, rq_stripped_path))
@@ -91,28 +103,32 @@ class TFTPFileService:
                 response.accept(fobj)
 
 
-class TFTPHookService:
+class TFTPHookService(AbstractTFTPReadService):
     """Base class for non-terminal read service.
 
     Services that only want to inspect the request should derive from this
     class and override the _pre_handle method.
 
     """
-    def __init__(self, service):
+
+    def __init__(self, service: AbstractTFTPReadService) -> None:
         self._service = service
 
-    def _pre_handle(self, request: TFTPRequest):
+    def _pre_handle(self, request: TFTPRequest) -> None:
         """This MAY be overridden in derived classes."""
         pass
 
-    def handle_read_request(self, request: TFTPRequest, response):
+    def handle_read_request(self, request: TFTPRequest, response: _Response) -> None:
         self._pre_handle(request)
         self._service.handle_read_request(request, response)
 
 
 class TFTPLogService(TFTPHookService):
     """A small hook service that permits logging of the requests."""
-    def __init__(self, logger, service):
+
+    def __init__(
+        self, logger: Callable[[str], None], service: AbstractTFTPReadService
+    ) -> None:
         """
         logger -- a callable object taking a string as argument
 
@@ -120,9 +136,12 @@ class TFTPLogService(TFTPHookService):
         super().__init__(service)
         self._logger = logger
 
-    def _pre_handle(self, request: TFTPRequest):
+    def _pre_handle(self, request: TFTPRequest) -> None:
         packet = request['packet']
-        msg = f"TFTP request from {request['address']} - filename '{packet['filename']}' - mode '{packet['mode']}'"
+        msg = (
+            f"TFTP request from {request['address']!r} - "
+            f"filename '{packet['filename']!r}' - mode '{packet['mode']!r}'"
+        )
         if packet['options']:
-            msg += f"- options '{packet['options']}'"
+            msg += f"- options '{packet['options']!r}'"
         self._logger(msg)

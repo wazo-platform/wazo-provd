@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from typing import Any
 
-from provd.persist.common import ID_KEY, InvalidIdError, NonDeletableError
+from provd.persist.common import (
+    ID_KEY,
+    InvalidIdError,
+    NonDeletableError,
+    AbstractDocumentCollection,
+)
 from twisted.internet import defer
 
 logger = logging.getLogger(__name__)
@@ -76,15 +82,15 @@ def _new_in_matcher(s_value):
         raise ValueError(
             f'selector value for in matcher must be a list: {s_value} is not'
         )
-    pred = lambda doc_value: doc_value in s_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(lambda doc_value: doc_value in s_value)
 
 
 def _new_contains_matcher(s_value):
     # Return a matcher that returns true if there's a value in the document
     # matching the select key that one of the value in s_value
-    pred = lambda doc_value: hasattr(doc_value, '__contains__') and s_value in doc_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(
+        lambda doc_value: hasattr(doc_value, '__contains__') and s_value in doc_value
+    )
 
 
 def _new_nin_matcher(s_value):
@@ -94,44 +100,37 @@ def _new_nin_matcher(s_value):
         raise ValueError(
             f'Selector value for nin matcher must be a list: {s_value} is not'
         )
-    pred = lambda doc_value: doc_value in s_value
-    return _new_simple_inv_matcher_from_pred(pred)
+    return _new_simple_inv_matcher_from_pred(lambda doc_value: doc_value in s_value)
 
 
 def _new_eq_matcher(s_value):
     # Return a matcher that returns true if there's a value in the document
     # matching the select key that is equal to s_value
-    pred = lambda doc_value: doc_value == s_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(lambda doc_value: doc_value == s_value)
 
 
 def _new_ne_matcher(s_value):
     # Return a matcher that returns true if there's no value in the document
     # matching the select key that is equal to s_value
-    pred = lambda doc_value: doc_value == s_value
-    return _new_simple_inv_matcher_from_pred(pred)
+    return _new_simple_inv_matcher_from_pred(lambda doc_value: doc_value == s_value)
 
 
 def _new_gt_matcher(s_value):
     # Return a matcher that returns true if there's a value in the document
     # matching the select key that is greater (>) to s_value
-    pred = lambda doc_value: doc_value > s_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(lambda doc_value: doc_value > s_value)
 
 
 def _new_ge_matcher(s_value):
-    pred = lambda doc_value: doc_value >= s_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(lambda doc_value: doc_value >= s_value)
 
 
 def _new_lt_matcher(s_value):
-    pred = lambda doc_value: doc_value < s_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(lambda doc_value: doc_value < s_value)
 
 
 def _new_le_matcher(s_value):
-    pred = lambda doc_value: doc_value <= s_value
-    return _new_simple_matcher_from_pred(pred)
+    return _new_simple_matcher_from_pred(lambda doc_value: doc_value <= s_value)
 
 
 def _new_exists_matcher(s_value):
@@ -206,7 +205,7 @@ def _create_pred_from_selector(selector):
     return aux
 
 
-class SimpleBackendDocumentCollection:
+class SimpleBackendDocumentCollection(AbstractDocumentCollection):
     def __init__(self, backend, generator):
         self._backend = backend
         self._generator = generator
@@ -520,9 +519,9 @@ class SimpleBackendDocumentCollection:
             if has_key:
                 yield document[ID_KEY], value
 
-    def _create_index(self, complex_key):
+    def _create_index(self, complex_key: str):
         logger.info('Creating index on complex key %s', complex_key)
-        index = {}
+        index: dict[str, Any] = {}
         for key, value in self._new_id_and_value_iterator(complex_key):
             self._new_value_for_index(index, key, value)
         self._indexes[complex_key] = index
@@ -557,7 +556,7 @@ def _new_key_fun_from_key(key):
         try:
             for cur_key in split_key:
                 cur_elem = cur_elem[cur_key]
-        except (KeyError, TypeError) as e:
+        except (KeyError, TypeError):
             return ''
         return '' if cur_elem is None else str(cur_elem)
 

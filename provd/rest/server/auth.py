@@ -1,11 +1,15 @@
 # Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import logging
 import requests
 from functools import wraps
 from wazo_auth_client import Client as AuthClient
-from wazo_auth_client.exceptions import InvalidTokenException, MissingPermissionsTokenException
+from wazo_auth_client.exceptions import (
+    InvalidTokenException,
+    MissingPermissionsTokenException,
+)
 from xivo import auth_verifier
 
 from provd.util import decode_bytes
@@ -32,7 +36,6 @@ def get_auth_client(**config):
 
 
 class AuthVerifier(auth_verifier.AuthVerifier):
-
     def verify_token(self, obj, request, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -48,11 +51,17 @@ class AuthVerifier(auth_verifier.AuthVerifier):
             kwargs_for_required_acl = kwargs | obj.__dict__
             required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
             try:
-                token_is_valid = self.client().token.check(token_id, required_acl, tenant=tenant_uuid)
+                token_is_valid = self.client().token.check(
+                    token_id, required_acl, tenant=tenant_uuid
+                )
             except InvalidTokenException:
-                return self._handle_invalid_token_exception(token_id, required_access=required_acl)
+                return self._handle_invalid_token_exception(
+                    token_id, required_access=required_acl
+                )
             except MissingPermissionsTokenException:
-                return self._handle_missing_permissions_token_exception(token_id, required_access=required_acl)
+                return self._handle_missing_permissions_token_exception(
+                    token_id, required_access=required_acl
+                )
             except requests.RequestException as e:
                 return self.handle_unreachable(e)
 
@@ -60,4 +69,5 @@ class AuthVerifier(auth_verifier.AuthVerifier):
                 return func(*args, **kwargs)
 
             return self.handle_unauthorized(token_id, required_access=required_acl)
+
         return wrapper

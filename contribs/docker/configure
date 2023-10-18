@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
 # Basic configuration provd for XiVO
 
@@ -6,29 +7,36 @@
 # To fix it, it would be necessary to get a valid token from wazo-auth and use wazo-provd-client
 
 import json
-import urllib
 from urllib.parse import urlencode
-from urllib.request import Request, HTTPPasswordMgrWithDefaultRealm, HTTPDigestAuthHandler, build_opener
+from urllib.request import (
+    Request,
+    HTTPPasswordMgrWithDefaultRealm,
+    HTTPDigestAuthHandler,
+    build_opener,
+)
 
 ADDRESS = '192.168.113.99'  # XiVO ip address
 PROVD_ADDRESS = '192.168.32.41'
 
 
 class HTTPRequest:
-
-    def __init__(self, host='127.0.0.1', port=80, headers=None, username=None, password=None):
+    def __init__(
+        self,
+        host: str = '127.0.0.1',
+        port: int = 80,
+        headers: dict[str, str] | None = None,
+        username: str | None = None,
+        password: str | None = None,
+    ):
         self._host = host
         self._port = port
         self._url = f'{self._host}:{self._port}'
-        self._headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'text/plain'
-        }
+        self._headers = {'Content-Type': 'application/json', 'Accept': 'text/plain'}
         if headers:
             self._headers |= headers
         self._opener = self._build_opener(username, password)
 
-    def run(self, uri='', qry=None, data=None):
+    def run(self, uri: str = '', qry=None, data=None):
         url = self._url
         if uri:
             url = f'{url}/{uri}'
@@ -64,9 +72,9 @@ def provd():
         'deletable': False,
         'displayname': 'local',
         'parent_ids': [],
-        'raw_config': {'X_key':'xivo'},
+        'raw_config': {'X_key': 'xivo'},
         'proxy_main': ADDRESS,
-        'registrar_main': ADDRESS
+        'registrar_main': ADDRESS,
     }
     data = {'config': config}
     provd_http_request.run('provd/cfg_mgr/configs', data=data)
@@ -77,10 +85,12 @@ def provd():
         'deletable': False,
         'displayname': 'base',
         'parent_ids': [],
-        'raw_config': {'X_key':'xivo',
-                       'ntp_enabled': True,
-                       'ntp_ip': ADDRESS,
-                       'X_xivo_phonebook_ip': ADDRESS},
+        'raw_config': {
+            'X_key': 'xivo',
+            'ntp_enabled': True,
+            'ntp_ip': ADDRESS,
+            'X_xivo_phonebook_ip': ADDRESS,
+        },
     }
     data = {'config': config}
     provd_http_request.run('provd/cfg_mgr/configs', data=data)
@@ -91,29 +101,18 @@ def provd():
         'id': 'defaultconfigdevice',
         'label': 'Default config device',
         'parent_ids': [],
-        'raw_config': {
-            'ntp_enabled': True,
-            'ntp_ip': ADDRESS
-        }
+        'raw_config': {'ntp_enabled': True, 'ntp_ip': ADDRESS},
     }
     data = {'config': config}
     provd_http_request.run('provd/cfg_mgr/configs', data=data)
-
 
     config = {
         'X_type': 'internal',
         'deletable': False,
         'id': 'autoprov',
-        'parent_ids': [
-            'base',
-            'defaultconfigdevice'
-        ],
+        'parent_ids': ['base', 'defaultconfigdevice'],
         'raw_config': {
-            'sccp_call_managers': {
-                '1': {
-                    'ip':  ADDRESS
-                }
-            },
+            'sccp_call_managers': {'1': {'ip': ADDRESS}},
             'sip_lines': {
                 '1': {
                     'display_name': 'Autoprov',
@@ -121,11 +120,11 @@ def provd():
                     'password': 'autoprov',
                     'proxy_ip': ADDRESS,
                     'registrar_ip': ADDRESS,
-                    'username': 'apYgW48ycP'
+                    'username': 'apYgW48ycP',
                 }
-            }
+            },
         },
-        'role': 'autocreate'
+        'role': 'autocreate',
     }
     data = {'config': config}
     provd_http_request.run('provd/cfg_mgr/configs', data=data)

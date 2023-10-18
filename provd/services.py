@@ -66,7 +66,7 @@ class AbstractConfigurationService(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def description(self) -> tuple[str, str | None]:
+    def description(self) -> list[tuple[str, str]]:
         """A read-only list of tuple where the first element is the name of
         the parameter that can be set and the second element is a short
         description of the parameter.
@@ -140,6 +140,7 @@ class AbstractInstallationService(metaclass=ABCMeta):
           description -- the description of the package
 
         """
+
     def upgrade(self, pkg_id):
         """Upgrade a package (optional operation).
 
@@ -162,6 +163,7 @@ class AbstractInstallationService(metaclass=ABCMeta):
 
 
 # Some base service implementation
+
 
 class AbstractConfigurationServiceParameter:
     description: str | None
@@ -203,7 +205,7 @@ class DictConfigurationServiceParameter(AbstractConfigurationServiceParameter):
         key: str,
         description: str | None = None,
         check_fun: Callable[[Any], NoReturn] | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         # kwargs is used to set localized description, for example "description_fr='bonjour'"
         self._dict = data
@@ -278,11 +280,12 @@ class PersistentConfigurationServiceDecorator:
             logger.debug('Setting configure param %s to %s', name, value)
             try:
                 self._cfg_service.set(name, value)
-            except KeyError as e:
+            except KeyError:
                 logger.info('Could not set unknown parameter "%s"', name)
             except InvalidParameterError as e:
-                logger.warning('Invalid value "%s" for parameter "%s": %s',
-                               value, name, e)
+                logger.warning(
+                    'Invalid value "%s" for parameter "%s": %s', value, name, e
+                )
 
     def get(self, name: str) -> Any:
         return self._cfg_service.get(name)

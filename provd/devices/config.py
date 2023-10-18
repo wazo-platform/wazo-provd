@@ -11,7 +11,8 @@ Config objects have the following standardized keys:
   raw_config -- the configuration parameters of this config (dict) (mandatory)
   role -- the role of the config (unicode) (optional).
     Right now, two roles have been standardized:
-    - the 'default' role: a config with such a role means that this config should be used for devices which have
+    - the 'default' role: a config with such a role means that this
+      config should be used for devices which have
       no config associated. There should be zero or one config with such a role
       in a collection.
     - the 'autocreate' role: a config with such a role means that this config is
@@ -25,7 +26,17 @@ Config objects have the following standardized keys:
 Config collection objects are used as a storage for config objects.
 
 """
+from __future__ import annotations
+
 from collections import defaultdict
+import logging
+import uuid
+from copy import deepcopy
+from functools import wraps
+from provd.persist.common import ID_KEY
+from provd.persist.util import ForwardingDocumentCollection
+from provd.util import decode_bytes
+from twisted.internet import defer
 
 """Specification of the configuration parameters.
 
@@ -419,25 +430,18 @@ specific values to a template.
 
 """
 
-import logging
-import uuid
-from copy import deepcopy
-from functools import wraps
-from provd.persist.common import ID_KEY
-from provd.persist.util import ForwardingDocumentCollection
-from provd.util import decode_bytes
-from twisted.internet import defer
-
 logger = logging.getLogger(__name__)
 
 
 class RawConfigError(Exception):
     """Raised when the raw config is not valid."""
+
     pass
 
 
 class RawConfigParamError(RawConfigError):
     """Raised when a specific parameter of the raw config is not valid."""
+
     pass
 
 
@@ -459,8 +463,9 @@ def _check_config_validity(config):
     if 'parent_ids' not in config:
         raise ValueError('missing "parent_ids" field in config')
     if not isinstance(config['parent_ids'], list):
-        raise ValueError('"parent_ids" field must be a list; is %s' %
-                         type(config['parent_ids']))
+        raise ValueError(
+            '"parent_ids" field must be a list; is %s' % type(config['parent_ids'])
+        )
     for parent_id in config['parent_ids']:
         if not isinstance(parent_id, str):
             raise ValueError(f'parent id must be a string; is {type(parent_id)}')
@@ -470,7 +475,9 @@ def _check_config_validity(config):
 
     raw_config = config['raw_config']
     if not isinstance(raw_config, dict):
-        raise ValueError(f'"raw_config" field must be a dict; is {type(config["raw_config"])}')
+        raise ValueError(
+            f'"raw_config" field must be a dict; is {type(config["raw_config"])}'
+        )
 
 
 def _needs_child_and_parent_indexes(fun):
@@ -481,12 +488,15 @@ def _needs_child_and_parent_indexes(fun):
         if self._has_child_and_parent_indexes():
             return defer.maybeDeferred(fun, self, *args, **kwargs)
         else:
+
             def callback(_):
                 assert self._has_child_and_parent_indexes()
                 return fun(self, *args, **kwargs)
+
             deferred = self._build_child_and_parent_indexes()
             deferred.addCallback(callback)
             return deferred
+
     return aux
 
 
@@ -552,6 +562,7 @@ class ConfigCollection(ForwardingDocumentCollection):
             # update parent idx
             self._parent_idx[config_id] = list(parent_ids)
             return config_id
+
         deferred = self._collection.insert(config)
         deferred.addCallback(callback)
         return deferred
@@ -579,6 +590,7 @@ class ConfigCollection(ForwardingDocumentCollection):
                         self._child_idx[parent_id] = [config_id]
                 # update parent idx
                 self._parent_idx[config_id] = list(new_parent_ids)
+
         deferred = self._collection.update(config)
         deferred.addCallback(callback)
         return deferred
@@ -586,6 +598,7 @@ class ConfigCollection(ForwardingDocumentCollection):
     @_needs_child_and_parent_indexes
     def delete(self, config_id):
         config_id = decode_bytes(config_id)
+
         def callback(_):
             # update idx of children
             old_parent_ids = self._parent_idx[config_id]
@@ -596,6 +609,7 @@ class ConfigCollection(ForwardingDocumentCollection):
                     del self._child_idx[parent_id]
             # update parent idx
             del self._parent_idx[config_id]
+
         deferred = self._collection.delete(config_id)
         deferred.addCallback(callback)
         return deferred
@@ -686,14 +700,8 @@ class DefaultConfigFactory:
         new_config = {
             'id': config_id + new_suffix,
             'parent_ids': [config_id],
-            'raw_config': {
-                'sip_lines': {
-                    '1': {
-                       'username': sip_line_1_username
-                    }
-                }
-            },
-            'transient': True
+            'raw_config': {'sip_lines': {'1': {'username': sip_line_1_username}}},
+            'transient': True,
         }
         return new_config
 

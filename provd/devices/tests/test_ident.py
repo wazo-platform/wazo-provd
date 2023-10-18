@@ -1,8 +1,15 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
+
+from collections.abc import Generator
+from typing import Any
 
 from hamcrest import assert_that, equal_to, has_entry
 from unittest.mock import Mock, patch
+
+from twisted.internet.defer import Deferred
+
 from provd.devices import ident
 from provd.devices.ident import (
     AddDeviceRetriever,
@@ -12,14 +19,17 @@ from provd.devices.ident import (
     VotingUpdater,
     _get_ip_from_http_request_with_proxies,
     _RequestHelper,
+    Request,
+    DHCPRequest,
 )
 from twisted.internet import defer
 from twisted.trial import unittest
 
+from provd.servers.tftp import TFTPRequest
+
 
 class TestAddDeviceRetriever(unittest.TestCase):
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.app = Mock()
         self.dev_retriever = AddDeviceRetriever(self.app)
 
@@ -35,18 +45,19 @@ class TestAddDeviceRetriever(unittest.TestCase):
 
         device = yield self.dev_retriever.retrieve(dev_info)
 
-        mock_log_security_msg.assert_called_once_with('New device created automatically from %s: %s', device_ip, device_id)
+        mock_log_security_msg.assert_called_once_with(
+            'New device created automatically from %s: %s', device_ip, device_id
+        )
         expected_device = dict(dev_info)
         expected_device['added'] = 'auto'
         assert_that(device, equal_to(expected_device))
 
 
 class TestLastSeenUpdater(unittest.TestCase):
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.updater = LastSeenUpdater()
 
-    def test_last_seen_updater_set_on_conflict(self):
+    def test_last_seen_updater_set_on_conflict(self) -> None:
         dev_infos = [
             {'k1': 'v1'},
             {'k1': 'v2'},
@@ -57,7 +68,7 @@ class TestLastSeenUpdater(unittest.TestCase):
 
         self.assertEqual(self.updater.dev_info, {'k1': 'v2'})
 
-    def test_last_seen_updater_noop_on_nonconflict(self):
+    def test_last_seen_updater_noop_on_nonconflict(self) -> None:
         dev_infos = [
             {'k1': 'v1'},
             {'k2': 'v2'},
@@ -70,11 +81,10 @@ class TestLastSeenUpdater(unittest.TestCase):
 
 
 class TestVotingUpdater(unittest.TestCase):
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.updater = VotingUpdater()
 
-    def test_voting_updater_votes_for_only_if_only_one(self):
+    def test_voting_updater_votes_for_only_if_only_one(self) -> None:
         dev_infos = [
             {'k1': 'v1'},
         ]
@@ -84,7 +94,7 @@ class TestVotingUpdater(unittest.TestCase):
 
         self.assertEqual(self.updater.dev_info, {'k1': 'v1'})
 
-    def test_voting_updater_votes_for_highest_1(self):
+    def test_voting_updater_votes_for_highest_1(self) -> None:
         dev_infos = [
             {'k1': 'v1'},
             {'k1': 'v1'},
@@ -96,7 +106,7 @@ class TestVotingUpdater(unittest.TestCase):
 
         self.assertEqual(self.updater.dev_info, {'k1': 'v1'})
 
-    def test_voting_updater_votes_for_highest_2(self):
+    def test_voting_updater_votes_for_highest_2(self) -> None:
         dev_infos = [
             {'k1': 'v2'},
             {'k1': 'v1'},
@@ -110,14 +120,13 @@ class TestVotingUpdater(unittest.TestCase):
 
 
 class TestRemoveOutdatedIpDeviceUpdater(unittest.TestCase):
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.app = Mock()
         self.app.nat = 0
         self.dev_updater = RemoveOutdatedIpDeviceUpdater(self.app)
 
     @defer.inlineCallbacks
-    def test_nat_disabled(self):
+    def test_nat_disabled(self) -> Generator[Deferred, None, None]:
         device = {
             'id': 'abc',
         }
@@ -128,10 +137,12 @@ class TestRemoveOutdatedIpDeviceUpdater(unittest.TestCase):
 
         yield self.dev_updater.update(device, dev_info, 'http', Mock())
 
-        self.app.dev_find.assert_called_once_with({'ip': '1.1.1.1', 'id': {'$ne': 'abc'}})
+        self.app.dev_find.assert_called_once_with(
+            {'ip': '1.1.1.1', 'id': {'$ne': 'abc'}}
+        )
 
     @defer.inlineCallbacks
-    def test_nat_enabled(self):
+    def test_nat_enabled(self) -> Generator[Deferred, None, None]:
         device = {
             'id': 'abc',
         }
@@ -146,15 +157,16 @@ class TestRemoveOutdatedIpDeviceUpdater(unittest.TestCase):
 
 
 class TestRequestHelper(unittest.TestCase):
+    request_type: Mock | RequestType
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.app = Mock()
         self.request = Mock()
         self.request_type = Mock()
         self.helper = _RequestHelper(self.app, self.request, self.request_type, 1)
 
     @defer.inlineCallbacks
-    def test_extract_device_info_no_info(self):
+    def test_extract_device_info_no_info(self) -> Generator[Deferred, None, None]:
         extractor = self._new_dev_info_extractor_mock(None)
 
         dev_info = yield self.helper.extract_device_info(extractor)
@@ -163,7 +175,7 @@ class TestRequestHelper(unittest.TestCase):
         assert_that(dev_info, equal_to({}))
 
     @defer.inlineCallbacks
-    def test_extract_device_info_with_info(self):
+    def test_extract_device_info_with_info(self) -> Generator[Deferred, None, None]:
         expected = {'a': 1}
         extractor = self._new_dev_info_extractor_mock(expected)
 
@@ -173,9 +185,9 @@ class TestRequestHelper(unittest.TestCase):
         assert_that(dev_info, equal_to(expected))
 
     @defer.inlineCallbacks
-    def test_retrieve_device_no_device(self):
+    def test_retrieve_device_no_device(self) -> Generator[Deferred, None, None]:
         retriever = self._new_dev_retriever_mock(None)
-        dev_info = {}
+        dev_info: dict[str, Any] = {}
 
         device = yield self.helper.retrieve_device(retriever, dev_info)
 
@@ -183,7 +195,7 @@ class TestRequestHelper(unittest.TestCase):
         assert_that(device, equal_to(None))
 
     @defer.inlineCallbacks
-    def test_retrieve_device_with_device(self):
+    def test_retrieve_device_with_device(self) -> Generator[Deferred, None, None]:
         expected = {'id': 'a'}
         retriever = self._new_dev_retriever_mock(expected)
         dev_info = Mock()
@@ -194,29 +206,35 @@ class TestRequestHelper(unittest.TestCase):
         assert_that(device, equal_to(expected))
 
     @defer.inlineCallbacks
-    def test_update_device_no_device(self):
+    def test_update_device_no_device(self) -> Generator[Deferred, None, None]:
         dev_updater = self._new_dev_updater_mock()
         device = None
-        dev_info = {}
+        dev_info: dict[str, Any] = {}
 
         yield self.helper.update_device(dev_updater, device, dev_info)
 
         self.assertFalse(dev_updater.update.called)
 
     @defer.inlineCallbacks
-    def test_update_device_on_no_device_change_and_no_remote_state_update(self):
+    def test_update_device_on_no_device_change_and_no_remote_state_update(
+        self,
+    ) -> Generator[Deferred, None, None]:
         dev_updater = self._new_dev_updater_mock()
         device = {'id': 'a'}
-        dev_info = {}
+        dev_info: dict[str, Any] = {}
 
         yield self.helper.update_device(dev_updater, device, dev_info)
 
-        dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
+        dev_updater.update.assert_called_once_with(
+            device, dev_info, self.request, self.request_type
+        )
         self.assertFalse(self.app.cfg_retrieve.called)
         self.assertFalse(self.app.dev_update.called)
 
     @defer.inlineCallbacks
-    def test_update_device_on_no_device_change_and_remote_state_update(self):
+    def test_update_device_on_no_device_change_and_remote_state_update(
+        self,
+    ) -> Generator[Deferred, None, None]:
         dev_updater = self._new_dev_updater_mock()
         device = {
             'id': 'a',
@@ -224,7 +242,7 @@ class TestRequestHelper(unittest.TestCase):
             'plugin': 'foo',
             'config': 'a',
         }
-        dev_info = {}
+        dev_info: dict[str, Any] = {}
         self.request = Mock()
         self.request.path = b'001122334455.cfg'
         self.request_type = RequestType.HTTP
@@ -244,21 +262,25 @@ class TestRequestHelper(unittest.TestCase):
 
         yield self.helper.update_device(dev_updater, device, dev_info)
 
-        dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
+        dev_updater.update.assert_called_once_with(
+            device, dev_info, self.request, self.request_type
+        )
         self.app.cfg_retrieve.assert_called_once_with(device['config'])
         self.app.dev_update.assert_called_once_with(device)
         assert_that(device, has_entry('remote_state_sip_username', 'foobar'))
 
     @defer.inlineCallbacks
-    def test_update_device_on_device_change_and_remote_state_update(self):
+    def test_update_device_on_device_change_and_remote_state_update(
+        self,
+    ) -> Generator[Deferred, None, None]:
         dev_updater = self._new_dev_updater_mock({'vendor': 'xivo'})
-        device = {
+        device: dict[str, Any] = {
             'id': 'a',
             'configured': True,
             'plugin': 'foo',
             'config': 'a',
         }
-        dev_info = {}
+        dev_info: dict[str, Any] = {}
         self.request = Mock()
         self.request.path = b'001122334455.cfg'
         self.request_type = RequestType.HTTP
@@ -278,43 +300,51 @@ class TestRequestHelper(unittest.TestCase):
 
         yield self.helper.update_device(dev_updater, device, dev_info)
 
-        dev_updater.update.assert_called_once_with(device, dev_info, self.request, self.request_type)
-        self.app.dev_update.assert_called_once_with(device, pre_update_hook=self.helper._pre_update_hook)
+        dev_updater.update.assert_called_once_with(
+            device, dev_info, self.request, self.request_type
+        )
+        self.app.dev_update.assert_called_once_with(
+            device, pre_update_hook=self.helper._pre_update_hook
+        )
 
-    def test_get_plugin_id_no_device(self):
+    def test_get_plugin_id_no_device(self) -> None:
         device = None
-
         pg_id = self.helper.get_plugin_id(device)
-
         assert_that(pg_id, equal_to(None))
 
-    def test_get_plugin_id_no_plugin_key(self):
+    def test_get_plugin_id_no_plugin_key(self) -> None:
         device = {'id': 'a'}
-
         pg_id = self.helper.get_plugin_id(device)
-
         assert_that(pg_id, equal_to(None))
 
-    def test_get_plugin_id_ok(self):
+    def test_get_plugin_id_ok(self) -> None:
         device = {'id': 'a', 'plugin': 'xivo-foo'}
-
         pg_id = self.helper.get_plugin_id(device)
-
         assert_that(pg_id, equal_to('xivo-foo'))
 
-    def _new_dev_info_extractor_mock(self, return_value):
+    def _new_dev_info_extractor_mock(self, return_value: Any) -> Mock:
         dev_info_extractor = Mock()
         dev_info_extractor.extract.return_value = defer.succeed(return_value)
         return dev_info_extractor
 
-    def _new_dev_retriever_mock(self, return_value):
+    def _new_dev_retriever_mock(self, return_value: Any) -> Mock:
         dev_retriever = Mock()
         dev_retriever.retrieve.return_value = defer.succeed(return_value)
         return dev_retriever
 
-    def _new_dev_updater_mock(self, device_update={}):
+    def _new_dev_updater_mock(
+        self, device_update: dict[str, Any] | None = None
+    ) -> Mock:
         dev_updater = Mock()
-        def update_fun(device, dev_info, request, request_type):
+        if device_update is None:
+            device_update = {}
+
+        def update_fun(
+            device: dict,
+            dev_info: dict,
+            request: Request | DHCPRequest | TFTPRequest,
+            request_type: RequestType,
+        ) -> Deferred:
             device.update(device_update)
             return defer.succeed(None)
 
@@ -323,8 +353,7 @@ class TestRequestHelper(unittest.TestCase):
 
 
 class TestLogSensitiveRequest(unittest.TestCase):
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.ip = '169.254.0.1'
         self.filename = 'foobar.cfg'
         self.request_type = ident.RequestType.HTTP
@@ -349,35 +378,61 @@ class TestLogSensitiveRequest(unittest.TestCase):
         ident._log_sensitive_request(self.plugin, self.request, self.request_type)
 
         self.plugin.is_sensitive_filename.assert_called_once_with(self.filename)
-        mock_log_security_msg.assert_called_once_with('Sensitive file requested from %s: %s',
-                                                      self.ip, self.filename)
+        mock_log_security_msg.assert_called_once_with(
+            'Sensitive file requested from %s: %s', self.ip, self.filename
+        )
 
 
 class TestGetIPFromHTTPRequestWithProxies(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.request = Mock()
 
-    def test_get_ip_without_proxy_in_request(self):
+    def test_get_ip_without_proxy_in_request(self) -> None:
         self.request.getHeader.return_value = None
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 1)
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0
+        )
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 1
+        )
 
-    def test_get_ip_with_one_proxy_in_request(self):
+    def test_get_ip_with_one_proxy_in_request(self) -> None:
         self.request.getHeader.return_value = 'proxied_client_ip'
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
-        assert _get_ip_from_http_request_with_proxies(self.request, 1) == 'proxied_client_ip'
-        assert _get_ip_from_http_request_with_proxies(self.request, 2) == 'proxied_client_ip'
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0
+        )
+        result = _get_ip_from_http_request_with_proxies(self.request, 1)
+        assert result == 'proxied_client_ip'
 
-    def test_get_ip_with_two_proxies_in_request(self):
+        result = _get_ip_from_http_request_with_proxies(self.request, 2)
+        assert result == 'proxied_client_ip'
+
+    def test_get_ip_with_two_proxies_in_request(self) -> None:
         self.request.getHeader.return_value = 'proxied_client_ip, proxied_proxy_ip'
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
-        assert _get_ip_from_http_request_with_proxies(self.request, 1) == 'proxied_proxy_ip'
-        assert _get_ip_from_http_request_with_proxies(self.request, 2) == 'proxied_client_ip'
-        assert _get_ip_from_http_request_with_proxies(self.request, 3) == 'proxied_client_ip'
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0
+        )
+        result = _get_ip_from_http_request_with_proxies(self.request, 1)
+        assert result == 'proxied_proxy_ip'
 
-    def test_get_ip_with_invalid_ip_address(self):
+        result = _get_ip_from_http_request_with_proxies(self.request, 2)
+        assert result == 'proxied_client_ip'
+
+        result = _get_ip_from_http_request_with_proxies(self.request, 3)
+        assert result == 'proxied_client_ip'
+
+    def test_get_ip_with_invalid_ip_address(self) -> None:
         self.request.getHeader.return_value = ', proxied_proxy_ip'
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0)
-        assert _get_ip_from_http_request_with_proxies(self.request, 1) == 'proxied_proxy_ip'
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 2)
-        self.assertRaises(RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 3)
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 0
+        )
+
+        result = _get_ip_from_http_request_with_proxies(self.request, 1)
+        assert result == 'proxied_proxy_ip'
+
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 2
+        )
+        self.assertRaises(
+            RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 3
+        )

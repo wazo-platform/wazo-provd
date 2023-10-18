@@ -10,14 +10,14 @@ from collections import defaultdict
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import Union
+from typing import TYPE_CHECKING, TypedDict, cast, Any, Union, Protocol
 
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
 from provd.servers.http_site import Request
 from provd.servers.tftp.packet import ERR_UNDEF
-from provd.servers.tftp.service import TFTPNullService
+from provd.servers.tftp.service import TFTPNullService, TFTPRequest
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.web.http import INTERNAL_SERVER_ERROR
@@ -27,37 +27,88 @@ from twisted.web import rewrite
 from provd.util import decode_bytes
 
 
+if TYPE_CHECKING:
+    from ..servers.tftp.proto import _Response
+    from ..main import ProvisioningApplication
+
+    class Request(Request):  # type: ignore[no-redef]
+        num_http_proxies: int | None
+
+
+class DeviceInfoUpdaterProtocol(Protocol):
+    dev_info: DeviceInfo
+
+    def update(self, dev_info: DeviceInfo) -> None:
+        ...
+
+
+class ExtractorProtocol(Protocol):
+    def extract(
+        self, request: Request | DHCPRequest | TFTPRequest, request_type: RequestType
+    ) -> Deferred:
+        ...
+
+
+class DevTFTPRequest(TFTPRequest, total=False):
+    prov_dev: DeviceInfo
+
+
+class DeviceInfoDict(TypedDict, total=False):
+    ip: str
+    mac: str
+
+
+DeviceInfo = Union[DeviceInfoDict, dict[str, Any]]
+
+
 class RequestType(Enum):
     HTTP = 'http'
     TFTP = 'tftp'
     DHCP = 'dhcp'
 
 
-DHCPRequest = dict[str, Union[str, dict[str, str]]]
+class DHCPRequest(TypedDict):
+    ip: str
+    mac: str
+    options: dict[int, bytes]
+
 
 logger = logging.getLogger(__name__)
 
 
-def _get_ip_from_request(request: Request, request_type: RequestType):
+def _get_ip_from_request(
+    request: Request | DHCPRequest | TFTPRequest, request_type: RequestType
+) -> str:
     if request_type == RequestType.HTTP:
-        if not request.num_http_proxies:
-            return request.getClientIP()
-        return _get_ip_from_http_request_with_proxies(request, request.num_http_proxies)
+        http_request: Request = request  # type: ignore
+        if not http_request.num_http_proxies:
+            return http_request.getClientIP()
+        return _get_ip_from_http_request_with_proxies(
+            http_request, http_request.num_http_proxies
+        )
     if request_type == RequestType.TFTP:
-        return request['address'][0]
+        tftp_request: TFTPRequest = request  # type: ignore
+        return tftp_request['address'][0]
     if request_type == RequestType.DHCP:
-        return request['ip']
+        dhcp_request: DHCPRequest = request  # type: ignore
+        return dhcp_request['ip']
     raise RuntimeError(f'invalid request_type: {request_type}')
 
 
-def _get_ip_from_http_request_with_proxies(request: Request, num_http_proxies: int):
+def _get_ip_from_http_request_with_proxies(
+    request: Request, num_http_proxies: int
+) -> str:
     if num_http_proxies <= 0:
-        raise RuntimeError('This function must be used with at least one expected proxy')
+        raise RuntimeError(
+            'This function must be used with at least one expected proxy'
+        )
     # Example with num_http_proxies = 2
     # X-Forwarded-For:   W.W.W.W,   X.X.X.X,     Y.Y.Y.Y,       Z.Z.Z.Z
     # X-Forwarded-For: untrusted, untrusted, entry proxy, backend proxy
     untrusted_forwarded_for = request.getHeader('X-Forwarded-For') or ''
-    untrusted_forwarded_for = [client_ip.strip() for client_ip in untrusted_forwarded_for.split(',')]
+    untrusted_forwarded_for = [
+        client_ip.strip() for client_ip in untrusted_forwarded_for.split(',')
+    ]
     trusted_forwarded_for = untrusted_forwarded_for[-num_http_proxies:]
     proxied_client_ip = trusted_forwarded_for[0]
     if not proxied_client_ip:
@@ -68,11 +119,18 @@ def _get_ip_from_http_request_with_proxies(request: Request, num_http_proxies: i
     return str(proxied_client_ip)
 
 
-def _get_filename_from_request(request: Request, request_type: RequestType):
+def _get_filename_from_request(
+    request: Request | DHCPRequest | TFTPRequest, request_type: RequestType
+) -> str | None:
     if request_type == RequestType.HTTP:
-        return basename(request.path.decode('ascii'))
+        http_request = cast(Request, request)
+        return basename(http_request.path.decode('ascii'))
     if request_type == RequestType.TFTP:
-        return basename(request['packet']['filename'])
+        tftp_request = cast(TFTPRequest, request)
+        filename: str | bytes = tftp_request['packet']['filename']
+        if isinstance(filename, bytes):
+            filename = filename.decode()
+        return basename(filename)
     if request_type == RequestType.DHCP:
         return None
     raise RuntimeError(f'invalid request_type: {request_type}')
@@ -100,7 +158,7 @@ class AbstractDeviceInfoExtractor(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def extract(self, request, request_type: RequestType):
+    def extract(self, request: Request, request_type: RequestType) -> Deferred:
         """Return a deferred that will fire with either a non-empty
         device info object or an object that evaluates to false in a boolean
         context if no information could be extracted.
@@ -120,10 +178,14 @@ class StandardDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     You SHOULD always use this extractor.
 
     """
-    def extract(self, request, request_type: RequestType):
+
+    def extract(
+        self, request: Request | DHCPRequest | TFTPRequest, request_type: RequestType
+    ) -> Deferred:
         dev_info = {'ip': _get_ip_from_request(request, request_type)}
         if request_type == RequestType.DHCP:
-            dev_info['mac'] = request['mac']
+            dhcp_request: DHCPRequest = request  # type: ignore[assignment]
+            dev_info['mac'] = dhcp_request['mac']
         return defer.succeed(dev_info)
 
 
@@ -132,11 +194,15 @@ class LastSeenUpdater:
     the last seen value.
 
     """
-    def __init__(self):
-        self.dev_info = {}
 
-    def update(self, dev_info: dict[str, str]) -> None:
+    def __init__(self) -> None:
+        self.dev_info: DeviceInfo = {}
+
+    def update(self, dev_info: DeviceInfo) -> None:
         self.dev_info |= dev_info
+
+
+KeyPool = dict[Any, int]
 
 
 class VotingUpdater:
@@ -147,27 +213,27 @@ class VotingUpdater:
 
     """
 
-    def __init__(self):
-        self._votes = defaultdict(dict)
+    def __init__(self) -> None:
+        self._votes: defaultdict[str, KeyPool] = defaultdict(dict)
 
-    def _vote(self, key, value):
+    def _vote(self, key: str, value: Any) -> None:
         key_pool = self._votes[key]
         key_pool[value] = key_pool.get(value, 0) + 1
 
-    def _get_winner(self, key_pool):
+    def _get_winner(self, key_pool: KeyPool) -> str:
         # Pre: key_pool is non-empty
         # XXX we are not doing any conflict resolution if key_pool has
-        #     a tie. What's worst is that it's not totally deterministic.
+        #     a tie. The worst is that it's not totally deterministic.
         return max(key_pool.items(), key=itemgetter(1))[0]
 
     @property
-    def dev_info(self):
-        dev_info = {}
+    def dev_info(self) -> DeviceInfo:
+        dev_info: dict[str, Any] = {}
         for key, key_pool in self._votes.items():
             dev_info[key] = self._get_winner(key_pool)
         return dev_info
 
-    def update(self, dev_info):
+    def update(self, dev_info: DeviceInfo):
         for key, value in dev_info.items():
             self._vote(key, value)
 
@@ -184,15 +250,21 @@ class CollaboratingDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     - 'dev_info' attribute, which is the current computed dev_info
 
     """
-    def __init__(self, updater_factory, extractors):
+
+    def __init__(
+        self,
+        updater_factory: type[DeviceInfoUpdaterProtocol],
+        extractors: list[ExtractorProtocol],
+    ):
         self._updater_factory = updater_factory
         self._extractors = extractors
 
     @defer.inlineCallbacks
-    def extract(self, request, request_type: RequestType):
+    def extract(self, request: Request, request_type: RequestType) -> Deferred:
         logging.debug('extractors: %s', self._extractors)
-        dlist = defer.DeferredList([extractor.extract(request, request_type)
-                                    for extractor in self._extractors])
+        dlist = defer.DeferredList(
+            [extractor.extract(request, request_type) for extractor in self._extractors]
+        )
         dlist_results = yield dlist
         updater = self._updater_factory()
         for success, result in dlist_results:
@@ -207,6 +279,7 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     device info extractors of every loaded plugins.
 
     """
+
     def __init__(self, extractor_factory, pg_mgr):
         """
         extractor_factory -- a function taking a list of extractors and
@@ -217,14 +290,15 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
         self._set_xtors()
         # observe plugin loading/unloading and keep a reference to the weakly
         # referenced observer
-        self._obs = BasePluginManagerObserver(self._on_plugin_load_or_unload,
-                                              self._on_plugin_load_or_unload)
+        self._obs = BasePluginManagerObserver(
+            self._on_plugin_load_or_unload, self._on_plugin_load_or_unload
+        )
         pg_mgr.attach(self._obs)
 
     def _xtor_name(self, request_type):
         return f'_{request_type}_xtor'
 
-    def _set_xtors(self):
+    def _set_xtors(self) -> None:
         logger.debug('Updating extractors for %s', self)
         for request_type in RequestType:
             pg_extractors = []
@@ -239,7 +313,7 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
     def _on_plugin_load_or_unload(self, pg_id):
         self._set_xtors()
 
-    def extract(self, request, request_type: RequestType):
+    def extract(self, request, request_type: RequestType) -> Deferred:
         xtor = getattr(self, self._xtor_name(request_type))
         return xtor.extract(request, request_type)
 
@@ -253,7 +327,7 @@ class AbstractDeviceRetriever(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def retrieve(self, dev_info: dict[str, str]) -> Deferred | None:
+    def retrieve(self, dev_info: DeviceInfo) -> Deferred | None:
         """Return a deferred that will fire with either a device object
         or None if it can't find such object.
 
@@ -266,18 +340,19 @@ class SearchDeviceRetriever(AbstractDeviceRetriever):
     one found.
 
     """
-    def __init__(self, app, key):
+
+    def __init__(self, app: ProvisioningApplication, key: str) -> None:
         self._app = app
         self._key = key
 
-    def retrieve(self, dev_info):
+    def retrieve(self, dev_info) -> Deferred:
         if self._key in dev_info:
             return self._app.dev_find_one({self._key: dev_info[self._key]})
         return defer.succeed(None)
 
 
 class IpDeviceRetriever(AbstractDeviceRetriever):
-    def __init__(self, app):
+    def __init__(self, app: ProvisioningApplication):
         self._app = app
 
     @defer.inlineCallbacks
@@ -294,7 +369,9 @@ class IpDeviceRetriever(AbstractDeviceRetriever):
         if nb_candidates == 1:
             return candidate_devices[0]
         elif nb_candidates > 1:
-            logger.warning('Multiple device match in IP device retriever: %r', candidate_devices)
+            logger.warning(
+                'Multiple device match in IP device retriever: %r', candidate_devices
+            )
         return None
 
     def _get_candidate_devices(self, devices, dev_info):
@@ -314,7 +391,7 @@ class IpDeviceRetriever(AbstractDeviceRetriever):
                         del devices_by_id[device_id]
 
 
-def MacDeviceRetriever(app):
+def MacDeviceRetriever(app: ProvisioningApplication) -> SearchDeviceRetriever:
     """Retrieve device object by looking up in a device manager for an
     object which MAC is the same as the device info object.
 
@@ -322,7 +399,7 @@ def MacDeviceRetriever(app):
     return SearchDeviceRetriever(app, 'mac')
 
 
-def SerialNumberDeviceRetriever(app):
+def SerialNumberDeviceRetriever(app: ProvisioningApplication) -> SearchDeviceRetriever:
     """Retrieve device object by looking up in a device manager for an
     object which serial number is the same as the device info object.
 
@@ -330,7 +407,7 @@ def SerialNumberDeviceRetriever(app):
     return SearchDeviceRetriever(app, 'sn')
 
 
-def UUIDDeviceRetriever(app):
+def UUIDDeviceRetriever(app: ProvisioningApplication) -> SearchDeviceRetriever:
     """Retrieve device object by looking up in a device manager for an
     object which UUID is the same as the device info object.
 
@@ -347,7 +424,8 @@ class AddDeviceRetriever(AbstractDeviceRetriever):
     don't find anything.
 
     """
-    def __init__(self, app):
+
+    def __init__(self, app: ProvisioningApplication) -> None:
         self._app = app
 
     @defer.inlineCallbacks
@@ -361,7 +439,9 @@ class AddDeviceRetriever(AbstractDeviceRetriever):
         else:
             device_ip = dev_info.get('ip')
             if device_ip:
-                log_security_msg('New device created automatically from %s: %s', device_ip, device_id)
+                log_security_msg(
+                    'New device created automatically from %s: %s', device_ip, device_id
+                )
             defer.returnValue(device)
 
 
@@ -370,7 +450,8 @@ class FirstCompositeDeviceRetriever(AbstractDeviceRetriever):
     returns.
 
     """
-    def __init__(self, retrievers=None):
+
+    def __init__(self, retrievers=None) -> None:
         self.retrievers = [] if retrievers is None else retrievers
 
     @defer.inlineCallbacks
@@ -403,6 +484,7 @@ class AbstractDeviceUpdater(metaclass=ABCMeta):
 
 class NullDeviceUpdater(AbstractDeviceUpdater):
     """Device updater that updates nothing."""
+
     def update(self, device, dev_info, request, request_type):
         return defer.succeed(None)
 
@@ -418,9 +500,8 @@ class DynamicDeviceUpdater(AbstractDeviceUpdater):
     reconfiguration.
 
     """
-    def __init__(self, keys, force_update=False):
-        # keys can either be a string (i.e. 'ip') or a list of string
-        #   (i.e. ['ip', 'version'])
+
+    def __init__(self, keys: str | list[str], force_update: bool = False) -> None:
         if isinstance(keys, str):
             keys = [keys]
         self._keys = list(keys)
@@ -442,6 +523,7 @@ class AddInfoDeviceUpdater(AbstractDeviceUpdater):
     reconfiguration.
 
     """
+
     def update(self, device, dev_info, request, request_type):
         for key in dev_info:
             if key not in device:
@@ -454,7 +536,8 @@ class AutocreateConfigDeviceUpdater(AbstractDeviceUpdater):
     device has no config.
 
     """
-    def __init__(self, app):
+
+    def __init__(self, app: ProvisioningApplication) -> None:
         self._app = app
 
     @defer.inlineCallbacks
@@ -467,7 +550,7 @@ class AutocreateConfigDeviceUpdater(AbstractDeviceUpdater):
 
 
 class RemoveOutdatedIpDeviceUpdater(AbstractDeviceUpdater):
-    def __init__(self, app):
+    def __init__(self, app: ProvisioningApplication) -> None:
         self._app = app
 
     @defer.inlineCallbacks
@@ -481,7 +564,7 @@ class RemoveOutdatedIpDeviceUpdater(AbstractDeviceUpdater):
 
 
 class CompositeDeviceUpdater(AbstractDeviceUpdater):
-    def __init__(self, updaters=None):
+    def __init__(self, updaters=None) -> None:
         self.updaters = [] if updaters is None else updaters
 
     @defer.inlineCallbacks
@@ -496,12 +579,18 @@ class RequestProcessingService:
 
     """
 
-    def __init__(self, app, dev_info_extractor, dev_retriever, dev_updater):
+    def __init__(
+        self,
+        app: ProvisioningApplication,
+        dev_info_extractor,
+        dev_retriever,
+        dev_updater,
+    ) -> None:
         self._app = app
         self._dev_info_extractor = dev_info_extractor
         self._dev_retriever = dev_retriever
         self._dev_updater = dev_updater
-        self._req_id = 0    # used for logging
+        self._req_id = 0  # used for logging
 
     def _new_request_id(self):
         req_id = f"{self._req_id:d}"
@@ -519,7 +608,9 @@ class RequestProcessingService:
           continue to process this request.
 
         """
-        helper = _RequestHelper(self._app, request, request_type, self._new_request_id())
+        helper = _RequestHelper(
+            self._app, request, request_type, self._new_request_id()
+        )
 
         dev_info = yield helper.extract_device_info(self._dev_info_extractor)
         device = yield helper.retrieve_device(self._dev_retriever, dev_info)
@@ -530,8 +621,9 @@ class RequestProcessingService:
 
 
 class _RequestHelper:
-
-    def __init__(self, app, request, request_type, request_id):
+    def __init__(
+        self, app: ProvisioningApplication, request, request_type, request_id
+    ) -> None:
         self._app = app
         self._request = request
         self._request_type = request_type
@@ -672,11 +764,13 @@ class _RequestHelper:
         return device.get('plugin')
 
 
-def _null_service_factory(pg_id, pg_service):
+def _null_service_factory(pg_id: str, pg_service):
     return pg_service
 
 
-def _log_sensitive_request(plugin, request, request_type):
+def _log_sensitive_request(
+    plugin, request: Request | DHCPRequest | TFTPRequest, request_type
+) -> None:
     is_sensitive_filename = getattr(plugin, 'is_sensitive_filename', None)
     if is_sensitive_filename is None:
         return
@@ -705,9 +799,10 @@ class HTTPRequestProcessingService(Resource):
     is used to continue with the request processing.
 
     """
+
     default_service = NoResource('Nowhere to route this request.')
 
-    def __init__(self, process_service, pg_mgr, num_http_proxies):
+    def __init__(self, process_service, pg_mgr, num_http_proxies) -> None:
         super().__init__()
         self._process_service = process_service
         self._pg_mgr = pg_mgr
@@ -724,14 +819,18 @@ class HTTPRequestProcessingService(Resource):
         request.num_http_proxies = self._num_http_proxies
 
         try:
-            device, pg_id = yield self._process_service.process(request, RequestType.HTTP)
+            device, pg_id = yield self._process_service.process(
+                request, RequestType.HTTP
+            )
         except Exception:
             logger.error('Error while processing HTTP request:', exc_info=True)
-            defer.returnValue(ErrorPage(
-                INTERNAL_SERVER_ERROR,
-                'Internal processing error',
-                'Internal processing error',
-            ))
+            defer.returnValue(
+                ErrorPage(
+                    INTERNAL_SERVER_ERROR,
+                    'Internal processing error',
+                    'Internal processing error',
+                )
+            )
         else:
             # Here we 'inject' the device object into the request object
             request.prov_dev = device
@@ -744,7 +843,9 @@ class HTTPRequestProcessingService(Resource):
                     # If the plugin specifies a path preprocessing method, use it
                     if hasattr(service, 'path_preprocess'):
                         logger.debug('Rewriting paths to the HTTP Service')
-                        service = rewrite.RewriterResource(service, service.path_preprocess)
+                        service = rewrite.RewriterResource(
+                            service, service.path_preprocess
+                        )
             if service.isLeaf:
                 request.postpath.insert(0, request.prepath.pop())
                 defer.returnValue(service)
@@ -758,14 +859,15 @@ class TFTPRequestProcessingService:
     the TFTP read service of plugins.
 
     """
+
     default_service = TFTPNullService(errmsg="Nowhere to route this request")
 
-    def __init__(self, process_service, pg_mgr):
+    def __init__(self, process_service: RequestProcessingService, pg_mgr):
         self._process_service = process_service
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
 
-    def handle_read_request(self, request: DHCPRequest, response):
+    def handle_read_request(self, request: DevTFTPRequest, response: _Response):
         logger.info('Processing TFTP request: %s', request['packet']['filename'])
         logger.debug('TFTP request: %s', request)
 
@@ -804,6 +906,7 @@ class DHCPRequestProcessingService(Resource):
     homogeneity’s sake.
 
     """
+
     def __init__(self, process_service):
         self._process_service = process_service
 
@@ -824,5 +927,6 @@ class DHCPRequestProcessingService(Resource):
 
         def errback(failure):
             logger.error('Error while processing DHCP request: %s', failure)
+
         d = self._process_service.process(request, RequestType.DHCP)
         d.addErrback(errback)

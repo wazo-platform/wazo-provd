@@ -5,19 +5,24 @@
 asynchronous application.
 
 """
+from __future__ import annotations
 
 from xivo_fetchfw import download
-from provd.operation import OperationInProgress, OIP_SUCCESS, OIP_FAIL, \
-    OIP_PROGRESS
+from provd.operation import (
+    OperationInProgress,
+    OIP_SUCCESS,
+    OIP_FAIL,
+    OIP_PROGRESS,
+)
 from twisted.internet import threads, defer
 
 
 def async_download(remote_file, supp_hooks=None):
     """Download a file asynchronously.
-        
+
     Return a deferred that will fire with None once the download is completed
     or fire its `errback` if the download failed.
-    
+
     """
     return threads.deferToThread(remote_file.download, supp_hooks or [])
 
@@ -42,11 +47,11 @@ class OperationInProgressHook(download.DownloadHook):
 
 def async_download_with_oip(remote_file, supp_hooks=None):
     """Download a file asynchronously.
-    
+
     Return a tuple (deferred, operation in progress). The deferred will fire
-    with None once the download is completed or fire its `errback` if the
+    with None once the download is completed or fire its errback if the
     download failed.
-    
+
     """
     oip = OperationInProgress(end=remote_file.size)
     oip_hook = OperationInProgressHook(oip)
@@ -56,11 +61,11 @@ def async_download_with_oip(remote_file, supp_hooks=None):
 
 def async_download_multiseq_with_oip(remote_files):
     """Download multiple files asynchronously,in a sequential way.
-    
+
     Return a tuple (deferred, operation in progress).
-    
+
     If one download fails, the other downloads will not be started.
-    
+
     """
     remote_files = list(remote_files)
     top_oip = OperationInProgress(state=OIP_PROGRESS)

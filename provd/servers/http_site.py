@@ -1,4 +1,4 @@
-# Copyright 2010-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
@@ -60,10 +60,11 @@ class Request(server.Request):
 
 
 class AuthResource(resource.Resource):
-
     def render(self, request: Request):
         render_method = self._extract_render_method(request)
-        decorated_render_method = auth_verifier.verify_token(self, request, render_method)
+        decorated_render_method = auth_verifier.verify_token(
+            self, request, render_method
+        )
         try:
             return decorated_render_method(request)
         except (
@@ -184,7 +185,9 @@ def getChildForRequest(resource, request: Request):
 def corsify_request(request: Request):
     # CORS
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
-    request.setHeader(b'Access-Control-Allow-Methods', b'GET, POST, PUT, DELETE, OPTIONS')
+    request.setHeader(
+        b'Access-Control-Allow-Methods', b'GET, POST, PUT, DELETE, OPTIONS'
+    )
     request.setHeader(
         b'Access-Control-Allow-Headers',
         b'Origin, X-Requested-With, Accept, Content-Type, X-Auth-Token, Wazo-Tenant',

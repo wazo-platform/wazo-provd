@@ -34,7 +34,7 @@ class ProvdFileSystemLoader(BaseLoader):
     """A custom file system loader that does some extra check to templates
     'up to date' status to make sure that a custom template will always
     override a base template.
-    
+
     """
 
     def __init__(self, searchpath, encoding='utf-8'):
@@ -56,8 +56,10 @@ class ProvdFileSystemLoader(BaseLoader):
                 f.close()
 
             mtime_map = _new_mtime_map(self._searchpath)
+
             def uptodate():
                 return mtime_map == _new_mtime_map(self._searchpath)
+
             return contents, filename, uptodate
         raise TemplateNotFound(template)
 
@@ -66,7 +68,11 @@ class ProvdFileSystemLoader(BaseLoader):
         for searchpath in self._searchpath:
             for dirpath, _, filenames in walk(searchpath):
                 for filename in filenames:
-                    template = join(dirpath, filename)[len(searchpath):].strip(sep).replace(sep, '/')
+                    template = (
+                        join(dirpath, filename)[len(searchpath) :]
+                        .strip(sep)
+                        .replace(sep, '/')
+                    )
                     if template[:2] == './':
                         template = template[2:]
                     if template not in found:

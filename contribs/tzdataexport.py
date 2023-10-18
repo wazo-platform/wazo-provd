@@ -171,9 +171,7 @@ class RuleLine:
             if is_unambiguous_abbrv_of(infield, month_name, cls._INFIELD_CONTEXT):
                 return i + 1
         else:
-            raise ValueError(
-                f"'{infield}' is an ambiguous month name abbreviation"
-            )
+            raise ValueError(f"'{infield}' is an ambiguous month name abbreviation")
 
     @classmethod
     def _atfield_to_seconds_and_type(cls, atfield):
@@ -231,9 +229,7 @@ class RuleLine:
         weekday, op, num = mobj.groups()
         weekday_idx = find_word_from_abbrv(weekday, cls._WEEKDAY_CONTEXT, True)
         if weekday_idx is None:
-            raise ValueError(
-                f"'{onfield}' is not a valid 'ON' field value (ambiguous)"
-            )
+            raise ValueError(f"'{onfield}' is not a valid 'ON' field value (ambiguous)")
         num = int(num)
         if op[0] == ">":
             if op[1:] == "":
@@ -243,7 +239,7 @@ class RuleLine:
                 logger.info(
                     "'%s' is not a well supported 'ON' field value (%d %% 7 != 0)",
                     onfield,
-                    num
+                    num,
                 )
             weeknum = q + 1
             return cls._variable_day_to_str(weeknum, weekday_idx + 1)
@@ -308,7 +304,7 @@ class RuleSet:
         if not dst_start_rules or not dst_end_rules:
             logger.debug(
                 "The '%s' rule set doesn't have currently applicable DST rules",
-                self.name
+                self.name,
             )
             return None
         if len(dst_start_rules) > 1 or len(dst_end_rules) > 1:

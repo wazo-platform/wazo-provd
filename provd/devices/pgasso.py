@@ -42,7 +42,6 @@ class DeviceSupport(IntEnum):
 
 
 class AbstractPluginAssociator(metaclass=ABCMeta):
-
     @abstractmethod
     def associate(self, dev_info: dict[str, str]) -> DeviceSupport | int:
         """Return a 'support score' from a device info object."""
@@ -56,7 +55,9 @@ class BasePgAssociator(AbstractPluginAssociator):
         version = dev_info.get('version')
         return self._do_associate(vendor, model, version)
 
-    def _do_associate(self, vendor: str, model: str | None, version: str | None) -> DeviceSupport | int:
+    def _do_associate(
+        self, vendor: str, model: str | None, version: str | None
+    ) -> DeviceSupport | int:
         """
         Pre: vendor is not None
         """
@@ -74,7 +75,7 @@ class AbstractConflictSolver(metaclass=ABCMeta):
 
 
 class ReverseAlphabeticConflictSolver(AbstractConflictSolver):
-    def solve(self, pg_ids):
+    def solve(self, pg_ids: list[str]) -> str:
         return max(pg_ids)
 
 
@@ -101,7 +102,9 @@ class PluginAssociatorDeviceUpdater(AbstractDeviceUpdater):
                     return pg_ids[0]
                 if pg_id := self._solver.solve(pg_ids):
                     return pg_id
-                logger.warning('Conflict resolution yielded nothing for plugins: %s', pg_ids)
+                logger.warning(
+                    'Conflict resolution yielded nothing for plugins: %s', pg_ids
+                )
         return None
 
     def _get_scores(self, dev_info):
@@ -112,8 +115,11 @@ class PluginAssociatorDeviceUpdater(AbstractDeviceUpdater):
                     score = associator.associate(dev_info)
                     logger.debug('Associator: %s = score %s', pg_id, score)
                 except Exception:
-                    logger.error('Error during plugin association for plugin %s',
-                                 pg_id, exc_info=True)
+                    logger.error(
+                        'Error during plugin association for plugin %s',
+                        pg_id,
+                        exc_info=True,
+                    )
                 else:
                     pg_scores[score].append(pg_id)
         return pg_scores

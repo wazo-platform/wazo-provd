@@ -1,5 +1,6 @@
 # Copyright 2017-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import os
 
@@ -26,7 +27,7 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
     wait_strategy = WaitStrategy()
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         super().setUpClass()
         cls.set_client()
 
@@ -35,7 +36,7 @@ class BaseIntegrationTest(AssetLaunchingTestCase):
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     @classmethod
-    def make_provd(cls, token):
+    def make_provd(cls, token: str) -> Client:
         return Client(
             '127.0.0.1',
             port=cls.service_port(8666, 'provd'),

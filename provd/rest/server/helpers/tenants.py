@@ -1,8 +1,7 @@
-# Copyright 2019-2022 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2019-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from xivo import tenant_helpers
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
 
 
 class Tenant(tenant_helpers.Tenant):
-
     @classmethod
     def autodetect(cls, request: Request, tokens: Tokens):
         token = tokens.from_headers(request)
@@ -38,7 +36,6 @@ class Tenant(tenant_helpers.Tenant):
 
 
 class Tokens(tenant_helpers.Tokens):
-
     def from_headers(self, request: Request):
         token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
         if not token_id:
