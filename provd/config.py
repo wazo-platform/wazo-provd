@@ -115,6 +115,7 @@ class GeneralConfig(TypedDict):
     sync_service_type: str
     num_http_proxies: int
     syncdb: SyncDbConfigDict
+    http_auth_strategy: Literal['url_key']
 
 
 class RestApiConfigDict(TypedDict):
@@ -205,6 +206,7 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
             'interval_sec': 86400,
             'start_sec': 60,
         },
+        'http_auth_strategy': 'url_key',
     },
     'rest_api': {
         'ip': '127.0.0.1',

@@ -15,6 +15,7 @@ general:
   syncdb:
     interval_sec: 86400
     start_sec: 60
+  http_auth_strategy: url_key
 rest_api:
   ip: 127.0.0.1
   port: 8666
