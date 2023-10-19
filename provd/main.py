@@ -413,7 +413,7 @@ class ProvdBusConsumer(BusConsumer):
         )
 
 
-class DevicesDeletionService(Service):
+class ResourcesDeletionService(Service):
     def __init__(self, prov_service, config):
         self._prov_service = prov_service
         self._config = config
@@ -427,7 +427,7 @@ class DevicesDeletionService(Service):
             yield app.dev_delete(device['id'])
 
 
-class BusEventConsumerService(DevicesDeletionService):
+class BusEventConsumerService(ResourcesDeletionService):
     _bus_consumer: BusConsumer | None
 
     @defer.inlineCallbacks
@@ -453,7 +453,7 @@ class BusEventConsumerService(DevicesDeletionService):
         Service.stopService(self)
 
 
-class SyncdbService(DevicesDeletionService):
+class SyncdbService(ResourcesDeletionService):
     def __init__(
         self, prov_service: ProvisioningService, config: ProvdConfigDict
     ) -> None:
