@@ -1126,7 +1126,7 @@ def _check_is_https_proxy(value):
 
 
 class ApplicationConfigureService:
-    VIRTUAL_ATTRIBUTES = ('provisioning_key',)
+    VIRTUAL_ATTRIBUTES = {'provisioning_key': {'parent': 'tenants'}}
 
     def __init__(self, pg_mgr: PluginManager, proxies, app: ProvisioningApplication):
         self._pg_mgr = pg_mgr

@@ -292,8 +292,10 @@ class PersistentConfigurationServiceDecorator:
 
     def set(self, name: str, value: Any, *args, **kwargs) -> None:
         self._cfg_service.set(name, value, *args, **kwargs)
-        if name not in getattr(self._cfg_service, 'VIRTUAL_ATTRIBUTES', ()):
-            self._persister.update(name, value)
+        if name in getattr(self._cfg_service, 'VIRTUAL_ATTRIBUTES'):
+            name = self._cfg_service.VIRTUAL_ATTRIBUTES[name]['parent']
+            value = self._cfg_service.get(name)
+        self._persister.update(name, value)
 
     def __getattr__(self, name: str) -> Any:
         # used for description and localized description
