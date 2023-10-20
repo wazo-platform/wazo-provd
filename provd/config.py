@@ -334,7 +334,7 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     base_raw_config |= {
         'http_port': app_raw_config['general']['http_port'],
         'tftp_port': app_raw_config['general']['tftp_port'],
-        'base_external_url': app_raw_config['general']['base_external_url'],
+        'http_base_url': app_raw_config['general']['base_external_url'],
     }
 
     if 'ip' not in base_raw_config:
