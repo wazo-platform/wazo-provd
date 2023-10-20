@@ -431,6 +431,7 @@ class ResourcesDeletionService(Service):
         all_tenants = configure_service.get('tenants')
         try:
             del all_tenants[tenant_uuid]
+            configure_service.set('tenants', all_tenants)
         except KeyError:
             pass
 
