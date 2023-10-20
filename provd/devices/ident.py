@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, TypedDict, cast, Any, Union, Protocol
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
+from provd.servers.http import BaseHTTPHookService
 from provd.servers.http_site import Request
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService, TFTPRequest
@@ -851,6 +852,26 @@ class HTTPRequestProcessingService(Resource):
                 defer.returnValue(service)
             else:
                 defer.returnValue(service.getChildWithDefault(path, request))
+
+
+class HTTPKeyVerifyingHook(BaseHTTPHookService):
+    unauthorized_resource = ErrorPage(401, 'Unauthorized', 'Unauthorized')
+
+    def __init__(self, app, *args, **kwargs):
+        self._app = app
+        super().__init__(*args, **kwargs)
+
+    def getChild(self, path, request):
+        logger.debug('URL key verifying hook, path = "%s", request = "%s"', path, request)
+        prov_key = path.decode('utf-8')
+        logger.debug('Prov key = "%s"', prov_key)
+        tenant_uuid = self._app.configure_service.get_tenant_from_provisioning_key(prov_key)
+        if not tenant_uuid:
+            logger.info('Invalid URL key. Denying request.')
+            return self.unauthorized_resource
+        # Inject tenant_uuid in request object
+        request.tenant_uuid = tenant_uuid
+        return self._next_service(path, request)
 
 
 # @implementer(ITFTPReadService)

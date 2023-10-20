@@ -205,6 +205,9 @@ class HTTPProcessService(Service):
         http_process_service = ident.HTTPRequestProcessingService(
             process_service, app.pg_mgr, num_http_proxies
         )
+        if app.use_provisioning_key:
+            logger.info('Using in-URL provisioning key')
+            http_process_service = ident.HTTPKeyVerifyingHook(app, http_process_service)
         site = Site(http_process_service)
         interface = self._config['general']['listen_interface']
         port = self._config['general']['http_port']

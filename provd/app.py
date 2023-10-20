@@ -215,6 +215,8 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat = 0
         self.tenants = self._split_config.get('tenants', {})
+        self.http_auth_strategy = self._split_config['general'].get('http_auth_strategy')
+        self.use_provisioning_key = self.http_auth_strategy == 'url_key'
 
         self.pg_mgr = PluginManager(
             self,
@@ -1225,6 +1227,11 @@ class ApplicationConfigureService:
         if tenant_config is None:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
         tenant_config['provisioning_key'] = provisioning_key
+
+    def get_tenant_from_provisioning_key(self, provisioning_key):
+        for tenant, config in self._app.tenants.items():
+            if config.get('provisioning_key') == provisioning_key:
+                return tenant
 
     def _set_param_tenants(self, tenants, *args, **kwargs):
         self._app.tenants = tenants
