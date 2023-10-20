@@ -487,17 +487,17 @@ class SyncdbService(ResourcesDeletionService):
         )
 
     @defer.inlineCallbacks
-    def remove_resources_for_deleted_tenants(self):
-        yield self.remove_devices_for_deleted_tenants()
-        self.remove_configuration_for_deleted_tenants()
-
-    @defer.inlineCallbacks
-    def remove_devices_for_deleted_tenants(self):
-        app = self._prov_service.app
+    def remove_resources_for_deleted_tenants(self) -> None:
         auth_client = auth.get_auth_client()
         auth_tenants = set(
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
         )
+        yield self.remove_devices_for_deleted_tenants(auth_tenants)
+        self.remove_configuration_for_deleted_tenants(auth_tenants)
+
+    @defer.inlineCallbacks
+    def remove_devices_for_deleted_tenants(self, auth_tenants) -> None:
+        app = self._prov_service.app
 
         find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
         devices = yield app.dev_find(**find_arguments)
@@ -507,12 +507,9 @@ class SyncdbService(ResourcesDeletionService):
         for t in removed_tenants:
             yield self.delete_devices(t)
 
-    def remove_configuration_for_deleted_tenants(self):
+    def remove_configuration_for_deleted_tenants(self, auth_tenants) -> None:
         app = self._prov_service.app
-        auth_client = auth.get_auth_client()
-        auth_tenants = set(
-            tenant['uuid'] for tenant in auth_client.tenants.list()['items']
-        )
+
         provd_tenants = set(app.configure_service.get('tenants'))
         removed_tenants = provd_tenants - auth_tenants
 
