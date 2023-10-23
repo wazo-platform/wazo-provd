@@ -187,42 +187,6 @@ class ProcessService(Service):
         Service.startService(self)
 
 
-class HTTPProcessService(Service):
-    def __init__(
-        self,
-        prov_service: ProvisioningService,
-        process_service: ProcessService,
-        config: ProvdConfigDict,
-    ) -> None:
-        self._prov_service = prov_service
-        self._process_service = process_service
-        self._config = config
-
-    def startService(self) -> None:
-        app = self._prov_service.app
-        process_service = self._process_service.request_processing
-        num_http_proxies = self._config['general']['num_http_proxies']
-        http_process_service = ident.HTTPRequestProcessingService(
-            process_service, app.pg_mgr, num_http_proxies
-        )
-        if app.use_provisioning_key:
-            logger.info('Using in-URL provisioning key')
-            http_process_service = ident.HTTPKeyVerifyingHook(app, http_process_service)
-        site = Site(http_process_service)
-        interface = self._config['general']['listen_interface']
-        port = self._config['general']['http_port']
-        logger.info('Binding HTTP provisioning service to port %s', port)
-        self._tcp_server = internet.TCPServer(
-            port, site, backlog=128, interface=interface
-        )
-        self._tcp_server.startService()
-        Service.startService(self)
-
-    def stopService(self) -> Deferred:
-        Service.stopService(self)
-        return self._tcp_server.stopService()
-
-
 class HTTPProxiedProcessService(Service):
     def __init__(self, prov_service, process_service, config):
         self._prov_service = prov_service
@@ -598,9 +562,6 @@ class ProvisioningServiceMaker:
 
         process_service = ProcessService(prov_service, config)
         process_service.setServiceParent(top_service)
-
-        http_process_service = HTTPProcessService(prov_service, process_service, config)
-        http_process_service.setServiceParent(top_service)
 
         http_proxied_process_service = HTTPProxiedProcessService(prov_service, process_service, config)
         http_proxied_process_service.setServiceParent(top_service)
