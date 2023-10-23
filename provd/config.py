@@ -23,13 +23,17 @@ The following parameters are defined:
         info_extractor
         retriever
         updater
-        external_ip
-        http_port
         tftp_port
         verbose
         sync_service_type
         asterisk_ami_servers
         num_http_proxies
+        advertised_host
+            The hostname of the provisioning server advertised to phones
+        advertised_http_port
+            The HTTP port advertised to phones
+        advertised_http_url
+            The HTTP URL advertised to phones
     rest_api:
         ip
         port
@@ -110,7 +114,6 @@ class GeneralConfig(TypedDict):
     updater: str
     http_port: int
     tftp_port: int
-    base_external_url: str | None
     verbose: bool
     sync_service_type: str
     num_http_proxies: int
@@ -171,16 +174,16 @@ class ProvdConfigDict(TypedDict):
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LISTEN_PORT = 8667
-DEFAULT_HTTP_PORT = 8667
+DEFAULT_ADVERTISED_HOST = '127.0.0.1'
+DEFAULT_ADVERTISED_HTTP_PORT = 8667
 
 _DEFAULT_CONFIG: ProvdConfigDict = {
     'config_file': '/etc/wazo-provd/config.yml',
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
-        'external_ip': '127.0.0.1',
-        'listen_interface': '0.0.0.0',
-        'listen_port': DEFAULT_LISTEN_PORT,
+        'advertised_host': '127.0.0.1',
+        'advertised_http_port': DEFAULT_ADVERTISED_HTTP_PORT,
+        'advertised_http_url': None,
         'base_raw_config': {},
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
         'request_config_dir': '/etc/wazo-provd',
@@ -193,12 +196,10 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
         'info_extractor': 'default',
         'retriever': 'default',
         'updater': 'default',
-        'http_port': DEFAULT_HTTP_PORT,
         'tftp_port': 69,
         'http_proxied_listen_interface': '127.0.0.1',
         'http_proxied_listen_port': 18667,
         'http_proxied_trusted_proxies_count': 1,
-        'base_external_url': None,
         'verbose': False,
         'sync_service_type': 'none',
         'num_http_proxies': 0,
@@ -249,7 +250,7 @@ _OPTION_TO_PARAM_LIST = [
     # (<option name, (<section, param name>)>)
     ('config-file', ('general', 'config_file')),
     ('config-dir', ('general', 'request_config_dir')),
-    ('http-port', ('general', 'http_port')),
+    ('http-port', ('general', 'advertised_http_port')),
     ('tftp-port', ('general', 'tftp_port')),
     ('rest-port', ('general', 'rest_port')),
 ]
@@ -301,10 +302,15 @@ def _load_json_file(raw_value: str) -> dict[str, Any]:
         return json.load(f)
 
 
-def _process_aliases(raw_config: ProvdConfigDict) -> None:
-    if 'ip' in raw_config['general'] and 'external_ip' not in raw_config['general']:
-        ip = raw_config['general']['ip']  # type: ignore[typeddict-item]
-        raw_config['general']['external_ip'] = ip
+def _process_aliases(raw_config):
+    if 'ip' in raw_config['general'] and 'advertised_host' not in raw_config['general']:
+        raw_config['general']['advertised_host'] = raw_config['general']['ip']  # type: ignore[typeddict-item]
+    if 'external_ip' in raw_config['general'] and 'advertised_host' not in raw_config['general']:
+        raw_config['general']['advertised_host'] = raw_config['general']['external_ip']  # type: ignore[typeddict-item]
+    if 'http_port' in raw_config['general'] and 'advertised_http_port' not in raw_config['general']:
+        raw_config['general']['advertised_http_port'] = raw_config['general']['http_port']  # type: ignore[typeddict-item]
+    if 'base_external_url' in raw_config['general'] and 'advertised_http_url' not in raw_config['general']:
+        raw_config['general']['advertised_http_url'] = raw_config['general']['base_external_url']  # type: ignore[typeddict-item]
 
 
 def _check_and_convert_parameters(raw_config: dict[str, Any]) -> None:
@@ -334,21 +340,21 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     # the app_raw_config argument means application configuration.
     base_raw_config = app_raw_config['general']['base_raw_config']
     base_raw_config |= {
-        'http_port': app_raw_config['general']['http_port'],
+        'http_port': app_raw_config['general']['advertised_http_port'],
         'tftp_port': app_raw_config['general']['tftp_port'],
     }
-    if app_raw_config['general'].get('base_external_url'):
+    if app_raw_config['general']['advertised_http_url']:
         base_raw_config |= {
-            'http_base_url': app_raw_config['general']['base_external_url'],
+            'http_base_url': app_raw_config['general']['advertised_http_url'],
         }
 
     if 'ip' not in base_raw_config:
-        if 'external_ip' in app_raw_config['general']:
-            external_ip = app_raw_config['general']['external_ip']
+        if 'advertised_host' in app_raw_config['general']:
+            advertised_host = app_raw_config['general']['advertised_host']
         else:
-            external_ip = _get_ip_fallback()
-            logger.warning('Using "%s" for base raw config ip parameter', external_ip)
-        base_raw_config['ip'] = external_ip
+            advertised_host = _get_ip_fallback()
+            logger.warning('Using "%s" for base raw config ip parameter', advertised_host)
+        base_raw_config['ip'] = advertised_host
 
 
 def _post_update_raw_config(raw_config: dict[str, Any]) -> None:
