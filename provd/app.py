@@ -300,6 +300,16 @@ class ProvisioningApplication:
         # Return true if the device has been successfully configured (i.e.
         # no exception were raised), else false.
         logger.info('Configuring device %s with plugin %s', device[ID_KEY], plugin.id)
+        if self.use_provisioning_key:
+            tenant_uuid = device.get('tenant_uuid', None)
+            if not tenant_uuid:
+                logger.warning('Device %s is using provisioning key but has no tenant_uuid', device[ID_KEY])
+                return False
+            provisioning_key = self.configure_service.get('provisioning_key', tenant_uuid)
+            raw_config = copy.deepcopy(raw_config)
+            # Inject the provisioning key into the device configuration
+            base_external_url = raw_config['base_external_url']
+            raw_config['http_base_url'] = f'{base_external_url}/{provisioning_key}'
         try:
             _check_raw_config_validity(raw_config)
         except Exception:
