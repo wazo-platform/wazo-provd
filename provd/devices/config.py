@@ -92,6 +92,14 @@ http_port [mandatory if tftp_port is not defined]
   If the device only support HTTP yet this value is not defined, an Exception
   SHOULD be raised.
 
+http_base_url [optional]
+  Used in place of the ip and http_port to be able to define the URL at which
+  the provisioning server is accessible from. This allows to set the provisioning
+  server behind a reverse proxy.
+  If you are using a `url_key` strategy for provisioning authentication (provisioning
+  key), then you MUST use this setting as the key is appended to this value.
+  This option has precedence over the ip + http_port combination.
+
 tftp_port [mandatory if http_port is not defined]
   The provisioning server TFTP port number.
   If the followings are true:
