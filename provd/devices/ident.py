@@ -812,9 +812,11 @@ class HTTPRequestProcessingService(Resource):
 
     @defer.inlineCallbacks
     def getChild(self, path: bytes, request: Request):
-        logger.info('Processing HTTP request: %s', request.path)
+        logger.info('Processing HTTP request: %s', request.uri)
         logger.debug('HTTP request: %s', request)
+        logger.debug('prepath: %s', request.prepath)
         logger.debug('postpath: %s', request.postpath)
+        logger.debug('path = %s', request.path)
 
         # Inject the number of trusted HTTP proxies
         request.num_http_proxies = self._num_http_proxies
