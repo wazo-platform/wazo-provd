@@ -857,7 +857,7 @@ class HTTPRequestProcessingService(Resource):
 
 
 class HTTPKeyVerifyingHook(BaseHTTPHookService):
-    unauthorized_resource = ErrorPage(401, 'Unauthorized', 'Unauthorized')
+    unauthorized_resource = NoResource('Nowhere to route this request.')
 
     def __init__(self, app, *args, **kwargs):
         self._app = app
