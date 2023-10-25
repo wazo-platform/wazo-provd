@@ -206,7 +206,7 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
             'interval_sec': 86400,
             'start_sec': 60,
         },
-        'http_auth_strategy': 'url_key',
+        'http_auth_strategy': None,
     },
     'rest_api': {
         'ip': '127.0.0.1',
