@@ -13,7 +13,13 @@ from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
 
-from .helpers.base import BaseIntegrationTest, INVALID_TOKEN
+from .helpers.base import (
+    BaseIntegrationTest,
+    INVALID_TENANT,
+    INVALID_TOKEN,
+    SUB_TENANT_1,
+    VALID_TOKEN_MULTITENANT,
+)
 from .helpers.operation import operation_successful, operation_fail
 from .helpers.wait_strategy import NoWaitStrategy
 
@@ -109,7 +115,8 @@ class TestParams(BaseIntegrationTest):
         )
 
     def test_provisioning_key_for_invalid_tenant(self) -> None:
-        provd = self.make_provd(INVALID_TOKEN)
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(INVALID_TENANT)
         assert_that(
             calling(provd.params.update).with_args('provisioning_key', 'not-working'),
             raises(ProvdError).matching(has_properties('status_code', 401)),
@@ -122,13 +129,11 @@ class TestParams(BaseIntegrationTest):
             has_entry('value', None),
         )
 
-
-class TestParamsOnLaunch(BaseIntegrationTest):
-    asset = 'base'
-    wait_strategy = NoWaitStrategy()
-
-    def test_provisioning_key_null_on_startup(self) -> None:
+    def test_provisioning_key_for_unconfigured_tenant(self) -> None:
+        # Do not use SUB_TENANT_1 in another provisioning key test
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(SUB_TENANT_1)
         assert_that(
-            self._client.params.get('provisioning_key'),
+            provd.params.get('provisioning_key'),
             has_entry('value', None),
         )

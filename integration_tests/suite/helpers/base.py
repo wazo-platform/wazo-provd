@@ -13,6 +13,7 @@ API_VERSION = '0.2'
 
 VALID_TOKEN = 'valid-token'
 INVALID_TOKEN = 'invalid-token'
+INVALID_TENANT = '00000000-0000-4000-8000-999999999999'
 VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
 MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
 SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
