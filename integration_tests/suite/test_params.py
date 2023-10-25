@@ -129,6 +129,25 @@ class TestParams(BaseIntegrationTest):
             has_entry('value', None),
         )
 
+    def test_provisioning_key_min_max_limit(self) -> None:
+        min_length = 8
+        too_short_key = 'a' * (min_length - 1)
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'provisioning_key', too_short_key
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+
+        max_length = 256
+        too_long_key = 'a' * (max_length + 1)
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'provisioning_key', too_long_key
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+
     def test_provisioning_key_for_unconfigured_tenant(self) -> None:
         # Do not use SUB_TENANT_1 in another provisioning key test
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
