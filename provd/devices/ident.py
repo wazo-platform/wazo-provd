@@ -867,6 +867,9 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
         logger.debug('URL key verifying hook, path = "%s", request = "%s"', path, request)
         prov_key = path.decode('utf-8')
         logger.debug('Prov key = "%s"', prov_key)
+        if not prov_key:
+            logger.info('Empty provisioning key. Denying request.')
+            return self.unauthorized_resource
         tenant_uuid = self._app.configure_service.get_tenant_from_provisioning_key(prov_key)
         if not tenant_uuid:
             logger.info('Invalid URL key. Denying request.')
