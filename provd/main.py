@@ -236,6 +236,9 @@ class HTTPProxiedProcessService(Service):
         http_process_service = ident.HTTPRequestProcessingService(
             process_service, app.pg_mgr, trusted_proxies_count
         )
+        if app.use_provisioning_key:
+            logger.info('Using in-URL provisioning key')
+            http_process_service = ident.HTTPKeyVerifyingHook(app, http_process_service)
         site = Site(http_process_service)
         interface = self._config['general']['http_proxied_listen_interface']
         port = self._config['general']['http_proxied_listen_port']
