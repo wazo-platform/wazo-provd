@@ -94,9 +94,41 @@ class TestParams(BaseIntegrationTest):
         with self._client.plugins.update() as op_progress:
             until.assert_(operation_successful, op_progress, tries=10, interval=0.5)
 
-    def test_wrong_pluign_server(self) -> None:
+    def test_wrong_plugin_server(self) -> None:
         wrong_url = 'https://provd.wazo.community/plugins/2/wrong/'
         self._client.params.update('plugin_server', wrong_url)
 
         with self._client.plugins.update() as op_progress:
             until.assert_(operation_fail, op_progress, tries=10, interval=0.5)
+
+    def test_provisioning_key_for_tenant(self) -> None:
+        self._client.params.update('provisioning_key', 'this-is-a-key')
+        assert_that(
+            self._client.params.get('provisioning_key'),
+            has_entry('value', 'this-is-a-key'),
+        )
+
+    def test_provisioning_key_for_invalid_tenant(self) -> None:
+        provd = self.make_provd(INVALID_TOKEN)
+        assert_that(
+            calling(provd.params.update).with_args('provisioning_key', 'not-working'),
+            raises(ProvdError).matching(has_properties('status_code', 401)),
+        )
+
+    def test_provisioning_key_can_be_nulled(self) -> None:
+        self._client.params.update('provisioning_key', None)
+        assert_that(
+            self._client.params.get('provisioning_key'),
+            has_entry('value', None),
+        )
+
+
+class TestParamsOnLaunch(BaseIntegrationTest):
+    asset = 'base'
+    wait_strategy = NoWaitStrategy()
+
+    def test_provisioning_key_null_on_startup(self) -> None:
+        assert_that(
+            self._client.params.get('provisioning_key'),
+            has_entry('value', None),
+        )
