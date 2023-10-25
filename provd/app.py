@@ -214,6 +214,7 @@ class ProvisioningApplication:
 
         self.proxies = self._split_config.get('proxy', {})
         self.nat = 0
+        self.tenants = self._split_config.get('tenants', {})
 
         self.pg_mgr = PluginManager(
             self,
@@ -254,10 +255,18 @@ class ProvisioningApplication:
         self._token = token_id
         auth_client = auth.get_auth_client()
         token = Tokens(auth_client).get(self._token)
-        self._tenant_uuid = Tenant.from_token(token).uuid
+        self.set_tenant_uuid(Tenant.from_token(token).uuid)
 
     def tenant_uuid(self):
         return self._tenant_uuid
+
+    def set_tenant_uuid(self, tenant_uuid):
+        self._tenant_uuid = tenant_uuid
+        if not self.tenants.get(tenant_uuid):
+            self.set_tenant_configuration(tenant_uuid, {})
+
+    def set_tenant_configuration(self, tenant_uuid, config):
+        self.tenants[tenant_uuid] = config
 
     # device methods
 
@@ -1117,19 +1126,21 @@ def _check_is_https_proxy(value):
 
 
 class ApplicationConfigureService:
-    def __init__(self, pg_mgr, proxies, app):
+    VIRTUAL_ATTRIBUTES = {'provisioning_key': {'parent': 'tenants'}}
+
+    def __init__(self, pg_mgr: PluginManager, proxies, app: ProvisioningApplication):
         self._pg_mgr = pg_mgr
         self._proxies = proxies
         self._app = app
 
-    def _get_param_locale(self):
+    def _get_param_locale(self, *args, **kwargs):
         l10n_service = get_localization_service()
         if l10n_service is None:
             logger.info('No localization service registered')
             return None
         return l10n_service.get_locale()
 
-    def _set_param_locale(self, value):
+    def _set_param_locale(self, value, *args, **kwargs):
         l10n_service = get_localization_service()
         if l10n_service is None:
             logger.info('No localization service registered')
@@ -1142,45 +1153,45 @@ class ApplicationConfigureService:
                 except (UnicodeError, ValueError) as e:
                     raise InvalidParameterError(e)
 
-    def _generic_set_proxy(self, key, value):
+    def _generic_set_proxy(self, key, value, *args, **kwargs):
         if not value:
             if key in self._proxies:
                 del self._proxies[key]
         else:
             self._proxies[key] = value
 
-    def _get_param_http_proxy(self):
+    def _get_param_http_proxy(self, *args, **kwargs):
         return self._proxies.get('http')
 
-    def _set_param_http_proxy(self, value):
+    def _set_param_http_proxy(self, value, *args, **kwargs):
         _check_is_proxy(value)
         self._generic_set_proxy('http', value)
 
-    def _get_param_ftp_proxy(self):
+    def _get_param_ftp_proxy(self, *args, **kwargs):
         return self._proxies.get('ftp')
 
-    def _set_param_ftp_proxy(self, value):
+    def _set_param_ftp_proxy(self, value, *args, **kwargs):
         _check_is_proxy(value)
         self._generic_set_proxy('ftp', value)
 
-    def _get_param_https_proxy(self):
+    def _get_param_https_proxy(self, *args, **kwargs):
         return self._proxies.get('https')
 
-    def _set_param_https_proxy(self, value):
+    def _set_param_https_proxy(self, value, *args, **kwargs):
         _check_is_https_proxy(value)
         self._generic_set_proxy('https', value)
 
-    def _get_param_plugin_server(self):
+    def _get_param_plugin_server(self, *args, **kwargs):
         return self._pg_mgr.server
 
-    def _set_param_plugin_server(self, value):
+    def _set_param_plugin_server(self, value, *args, **kwargs):
         _check_is_server_url(value)
         self._pg_mgr.server = value
 
-    def _get_param_NAT(self):
+    def _get_param_NAT(self, *args, **kwargs):
         return self._app.nat
 
-    def _set_param_NAT(self, value):
+    def _set_param_NAT(self, value, *args, **kwargs):
         if value is None or value == '0':
             value = 0
         elif value == '1':
@@ -1189,23 +1200,55 @@ class ApplicationConfigureService:
             raise InvalidParameterError(value)
         self._app.nat = value
 
-    def get(self, name):
+    def _get_tenant_config(self, tenant_uuid):
+        return self._app.tenants.get(tenant_uuid)
+
+    def _create_empty_tenant_config(self, tenant_uuid):
+        self._app.tenants[tenant_uuid] = {}
+        return self._get_tenant_config(tenant_uuid)
+
+    def _get_param_provisioning_key(self, tenant_uuid):
+        tenant_config = self._get_tenant_config(tenant_uuid)
+        if tenant_config is None:
+            tenant_config = self._create_empty_tenant_config(tenant_uuid)
+        return tenant_config.get('provisioning_key')
+
+    def _set_param_provisioning_key(self, provisioning_key, tenant_uuid):
+        if provisioning_key and (
+            len(provisioning_key) < 8 or len(provisioning_key) > 256
+        ):
+            raise InvalidParameterError(
+                '`provisioning_key` should be [8, 256] characters long.'
+            )
+
+        tenant_config = self._get_tenant_config(tenant_uuid)
+        if tenant_config is None:
+            tenant_config = self._create_empty_tenant_config(tenant_uuid)
+        tenant_config['provisioning_key'] = provisioning_key
+
+    def _set_param_tenants(self, tenants, *args, **kwargs):
+        self._app.tenants = tenants
+
+    def _get_param_tenants(self, *args, **kwargs):
+        return self._app.tenants
+
+    def get(self, name, *args, **kwargs):
         get_fun_name = f'_get_param_{name}'
         try:
             get_fun = getattr(self, get_fun_name)
         except AttributeError:
             raise KeyError(name)
         else:
-            return get_fun()
+            return get_fun(*args, **kwargs)
 
-    def set(self, name, value):
+    def set(self, name, value, *args, **kwargs):
         set_fun_name = f'_set_param_{name}'
         try:
             set_fun = getattr(self, set_fun_name)
         except AttributeError:
             raise KeyError(name)
         else:
-            set_fun(value)
+            set_fun(value, *args, **kwargs)
 
     description = [
         ('plugin_server', 'The plugins repository URL'),
@@ -1220,6 +1263,7 @@ class ApplicationConfigureService:
         ('https_proxy', 'The proxy for HTTPS requests. Format is "host:port"'),
         ('locale', 'The current locale. Example: fr_FR'),
         ('NAT', 'Set to 1 if all the devices are behind a NAT.'),
+        ('provisioning_key', 'The provisioning key for the tenant. [min: 8, max: 256]'),
     ]
 
     description_fr = [
@@ -1235,4 +1279,8 @@ class ApplicationConfigureService:
         ('https_proxy', 'Le proxy pour les requêtes HTTPS. Le format est "host:port"'),
         ('locale', 'La locale courante. Exemple: en_CA'),
         ('NAT', 'Mettre à 1 si toutes les terminaisons sont derrière un NAT.'),
+        (
+            'provisioning_key',
+            'La clé de provisioning pour le tenant. [min: 8, max: 256]',
+        ),
     ]

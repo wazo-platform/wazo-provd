@@ -413,7 +413,7 @@ class ProvdBusConsumer(BusConsumer):
         )
 
 
-class DevicesDeletionService(Service):
+class ResourcesDeletionService(Service):
     def __init__(self, prov_service, config):
         self._prov_service = prov_service
         self._config = config
@@ -426,8 +426,17 @@ class DevicesDeletionService(Service):
         for device in devices:
             yield app.dev_delete(device['id'])
 
+    def delete_tenant_configuration(self, tenant_uuid):
+        configure_service = self._prov_service.app.configure_service
+        all_tenants = configure_service.get('tenants')
+        try:
+            del all_tenants[tenant_uuid]
+            configure_service.set('tenants', all_tenants)
+        except KeyError:
+            pass
 
-class BusEventConsumerService(DevicesDeletionService):
+
+class BusEventConsumerService(ResourcesDeletionService):
     _bus_consumer: BusConsumer | None
 
     @defer.inlineCallbacks
@@ -437,6 +446,7 @@ class BusEventConsumerService(DevicesDeletionService):
         logger.info("auth_tenant_deleted event consumed: %s", event)
         tenant_uuid = event['uuid']
         yield self.delete_devices(tenant_uuid)
+        self.delete_tenant_configuration(tenant_uuid)
 
     def startService(self) -> None:
         self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
@@ -453,14 +463,14 @@ class BusEventConsumerService(DevicesDeletionService):
         Service.stopService(self)
 
 
-class SyncdbService(DevicesDeletionService):
+class SyncdbService(ResourcesDeletionService):
     def __init__(
         self, prov_service: ProvisioningService, config: ProvdConfigDict
     ) -> None:
         super().__init__(prov_service, config)
         auth_client = auth.get_auth_client(**self._config['auth'])
         auth.get_auth_verifier().set_client(auth_client)
-        self._looping_call = task.LoopingCall(self.remove_devices_for_deleted_tenants)
+        self._looping_call = task.LoopingCall(self.remove_resources_for_deleted_tenants)
 
     def startService(self) -> None:
         start_sec = int(self._config['general']['syncdb']['start_sec'])
@@ -478,12 +488,17 @@ class SyncdbService(DevicesDeletionService):
         )
 
     @defer.inlineCallbacks
-    def remove_devices_for_deleted_tenants(self):
-        app = self._prov_service.app
+    def remove_resources_for_deleted_tenants(self) -> None:
         auth_client = auth.get_auth_client()
         auth_tenants = set(
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
         )
+        yield self.remove_devices_for_deleted_tenants(auth_tenants)
+        self.remove_configuration_for_deleted_tenants(auth_tenants)
+
+    @defer.inlineCallbacks
+    def remove_devices_for_deleted_tenants(self, auth_tenants) -> None:
+        app = self._prov_service.app
 
         find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
         devices = yield app.dev_find(**find_arguments)
@@ -492,6 +507,15 @@ class SyncdbService(DevicesDeletionService):
 
         for t in removed_tenants:
             yield self.delete_devices(t)
+
+    def remove_configuration_for_deleted_tenants(self, auth_tenants) -> None:
+        app = self._prov_service.app
+
+        provd_tenants = set(app.configure_service.get('tenants'))
+        removed_tenants = provd_tenants - auth_tenants
+
+        for tenant in removed_tenants:
+            self.delete_tenant_configuration(tenant)
 
     def stopService(self) -> None:
         try:

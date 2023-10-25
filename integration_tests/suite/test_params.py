@@ -13,7 +13,13 @@ from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
 
-from .helpers.base import BaseIntegrationTest, INVALID_TOKEN
+from .helpers.base import (
+    BaseIntegrationTest,
+    INVALID_TENANT,
+    INVALID_TOKEN,
+    SUB_TENANT_1,
+    VALID_TOKEN_MULTITENANT,
+)
 from .helpers.operation import operation_successful, operation_fail
 from .helpers.wait_strategy import NoWaitStrategy
 
@@ -94,9 +100,59 @@ class TestParams(BaseIntegrationTest):
         with self._client.plugins.update() as op_progress:
             until.assert_(operation_successful, op_progress, tries=10, interval=0.5)
 
-    def test_wrong_pluign_server(self) -> None:
+    def test_wrong_plugin_server(self) -> None:
         wrong_url = 'https://provd.wazo.community/plugins/2/wrong/'
         self._client.params.update('plugin_server', wrong_url)
 
         with self._client.plugins.update() as op_progress:
             until.assert_(operation_fail, op_progress, tries=10, interval=0.5)
+
+    def test_provisioning_key_for_tenant(self) -> None:
+        self._client.params.update('provisioning_key', 'this-is-a-key')
+        assert_that(
+            self._client.params.get('provisioning_key'),
+            has_entry('value', 'this-is-a-key'),
+        )
+
+    def test_provisioning_key_for_invalid_tenant(self) -> None:
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(INVALID_TENANT)
+        assert_that(
+            calling(provd.params.update).with_args('provisioning_key', 'not-working'),
+            raises(ProvdError).matching(has_properties('status_code', 401)),
+        )
+
+    def test_provisioning_key_can_be_nulled(self) -> None:
+        self._client.params.update('provisioning_key', None)
+        assert_that(
+            self._client.params.get('provisioning_key'),
+            has_entry('value', None),
+        )
+
+    def test_provisioning_key_min_max_limit(self) -> None:
+        min_length = 8
+        too_short_key = 'a' * (min_length - 1)
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'provisioning_key', too_short_key
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+
+        max_length = 256
+        too_long_key = 'a' * (max_length + 1)
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'provisioning_key', too_long_key
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+
+    def test_provisioning_key_for_unconfigured_tenant(self) -> None:
+        # Do not use SUB_TENANT_1 in another provisioning key test
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(SUB_TENANT_1)
+        assert_that(
+            provd.params.get('provisioning_key'),
+            has_entry('value', None),
+        )

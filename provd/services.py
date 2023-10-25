@@ -287,11 +287,14 @@ class PersistentConfigurationServiceDecorator:
                     'Invalid value "%s" for parameter "%s": %s', value, name, e
                 )
 
-    def get(self, name: str) -> Any:
-        return self._cfg_service.get(name)
+    def get(self, name: str, *args, **kwargs) -> Any:
+        return self._cfg_service.get(name, *args, **kwargs)
 
-    def set(self, name: str, value: Any) -> None:
-        self._cfg_service.set(name, value)
+    def set(self, name: str, value: Any, *args, **kwargs) -> None:
+        self._cfg_service.set(name, value, *args, **kwargs)
+        if name in getattr(self._cfg_service, 'VIRTUAL_ATTRIBUTES'):
+            name = self._cfg_service.VIRTUAL_ATTRIBUTES[name]['parent']
+            value = self._cfg_service.get(name)
         self._persister.update(name, value)
 
     def __getattr__(self, name: str) -> Any:

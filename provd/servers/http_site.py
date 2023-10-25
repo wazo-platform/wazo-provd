@@ -18,7 +18,7 @@ from twisted.web.resource import _computeAllowedMethods
 from twisted.web.error import UnsupportedMethod
 
 from provd.rest.server import auth
-from provd.rest.server.helpers.tenants import Tenant, Tokens
+from provd.rest.server.helpers.tenants import tenant_helpers, Tenant, Tokens
 from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from requests.exceptions import HTTPError
 
@@ -66,11 +66,16 @@ class AuthResource(resource.Resource):
             self, request, render_method
         )
         try:
+            self.tenant_uuid = self._build_tenant_list_from_request(request, recurse=False)[0]
             return decorated_render_method(request)
         except (
             auth.auth_verifier.Unauthorized,
             auth.auth_verifier.InvalidTokenAPIException,
             auth.auth_verifier.MissingPermissionsTokenAPIException,
+            tenant_helpers.InvalidTenant,
+            tenant_helpers.InvalidToken,
+            tenant_helpers.InvalidUser,
+            tenant_helpers.UnauthorizedTenant,
         ):
             request.setResponseCode(http.UNAUTHORIZED)
             return b'Unauthorized'
