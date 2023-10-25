@@ -1214,6 +1214,13 @@ class ApplicationConfigureService:
         return tenant_config.get('provisioning_key')
 
     def _set_param_provisioning_key(self, provisioning_key, tenant_uuid):
+        if provisioning_key and (
+            len(provisioning_key) < 8 or len(provisioning_key) > 256
+        ):
+            raise InvalidParameterError(
+                '`provisioning_key` should be [8, 256] characters long.'
+            )
+
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
@@ -1256,7 +1263,7 @@ class ApplicationConfigureService:
         ('https_proxy', 'The proxy for HTTPS requests. Format is "host:port"'),
         ('locale', 'The current locale. Example: fr_FR'),
         ('NAT', 'Set to 1 if all the devices are behind a NAT.'),
-        ('provisioning_key', 'The provisioning key for the tenant'),
+        ('provisioning_key', 'The provisioning key for the tenant. [min: 8, max: 256]'),
     ]
 
     description_fr = [
@@ -1272,5 +1279,8 @@ class ApplicationConfigureService:
         ('https_proxy', 'Le proxy pour les requêtes HTTPS. Le format est "host:port"'),
         ('locale', 'La locale courante. Exemple: en_CA'),
         ('NAT', 'Mettre à 1 si toutes les terminaisons sont derrière un NAT.'),
-        ('provisioning_key', 'La clé de provisioning pour le tenant.'),
+        (
+            'provisioning_key',
+            'La clé de provisioning pour le tenant. [min: 8, max: 256]',
+        ),
     ]
