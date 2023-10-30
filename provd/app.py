@@ -308,8 +308,8 @@ class ProvisioningApplication:
             provisioning_key = self.configure_service.get('provisioning_key', tenant_uuid)
             raw_config = copy.deepcopy(raw_config)
             # Inject the provisioning key into the device configuration
-            base_external_url = raw_config['base_external_url']
-            raw_config['http_base_url'] = f'{base_external_url}/{provisioning_key}'
+            http_base_url = raw_config['http_base_url']
+            raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
         try:
             _check_raw_config_validity(raw_config)
         except Exception:
