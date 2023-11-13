@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import copy
-import logging
 import functools
+import logging
 import os.path
+import re
 from typing import Any, TYPE_CHECKING
 from urllib.parse import urlparse
 
@@ -1137,6 +1138,11 @@ def _check_is_https_proxy(value):
         raise InvalidParameterError(f'scheme and hostname: {value}')
 
 
+def _is_string_url_safe(value: str) -> bool:
+    safe_str_pattern = re.compile(r"^[a-zA-Z0-9\-$~.]+$")
+    return safe_str_pattern.match(value) is not None
+
+
 class ApplicationConfigureService:
     VIRTUAL_ATTRIBUTES = {'provisioning_key': {'parent': 'tenants'}}
 
@@ -1226,16 +1232,21 @@ class ApplicationConfigureService:
         return tenant_config.get('provisioning_key')
 
     def _set_param_provisioning_key(self, provisioning_key, tenant_uuid):
-        if provisioning_key and (
-            len(provisioning_key) < 8 or len(provisioning_key) > 256
-        ):
-            raise InvalidParameterError(
-                '`provisioning_key` should be [8, 256] characters long.'
-            )
+        if provisioning_key:
+            if len(provisioning_key) < 8 or len(provisioning_key) > 256:
+                raise InvalidParameterError(
+                    '`provisioning_key` should be [8, 256] characters long.'
+                )
+
+            if not _is_string_url_safe(provisioning_key):
+                raise InvalidParameterError(
+                    '`provisioning_key` should only contain the following characters: `a-z, A-Z, 0-9, -, $, ~, .`'
+                )
 
         existing_tenant_uuid = self.get_tenant_from_provisioning_key(provisioning_key)
         if existing_tenant_uuid and existing_tenant_uuid != tenant_uuid:
             raise InvalidParameterError('another tenant already uses this provisioning key.')
+
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)

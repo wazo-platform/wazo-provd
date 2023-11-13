@@ -149,6 +149,14 @@ class TestParams(BaseIntegrationTest):
             raises(ProvdError).matching(has_properties('status_code', 400)),
         )
 
+    def test_provisioning_key_invalid_characters(self) -> None:
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'provisioning_key', 'asdf1234%$'
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+
     def test_provisioning_key_for_unconfigured_tenant(self) -> None:
         # Do not use SUB_TENANT_1 in another provisioning key test
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
