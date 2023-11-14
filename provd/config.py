@@ -174,15 +174,12 @@ class ProvdConfigDict(TypedDict):
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ADVERTISED_HOST = '127.0.0.1'
-DEFAULT_ADVERTISED_HTTP_PORT = 8667
-
 _DEFAULT_CONFIG: ProvdConfigDict = {
     'config_file': '/etc/wazo-provd/config.yml',
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
         'advertised_host': '127.0.0.1',
-        'advertised_http_port': DEFAULT_ADVERTISED_HTTP_PORT,
+        'advertised_http_port': 8667,
         'advertised_http_url': None,
         'base_raw_config': {},
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
