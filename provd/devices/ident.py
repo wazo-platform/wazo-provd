@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, TypedDict, cast, Any, Union, Protocol
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
 from provd.security import log_security_msg
+from provd.servers.http import BaseHTTPHookService
 from provd.servers.http_site import Request
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService, TFTPRequest
@@ -811,9 +812,11 @@ class HTTPRequestProcessingService(Resource):
 
     @defer.inlineCallbacks
     def getChild(self, path: bytes, request: Request):
-        logger.info('Processing HTTP request: %s', request.path)
+        logger.info('Processing HTTP request: %s', request.uri)
         logger.debug('HTTP request: %s', request)
+        logger.debug('prepath: %s', request.prepath)
         logger.debug('postpath: %s', request.postpath)
+        logger.debug('path = %s', request.path)
 
         # Inject the number of trusted HTTP proxies
         request.num_http_proxies = self._num_http_proxies
@@ -851,6 +854,40 @@ class HTTPRequestProcessingService(Resource):
                 defer.returnValue(service)
             else:
                 defer.returnValue(service.getChildWithDefault(path, request))
+
+
+class HTTPKeyVerifyingHook(BaseHTTPHookService):
+    unauthorized_resource = NoResource('Nowhere to route this request.')
+
+    def __init__(self, app, *args, **kwargs):
+        self._app = app
+        super().__init__(*args, **kwargs)
+
+    def getChild(self, path: str, request: Request):
+        logger.debug('URL key verifying hook, path = "%s", request = "%s"', path, request)
+        prov_key = path.decode('utf-8')
+        logger.debug('Prov key = "%s"', prov_key)
+        if not prov_key:
+            logger.info('Empty provisioning key. Denying request.')
+            return self.unauthorized_resource
+        tenant_uuid = self._app.configure_service.get_tenant_from_provisioning_key(prov_key)
+        if not tenant_uuid:
+            logger.info('Invalid URL key. Denying request.')
+            return self.unauthorized_resource
+        # Inject tenant_uuid in request object
+        request.tenant_uuid = tenant_uuid
+
+        request.postpath.insert(0, path)
+        request.prepath.pop()
+
+        request.postpath = request.postpath[1:]
+        path = b'/' + b'/'.join(request.prepath + request.postpath)
+
+        path = request.postpath.pop(0)
+        request.prepath.append(path)
+        logger.debug('Rewritten request: path = %s, prepath = %s, postpath = %s', path, request.prepath, request.postpath)
+        return self._next_service(path, request)
+
 
 
 # @implementer(ITFTPReadService)

@@ -215,6 +215,8 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat = 0
         self.tenants = self._split_config.get('tenants', {})
+        self.http_auth_strategy = self._split_config['general'].get('http_auth_strategy')
+        self.use_provisioning_key = self.http_auth_strategy == 'url_key'
 
         self.pg_mgr = PluginManager(
             self,
@@ -298,6 +300,16 @@ class ProvisioningApplication:
         # Return true if the device has been successfully configured (i.e.
         # no exception were raised), else false.
         logger.info('Configuring device %s with plugin %s', device[ID_KEY], plugin.id)
+        if self.use_provisioning_key:
+            tenant_uuid = device.get('tenant_uuid', None)
+            if not tenant_uuid:
+                logger.warning('Device %s is using provisioning key but has no tenant_uuid', device[ID_KEY])
+                return False
+            provisioning_key = self.configure_service.get('provisioning_key', tenant_uuid)
+            raw_config = copy.deepcopy(raw_config)
+            # Inject the provisioning key into the device configuration
+            http_base_url = raw_config['http_base_url']
+            raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
         try:
             _check_raw_config_validity(raw_config)
         except Exception:
@@ -1225,6 +1237,11 @@ class ApplicationConfigureService:
         if tenant_config is None:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
         tenant_config['provisioning_key'] = provisioning_key
+
+    def get_tenant_from_provisioning_key(self, provisioning_key):
+        for tenant, config in self._app.tenants.items():
+            if config.get('provisioning_key') == provisioning_key:
+                return tenant
 
     def _set_param_tenants(self, tenants, *args, **kwargs):
         self._app.tenants = tenants
