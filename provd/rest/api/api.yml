@@ -226,6 +226,8 @@ paths:
       responses:
         '204':
           $ref: '#/responses/NoContentResponse'
+        '400':
+          $ref: '#/responses/BadRequestError'
         '404':
           $ref: '#/responses/NoSuchResourceError'
         '415':

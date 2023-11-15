@@ -18,6 +18,7 @@ from .helpers.base import (
     INVALID_TENANT,
     INVALID_TOKEN,
     SUB_TENANT_1,
+    SUB_TENANT_2,
     VALID_TOKEN_MULTITENANT,
 )
 from .helpers.operation import operation_successful, operation_fail
@@ -155,4 +156,18 @@ class TestParams(BaseIntegrationTest):
         assert_that(
             provd.params.get('provisioning_key'),
             has_entry('value', None),
+        )
+
+    def test_provisioning_key_already_exists(self) -> None:
+        self._client.params.update('provisioning_key', 'secure-key')
+        # Should not raise an error since it's the same tenant
+        self._client.params.update('provisioning_key', 'secure-key')
+
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(SUB_TENANT_2)
+        assert_that(
+            calling(provd.params.update).with_args(
+                'provisioning_key', 'secure-key'
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
         )
