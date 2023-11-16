@@ -1,6 +1,7 @@
 general:
   advertised_host: 127.0.0.1
   advertised_http_port: 8667
+  advertised_http_url: null
   tftp_port: 69
   http_proxied_listen_interface: 127.0.0.1
   http_proxied_listen_port: 18667
