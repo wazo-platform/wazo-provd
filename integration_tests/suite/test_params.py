@@ -179,3 +179,13 @@ class TestParams(BaseIntegrationTest):
             ),
             raises(ProvdError).matching(has_properties('status_code', 400)),
         )
+
+    def test_provisioning_key_multiple_null_values_can_exist(self) -> None:
+        self._client.params.update('provisioning_key', None)
+        # Should not raise an error since it's the same tenant
+        self._client.params.update('provisioning_key', None)
+
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(SUB_TENANT_2)
+        # Should not raise an error since multiple tenants can have a null provisioning key
+        provd.params.update('provisioning_key', None)
