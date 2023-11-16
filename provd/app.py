@@ -1243,9 +1243,9 @@ class ApplicationConfigureService:
                     '`provisioning_key` should only contain the following characters: `a-z, A-Z, 0-9, -, $, ~, .`'
                 )
 
-        existing_tenant_uuid = self.get_tenant_from_provisioning_key(provisioning_key)
-        if existing_tenant_uuid and existing_tenant_uuid != tenant_uuid:
-            raise InvalidParameterError('another tenant already uses this provisioning key.')
+            existing_tenant_uuid = self.get_tenant_from_provisioning_key(provisioning_key)
+            if existing_tenant_uuid and existing_tenant_uuid != tenant_uuid:
+                raise InvalidParameterError('another tenant already uses this provisioning key.')
 
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:
