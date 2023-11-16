@@ -97,7 +97,6 @@ class SyncDbConfigDict(TypedDict):
 
 
 class GeneralConfig(TypedDict):
-    external_ip: str
     listen_interface: str
     listen_port: int
     base_raw_config: dict[str, Any]
@@ -112,7 +111,6 @@ class GeneralConfig(TypedDict):
     info_extractor: str
     retriever: str
     updater: str
-    http_port: int
     tftp_port: int
     verbose: bool
     sync_service_type: str
@@ -299,17 +297,6 @@ def _load_json_file(raw_value: str) -> dict[str, Any]:
         return json.load(f)
 
 
-def _process_aliases(raw_config):
-    if 'ip' in raw_config['general'] and 'advertised_host' not in raw_config['general']:
-        raw_config['general']['advertised_host'] = raw_config['general']['ip']  # type: ignore[typeddict-item]
-    if 'external_ip' in raw_config['general'] and 'advertised_host' not in raw_config['general']:
-        raw_config['general']['advertised_host'] = raw_config['general']['external_ip']  # type: ignore[typeddict-item]
-    if 'http_port' in raw_config['general'] and 'advertised_http_port' not in raw_config['general']:
-        raw_config['general']['advertised_http_port'] = raw_config['general']['http_port']  # type: ignore[typeddict-item]
-    if 'base_external_url' in raw_config['general'] and 'advertised_http_url' not in raw_config['general']:
-        raw_config['general']['advertised_http_url'] = raw_config['general']['base_external_url']  # type: ignore[typeddict-item]
-
-
 def _check_and_convert_parameters(raw_config: dict[str, Any]) -> None:
     if raw_config['rest_api']['ssl']:
         if 'ssl_certfile' not in raw_config['rest_api']:
@@ -350,7 +337,9 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
             advertised_host = app_raw_config['general']['advertised_host']
         else:
             advertised_host = _get_ip_fallback()
-            logger.warning('Using "%s" for base raw config ip parameter', advertised_host)
+            logger.warning(
+                'Using "%s" for base raw config ip parameter', advertised_host
+            )
         base_raw_config['ip'] = advertised_host
 
 
@@ -383,7 +372,6 @@ def get_config(argv: Options) -> ProvdConfigDict:
     file_config = read_config_file_hierarchy(ChainMap(cli_config, _DEFAULT_CONFIG))
     service_key = _load_key_file(ChainMap(cli_config, file_config, _DEFAULT_CONFIG))
     raw_config = ChainMap(cli_config, service_key, file_config, _DEFAULT_CONFIG)
-    _process_aliases(raw_config)
     _check_and_convert_parameters(raw_config)
     _post_update_raw_config(raw_config)
     return cast(ProvdConfigDict, raw_config)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 23.16
+
+* The following configurations have been renamed:
+
+  * `ip` / `external_ip` --> `advertised_host`
+  * `http_port` --> `advertised_http_port`
+  * `base_external_url` --> `advertised_http_url`
+
 ## 23.12
 
 * New configuration has been added to configure number of HTTP proxies ahead of this
