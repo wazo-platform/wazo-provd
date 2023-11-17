@@ -110,7 +110,7 @@ class GeneralConfig(TypedDict):
     updater: str
     http_port: int
     tftp_port: int
-    base_external_url: str
+    base_external_url: str | None
     verbose: bool
     sync_service_type: str
     num_http_proxies: int
@@ -198,7 +198,7 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
         'http_proxied_listen_interface': '127.0.0.1',
         'http_proxied_listen_port': 18667,
         'http_proxied_trusted_proxies_count': 1,
-        'base_external_url': f'http://localhost:{DEFAULT_HTTP_PORT}',
+        'base_external_url': None,
         'verbose': False,
         'sync_service_type': 'none',
         'num_http_proxies': 0,
@@ -336,8 +336,11 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     base_raw_config |= {
         'http_port': app_raw_config['general']['http_port'],
         'tftp_port': app_raw_config['general']['tftp_port'],
-        'http_base_url': app_raw_config['general']['base_external_url'],
     }
+    if app_raw_config['general'].get('base_external_url'):
+        base_raw_config |= {
+            'http_base_url': app_raw_config['general']['base_external_url'],
+        }
 
     if 'ip' not in base_raw_config:
         if 'external_ip' in app_raw_config['general']:
