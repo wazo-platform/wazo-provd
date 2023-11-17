@@ -74,7 +74,6 @@ from __future__ import annotations
 import logging
 import json
 import os.path
-import socket
 from typing import Any, TypedDict, Union, cast, Literal
 
 from twisted.python import usage
@@ -312,13 +311,6 @@ def _check_and_convert_parameters(raw_config: dict[str, Any]) -> None:
     )
 
 
-def _get_ip_fallback():
-    # This function might return an IP address of a loopback interface, but we
-    # don't care since it's not possible to determine implicitly which IP address
-    # we should use anyway.
-    return socket.gethostbyname(socket.gethostname())
-
-
 def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     # warning: raw_config in the function name means device raw config and
     # the app_raw_config argument means application configuration.
@@ -333,13 +325,7 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
         }
 
     if 'ip' not in base_raw_config:
-        if 'advertised_host' in app_raw_config['general']:
-            advertised_host = app_raw_config['general']['advertised_host']
-        else:
-            advertised_host = _get_ip_fallback()
-            logger.warning(
-                'Using "%s" for base raw config ip parameter', advertised_host
-            )
+        advertised_host = app_raw_config['general']['advertised_host']
         base_raw_config['ip'] = advertised_host
 
 
