@@ -96,8 +96,12 @@ class SyncDbConfigDict(TypedDict):
 
 
 class GeneralConfig(TypedDict):
-    listen_interface: str
-    listen_port: int
+    http_proxied_listen_interface: str
+    http_proxied_listen_port: int
+    http_proxied_trusted_proxies_count: int
+    advertised_host: Union[str, None]
+    advertised_http_url: Union[str, None]
+    advertised_http_port: int
     base_raw_config: dict[str, Any]
     base_raw_config_file: str
     request_config_dir: str
@@ -113,9 +117,8 @@ class GeneralConfig(TypedDict):
     tftp_port: int
     verbose: bool
     sync_service_type: str
-    num_http_proxies: int
     syncdb: SyncDbConfigDict
-    http_auth_strategy: Literal['url_key']
+    http_auth_strategy: Union[Literal['url_key'], None]
 
 
 class RestApiConfigDict(TypedDict):
@@ -167,6 +170,7 @@ class ProvdConfigDict(TypedDict):
     amid: AmidConfigDict
     bus: BusConfigDict
     plugin_config: dict[str, Any]
+    tenants: dict[str, dict]
 
 
 logger = logging.getLogger(__name__)
@@ -196,7 +200,6 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
         'http_proxied_trusted_proxies_count': 1,
         'verbose': False,
         'sync_service_type': 'none',
-        'num_http_proxies': 0,
         'syncdb': {
             'interval_sec': 86400,
             'start_sec': 60,
@@ -238,6 +241,7 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
         'exchange_type': 'headers',
     },
     'plugin_config': {},
+    'tenants': {},
 }
 
 _OPTION_TO_PARAM_LIST = [

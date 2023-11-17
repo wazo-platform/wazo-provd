@@ -174,9 +174,7 @@ class TestParams(BaseIntegrationTest):
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
         provd.set_tenant(SUB_TENANT_2)
         assert_that(
-            calling(provd.params.update).with_args(
-                'provisioning_key', 'secure-key'
-            ),
+            calling(provd.params.update).with_args('provisioning_key', 'secure-key'),
             raises(ProvdError).matching(has_properties('status_code', 400)),
         )
 

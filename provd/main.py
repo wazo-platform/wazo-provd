@@ -492,7 +492,7 @@ class SyncdbService(ResourcesDeletionService):
         )
 
     @defer.inlineCallbacks
-    def remove_resources_for_deleted_tenants(self) -> None:
+    def remove_resources_for_deleted_tenants(self) -> Deferred:
         auth_client = auth.get_auth_client()
         auth_tenants = set(
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
@@ -501,7 +501,7 @@ class SyncdbService(ResourcesDeletionService):
         self.remove_configuration_for_deleted_tenants(auth_tenants)
 
     @defer.inlineCallbacks
-    def remove_devices_for_deleted_tenants(self, auth_tenants) -> None:
+    def remove_devices_for_deleted_tenants(self, auth_tenants) -> Deferred:
         app = self._prov_service.app
 
         find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
