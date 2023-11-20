@@ -7,7 +7,7 @@ import functools
 import logging
 import os.path
 import re
-from typing import Any, TYPE_CHECKING
+from typing import Any, Literal, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from provd.devices.config import RawConfigError, DefaultConfigFactory, ConfigCollection
@@ -206,7 +206,7 @@ class ProvisioningApplication:
     ):
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
-        self._split_config = config
+        self._split_config: ProvdConfigDict = config
         self._token = None
         self._tenant_uuid = None
 
@@ -214,10 +214,12 @@ class ProvisioningApplication:
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
 
         self.proxies = self._split_config.get('proxy', {})
-        self.nat = 0
-        self.tenants = self._split_config.get('tenants', {})
-        self.http_auth_strategy = self._split_config['general'].get('http_auth_strategy')
-        self.use_provisioning_key = self.http_auth_strategy == 'url_key'
+        self.nat: int = 0
+        self.tenants: dict[str, dict] = self._split_config.get('tenants', {})
+        self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
+            'general'
+        ].get('http_auth_strategy')
+        self.use_provisioning_key: bool = self.http_auth_strategy == 'url_key'
 
         self.pg_mgr = PluginManager(
             self,
@@ -304,13 +306,24 @@ class ProvisioningApplication:
         if self.use_provisioning_key:
             tenant_uuid = device.get('tenant_uuid', None)
             if not tenant_uuid:
-                logger.warning('Device %s is using provisioning key but has no tenant_uuid', device[ID_KEY])
+                logger.warning(
+                    'Device %s is using provisioning key but has no tenant_uuid',
+                    device[ID_KEY],
+                )
                 return False
-            provisioning_key = self.configure_service.get('provisioning_key', tenant_uuid)
+            provisioning_key = self.configure_service.get(
+                'provisioning_key', tenant_uuid
+            )
+
             raw_config = copy.deepcopy(raw_config)
+            http_base_url = raw_config.get('http_base_url')
+            if not http_base_url:
+                host = raw_config['ip']
+                port = raw_config['http_port']
+                http_base_url = f'http://{host}:{port}'
             # Inject the provisioning key into the device configuration
-            http_base_url = raw_config['http_base_url']
             raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
+
         try:
             _check_raw_config_validity(raw_config)
         except Exception:
@@ -1240,12 +1253,17 @@ class ApplicationConfigureService:
 
             if not _is_string_url_safe(provisioning_key):
                 raise InvalidParameterError(
-                    '`provisioning_key` should only contain the following characters: `a-z, A-Z, 0-9, -, $, ~, .`'
+                    '`provisioning_key` should only contain the following characters: '
+                    '`a-z, A-Z, 0-9, -, $, ~, .`'
                 )
 
-            existing_tenant_uuid = self.get_tenant_from_provisioning_key(provisioning_key)
+            existing_tenant_uuid = self.get_tenant_from_provisioning_key(
+                provisioning_key
+            )
             if existing_tenant_uuid and existing_tenant_uuid != tenant_uuid:
-                raise InvalidParameterError('another tenant already uses this provisioning key.')
+                raise InvalidParameterError(
+                    'another tenant already uses this provisioning key.'
+                )
 
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:

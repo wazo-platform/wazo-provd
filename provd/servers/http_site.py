@@ -66,7 +66,9 @@ class AuthResource(resource.Resource):
             self, request, render_method
         )
         try:
-            self.tenant_uuid = self._build_tenant_list_from_request(request, recurse=False)[0]
+            self.tenant_uuid = self._build_tenant_list_from_request(
+                request, recurse=False
+            )[0]
             return decorated_render_method(request)
         except (
             auth.auth_verifier.Unauthorized,

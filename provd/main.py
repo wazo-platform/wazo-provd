@@ -187,52 +187,22 @@ class ProcessService(Service):
         Service.startService(self)
 
 
-class HTTPProcessService(Service):
+class HTTPProxiedProcessService(Service):
     def __init__(
         self,
         prov_service: ProvisioningService,
         process_service: ProcessService,
         config: ProvdConfigDict,
-    ) -> None:
-        self._prov_service = prov_service
-        self._process_service = process_service
-        self._config = config
-
-    def startService(self) -> None:
-        app = self._prov_service.app
-        process_service = self._process_service.request_processing
-        num_http_proxies = self._config['general']['num_http_proxies']
-        http_process_service = ident.HTTPRequestProcessingService(
-            process_service, app.pg_mgr, num_http_proxies
-        )
-        if app.use_provisioning_key:
-            logger.info('Using in-URL provisioning key')
-            http_process_service = ident.HTTPKeyVerifyingHook(app, http_process_service)
-        site = Site(http_process_service)
-        interface = self._config['general']['listen_interface']
-        port = self._config['general']['http_port']
-        logger.info('Binding HTTP provisioning service to port %s', port)
-        self._tcp_server = internet.TCPServer(
-            port, site, backlog=128, interface=interface
-        )
-        self._tcp_server.startService()
-        Service.startService(self)
-
-    def stopService(self) -> Deferred:
-        Service.stopService(self)
-        return self._tcp_server.stopService()
-
-
-class HTTPProxiedProcessService(Service):
-    def __init__(self, prov_service, process_service, config):
+    ):
         self._prov_service = prov_service
         self._process_service = process_service
         self._config = config
 
     def startService(self):
         app = self._prov_service.app
+        config = self._config['general']
         process_service = self._process_service.request_processing
-        trusted_proxies_count = self._config['general']['http_proxied_trusted_proxies_count']
+        trusted_proxies_count = config['http_proxied_trusted_proxies_count']
         http_process_service = ident.HTTPRequestProcessingService(
             process_service, app.pg_mgr, trusted_proxies_count
         )
@@ -240,8 +210,8 @@ class HTTPProxiedProcessService(Service):
             logger.info('Using in-URL provisioning key')
             http_process_service = ident.HTTPKeyVerifyingHook(app, http_process_service)
         site = Site(http_process_service)
-        interface = self._config['general']['http_proxied_listen_interface']
-        port = self._config['general']['http_proxied_listen_port']
+        interface = config['http_proxied_listen_interface']
+        port = config['http_proxied_listen_port']
         logger.info('Binding HTTP-proxied provisioning service to port %s', port)
         self._tcp_server = internet.TCPServer(
             port, site, backlog=128, interface=interface
@@ -522,7 +492,7 @@ class SyncdbService(ResourcesDeletionService):
         )
 
     @defer.inlineCallbacks
-    def remove_resources_for_deleted_tenants(self) -> None:
+    def remove_resources_for_deleted_tenants(self) -> Deferred:
         auth_client = auth.get_auth_client()
         auth_tenants = set(
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
@@ -531,7 +501,7 @@ class SyncdbService(ResourcesDeletionService):
         self.remove_configuration_for_deleted_tenants(auth_tenants)
 
     @defer.inlineCallbacks
-    def remove_devices_for_deleted_tenants(self, auth_tenants) -> None:
+    def remove_devices_for_deleted_tenants(self, auth_tenants) -> Deferred:
         app = self._prov_service.app
 
         find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
@@ -599,10 +569,9 @@ class ProvisioningServiceMaker:
         process_service = ProcessService(prov_service, config)
         process_service.setServiceParent(top_service)
 
-        http_process_service = HTTPProcessService(prov_service, process_service, config)
-        http_process_service.setServiceParent(top_service)
-
-        http_proxied_process_service = HTTPProxiedProcessService(prov_service, process_service, config)
+        http_proxied_process_service = HTTPProxiedProcessService(
+            prov_service, process_service, config
+        )
         http_proxied_process_service.setServiceParent(top_service)
 
         tftp_process_service = TFTPProcessService(prov_service, process_service, config)
