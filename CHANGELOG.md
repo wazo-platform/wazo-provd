@@ -7,6 +7,7 @@
   * `ip` / `external_ip` --> `advertised_host`
   * `http_port` --> `advertised_http_port`
   * `base_external_url` --> `advertised_http_url`
+  * `num_http_proxies` --> `http_proxied_trusted_proxies_count`
 
 ## 23.12
 
