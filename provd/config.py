@@ -27,7 +27,6 @@ The following parameters are defined:
         verbose
         sync_service_type
         asterisk_ami_servers
-        num_http_proxies
         advertised_host
             The hostname of the provisioning server advertised to phones
         advertised_http_port
