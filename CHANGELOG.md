@@ -9,6 +9,10 @@
   * `base_external_url` --> `advertised_http_url`
   * `num_http_proxies` --> `http_proxied_trusted_proxies_count`
 
+## 23.15
+
+* A new API has been added to configure the provisioning key
+
 ## 23.12
 
 * New configuration has been added to configure number of HTTP proxies ahead of this
