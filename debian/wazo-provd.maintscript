@@ -6,3 +6,4 @@ mv_conffile /etc/xivo/provd/retriever.py.conf.default /etc/wazo-provd/retriever.
 mv_conffile /etc/xivo/provd/retriever.py.conf.secure /etc/wazo-provd/retriever.py.conf.secure 19.02
 mv_conffile /etc/xivo/provd/updater.py.conf.default /etc/wazo-provd/updater.py.conf.default 19.02
 mv_conffile /etc/xivo/provd/updater.py.conf.secure /etc/wazo-provd/updater.py.conf.secure 19.02
+rm_conffile /etc/nginx/sites-available/wazo-provd 23.16
