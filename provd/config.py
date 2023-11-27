@@ -318,18 +318,16 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     # warning: raw_config in the function name means device raw config and
     # the app_raw_config argument means application configuration.
     base_raw_config = app_raw_config['general']['base_raw_config']
-    base_raw_config |= {
-        'http_port': app_raw_config['general']['advertised_http_port'],
-        'tftp_port': app_raw_config['general']['tftp_port'],
-    }
-    if app_raw_config['general']['advertised_http_url']:
-        base_raw_config |= {
-            'http_base_url': app_raw_config['general']['advertised_http_url'],
-        }
-
+    if 'http_port' not in base_raw_config:
+        base_raw_config['http_port'] = app_raw_config['general']['advertised_http_port']
+    if 'tftp_port' not in base_raw_config:
+        base_raw_config['tftp_port'] = app_raw_config['general']['tftp_port']
+    if 'http_base_url' not in base_raw_config:
+        base_raw_config['http_base_url'] = app_raw_config['general'][
+            'advertised_http_url'
+        ]
     if 'ip' not in base_raw_config:
-        advertised_host = app_raw_config['general']['advertised_host']
-        base_raw_config['ip'] = advertised_host
+        base_raw_config['ip'] = app_raw_config['general']['advertised_host']
 
 
 def _post_update_raw_config(raw_config: dict[str, Any]) -> None:
