@@ -247,7 +247,6 @@ _OPTION_TO_PARAM_LIST = [
     # (<option name, (<section, param name>)>)
     ('config-file', ('general', 'config_file')),
     ('config-dir', ('general', 'request_config_dir')),
-    ('http-port', ('general', 'advertised_http_port')),
     ('tftp-port', ('general', 'tftp_port')),
     ('rest-port', ('general', 'rest_port')),
 ]
@@ -276,7 +275,6 @@ class Options(usage.Options):
             None,
             'The directory where request processing configuration file can be found',
         ),
-        ('http-port', None, None, 'The HTTP port to listen on.'),
         ('tftp-port', None, None, 'The TFTP port to listen on.'),
         ('rest-port', None, None, 'The port to listen on.'),
     ]
