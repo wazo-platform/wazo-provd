@@ -28,8 +28,8 @@ amid:
   prefix: null
   https: false
 bus:
-    username: guest
-    password: guest
-    host: localhost
-    port: 5672
-    exchange_name: wazo-headers
+  username: guest
+  password: guest
+  host: localhost
+  port: 5672
+  exchange_name: wazo-headers
