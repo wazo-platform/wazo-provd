@@ -1,5 +1,13 @@
 # Changelog
 
+## 23.17
+
+* The following configurations have been removed in favor of
+  `advertised_http_url`:
+
+  * `advertised_host`
+  * `advertised_http_port`
+
 ## 23.16
 
 * The following configurations have been renamed:

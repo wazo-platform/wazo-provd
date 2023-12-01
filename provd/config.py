@@ -27,10 +27,6 @@ The following parameters are defined:
         verbose
         sync_service_type
         asterisk_ami_servers
-        advertised_host
-            The hostname of the provisioning server advertised to phones
-        advertised_http_port
-            The HTTP port advertised to phones
         advertised_http_url
             The HTTP URL advertised to phones
     rest_api:
@@ -98,9 +94,7 @@ class GeneralConfig(TypedDict):
     http_proxied_listen_interface: str
     http_proxied_listen_port: int
     http_proxied_trusted_proxies_count: int
-    advertised_host: Union[str, None]
     advertised_http_url: Union[str, None]
-    advertised_http_port: int
     base_raw_config: dict[str, Any]
     base_raw_config_file: str
     request_config_dir: str
@@ -178,8 +172,6 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
     'config_file': '/etc/wazo-provd/config.yml',
     'extra_config_files': '/etc/wazo-provd/conf.d',
     'general': {
-        'advertised_host': '127.0.0.1',
-        'advertised_http_port': 8667,
         'advertised_http_url': None,
         'base_raw_config': {},
         'base_raw_config_file': '/etc/wazo-provd/base_raw_config.json',
@@ -316,16 +308,12 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
     # warning: raw_config in the function name means device raw config and
     # the app_raw_config argument means application configuration.
     base_raw_config = app_raw_config['general']['base_raw_config']
-    if 'http_port' not in base_raw_config:
-        base_raw_config['http_port'] = app_raw_config['general']['advertised_http_port']
     if 'tftp_port' not in base_raw_config:
         base_raw_config['tftp_port'] = app_raw_config['general']['tftp_port']
     if 'http_base_url' not in base_raw_config:
         base_raw_config['http_base_url'] = app_raw_config['general'][
             'advertised_http_url'
         ]
-    if 'ip' not in base_raw_config:
-        base_raw_config['ip'] = app_raw_config['general']['advertised_host']
 
 
 def _post_update_raw_config(raw_config: dict[str, Any]) -> None:
