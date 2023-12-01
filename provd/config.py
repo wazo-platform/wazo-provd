@@ -69,6 +69,8 @@ from __future__ import annotations
 import logging
 import json
 import os.path
+
+from urllib.parse import urlparse
 from typing import Any, TypedDict, Union, cast, Literal
 
 from twisted.python import usage
@@ -314,6 +316,12 @@ def _update_general_base_raw_config(app_raw_config: dict[str, Any]) -> None:
         base_raw_config['http_base_url'] = app_raw_config['general'][
             'advertised_http_url'
         ]
+    # Compatibility for plugins released before 23.17
+    if 'ip' not in base_raw_config:
+        base_raw_config['ip'] = urlparse(base_raw_config['http_base_url']).hostname
+    if 'http_port' not in base_raw_config:
+        extracted_port = urlparse(base_raw_config['http_base_url']).port
+        base_raw_config['http_port'] = extracted_port or '8667'
 
 
 def _post_update_raw_config(raw_config: dict[str, Any]) -> None:
