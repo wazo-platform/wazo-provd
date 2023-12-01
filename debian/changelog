@@ -24,7 +24,7 @@ xivo-provisioning (14.01~20140110.152923.0990432-wheezy-2) xivo-dev; urgency=low
 
 xivo-provisioning (13.04~20130208.151433.f97c02c-4) squeeze-xivo-skaro-dev; urgency=low
 
-  * revert init script 
+  * revert init script
 
  -- Nicolas HICHER <nhicher@avencall.com>  Sat, 23 Feb 2013 08:53:11 -0500
 
@@ -48,7 +48,7 @@ xivo-provisioning (13.03~20130122.213143.ac30299-2) squeeze-xivo-skaro-dev; urge
 
 xivo-provisioning (13.01~20130116.125546.a92c671-2) squeeze-xivo-skaro-dev; urgency=low
 
-  * for version 
+  * for version
 
  -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Wed, 16 Jan 2013 08:41:20 -0500
 
@@ -60,13 +60,13 @@ xivo-provisioning (13.01~20121213.161604.7be16d9-2) squeeze-xivo-skaro-dev; urge
 
 xivo-provisioning (12.23~20121127.145026.b50145b-2) squeeze-xivo-skaro-dev; urgency=low
 
-  * fix version 
+  * fix version
 
  -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Tue, 27 Nov 2012 10:01:32 -0500
 
 xivo-provisioning (12.23~20121126.194943.bd61459-3) squeeze-xivo-skaro-dev; urgency=low
 
-  * fix init script 
+  * fix init script
 
  -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Tue, 27 Nov 2012 09:42:57 -0500
 
@@ -78,7 +78,7 @@ xivo-provisioning (12.23~20121126.194943.bd61459-2) squeeze-xivo-skaro-dev; urge
 
 pf-xivo-provisioning (6:1.2~beta-1-rc2-1) squeeze-xivo-skaro-dev; urgency=low
 
-  * fix for packaging-farm 
+  * fix for packaging-farm
 
  -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Fri, 09 Dec 2011 10:16:43 -0500
 
@@ -90,7 +90,7 @@ pf-xivo-provisioning (5:1.2-dev~20111123.152935.a7dcae2-3) squeeze-xivo-skaro-de
 
 pf-xivo-provisioning (5:1.2-dev~20111123.152935.a7dcae2-2) squeeze-xivo-skaro-dev; urgency=low
 
-  * fix epoch 
+  * fix epoch
 
  -- Nicolas HICHER (atarakt) <nhicher@proformatique.com>  Mon, 28 Nov 2011 09:47:36 -0500
 
@@ -168,7 +168,7 @@ pf-xivo-provisioning (2:1.1~svn7414-2) lenny-xivo-gallifrey-dev; urgency=low
 
 pf-xivo-provisioning (2:1.1~svn6892-3) etch-xivo-gallifrey-dev; urgency=low
 
-  * Removed output info on startup to init script. 
+  * Removed output info on startup to init script.
 
  -- Adrien DELLE CAVE (Decryptus) <decryptus@proformatique.com>  Sat, 19 Sep 2009 16:32:15 +0200
 
@@ -408,4 +408,3 @@ pf-xivo-provisioning (0.1~svn626-1) etch; urgency=low
   * Initial Release.
 
  -- Corentin Le Gall <corentin@proformatique.com>  Tue, 17 Apr 2007 18:12:35 +0200
-

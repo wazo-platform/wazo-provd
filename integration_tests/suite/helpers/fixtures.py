@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from wazo_provd_client import Client as ProvdClient
 from wazo_test_helpers import until
 
-from wazo_provd_client import Client as ProvdClient
 from .operation import operation_successful
 
 PLUGIN_TO_INSTALL = 'test-plugin'

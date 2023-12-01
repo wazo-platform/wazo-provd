@@ -5,18 +5,19 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Generator
 from copy import deepcopy
-from typing import Any, Generator, Literal
+from typing import Any, Literal
 
 from provd.persist.common import (
-    AbstractDatabaseFactory,
-    AbstractDatabase,
     AbstractBackend,
+    AbstractDatabase,
+    AbstractDatabaseFactory,
 )
-from provd.persist.id import get_id_generator_factory, GeneratorFactory
+from provd.persist.id import GeneratorFactory, get_id_generator_factory
 from provd.persist.util import (
-    new_backend_based_collection,
     SimpleBackendDocumentCollection,
+    new_backend_based_collection,
 )
 
 logger = logging.getLogger(__name__)

@@ -6,9 +6,9 @@ import unittest
 from typing import Any
 
 from provd.persist.util import (
-    _retrieve_doc_values,
     _create_pred_from_selector,
     _new_key_fun_from_key,
+    _retrieve_doc_values,
 )
 
 

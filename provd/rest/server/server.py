@@ -18,30 +18,32 @@ import functools
 import json
 import logging
 from binascii import a2b_base64
-from typing import Generator, Any
+from collections.abc import Generator
+from typing import Any
+
+from twisted.web import http
+from twisted.web.server import NOT_DONE_YET
+from xivo.tenant_helpers import UnauthorizedTenant
 
 from provd.app import (
-    InvalidIdError,
     DeviceNotInProvdTenantError,
+    InvalidIdError,
+    NonDeletableError,
     ProvisioningApplication,
     TenantInvalidForDeviceError,
-    NonDeletableError,
 )
 from provd.localization import get_locale_and_language
 from provd.operation import format_oip, operation_in_progres_from_deferred
 from provd.persist.common import ID_KEY
 from provd.plugins import BasePluginManagerObserver
+from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.rest.util import PROV_MIME_TYPE, uri_append_path
 from provd.servers.http_site import AuthResource, Request
-from provd.rest.server.util import accept_mime_type, numeric_id_generator
 from provd.services import InvalidParameterError
 from provd.status import get_status_aggregator
-from provd.util import norm_mac, norm_ip, decode_bytes, decode_value
-from twisted.web import http
-from twisted.web.server import NOT_DONE_YET
-from .auth import required_acl
-from .auth import get_auth_verifier
-from xivo.tenant_helpers import UnauthorizedTenant
+from provd.util import decode_bytes, decode_value, norm_ip, norm_mac
+
+from .auth import get_auth_verifier, required_acl
 
 logger = logging.getLogger(__name__)
 

@@ -41,10 +41,10 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from copy import deepcopy
-from typing import TypeVar, Any
+from typing import Any, TypeVar
 
-from provd.util import is_normed_mac, is_normed_ip
 from provd.persist.util import ForwardingDocumentCollection
+from provd.util import is_normed_ip, is_normed_mac
 
 logger = logging.getLogger(__name__)
 

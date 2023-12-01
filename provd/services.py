@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from twisted.internet.defer import Deferred
+
     from provd.operation import OperationInProgress
 
 logger = logging.getLogger(__name__)

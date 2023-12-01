@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
-import requests
 from functools import wraps
+
+import requests
 from wazo_auth_client import Client as AuthClient
 from wazo_auth_client.exceptions import (
     InvalidTokenException,

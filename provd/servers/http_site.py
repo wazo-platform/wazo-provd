@@ -10,18 +10,15 @@ from __future__ import annotations
 import copy
 import logging
 
-from twisted.internet import defer
-from twisted.web import http
-from twisted.web import server
-from twisted.web import resource
-from twisted.web.resource import _computeAllowedMethods
-from twisted.web.error import UnsupportedMethod
-
-from provd.rest.server import auth
-from provd.rest.server.helpers.tenants import tenant_helpers, Tenant, Tokens
-from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from requests.exceptions import HTTPError
+from twisted.internet import defer
+from twisted.web import http, resource, server
+from twisted.web.error import UnsupportedMethod
+from twisted.web.resource import _computeAllowedMethods
 
+from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
+from provd.rest.server import auth
+from provd.rest.server.helpers.tenants import Tenant, Tokens, tenant_helpers
 from provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)

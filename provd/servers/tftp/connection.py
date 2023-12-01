@@ -4,27 +4,29 @@
 """Manage the transfer between two host."""
 from __future__ import annotations
 
-# TODO RFC1122 says we must use an adaptive timeout...
-
-import struct
 import logging
+import struct
 from typing import BinaryIO
 
-from provd.servers.tftp.packet import (
-    build_dgram,
-    err_packet,
-    ERR_UNKNWN_TID,
-    ERR_UNDEF,
-    ERR_ILL,
-    parse_dgram,
-    PacketError,
-    OP_ERR,
-    OP_ACK,
-    data_packet,
-    AckPacket,
-)
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
+
+from provd.servers.tftp.packet import (
+    ERR_ILL,
+    ERR_UNDEF,
+    ERR_UNKNWN_TID,
+    OP_ACK,
+    OP_ERR,
+    AckPacket,
+    PacketError,
+    build_dgram,
+    data_packet,
+    err_packet,
+    parse_dgram,
+)
+
+# TODO RFC1122 says we must use an adaptive timeout...
+
 
 logger = logging.getLogger(__name__)
 

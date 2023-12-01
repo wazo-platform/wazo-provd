@@ -66,12 +66,11 @@ The following parameters are defined:
 #     raw config, yet they mean different things
 from __future__ import annotations
 
-import logging
 import json
+import logging
 import os.path
-
+from typing import Any, Literal, TypedDict, Union, cast
 from urllib.parse import urlparse
-from typing import Any, TypedDict, Union, cast, Literal
 
 from twisted.python import usage
 from xivo.chain_map import ChainMap

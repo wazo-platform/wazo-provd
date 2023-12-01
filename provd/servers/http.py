@@ -11,10 +11,7 @@ implementing twisted.web.resource.IResource.
 from __future__ import annotations
 
 from twisted.internet import defer
-from twisted.web import http
-from twisted.web import resource
-from twisted.web import static
-
+from twisted.web import http, resource, static
 
 IHTTPService = resource.IResource
 """An HTTP service is exactly the same thing as an IResource."""

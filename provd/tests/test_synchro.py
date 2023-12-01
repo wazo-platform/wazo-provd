@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 import time
+
+from twisted.internet import defer, reactor
+
 from provd.synchro import DeferredRWLock
-from twisted.internet import defer
-from twisted.internet import reactor
 
 _load_time = time.time()
 

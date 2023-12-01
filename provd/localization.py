@@ -20,8 +20,8 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable
-from weakref import WeakKeyDictionary
 from typing import Any
+from weakref import WeakKeyDictionary
 
 logger = logging.getLogger(__name__)
 

@@ -6,13 +6,14 @@ import contextlib
 import logging
 from typing import Any
 
+from twisted.internet import defer
+
 from provd.persist.common import (
     ID_KEY,
+    AbstractDocumentCollection,
     InvalidIdError,
     NonDeletableError,
-    AbstractDocumentCollection,
 )
-from twisted.internet import defer
 
 logger = logging.getLogger(__name__)
 

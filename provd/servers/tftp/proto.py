@@ -3,27 +3,27 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, TYPE_CHECKING, BinaryIO, Union
+from typing import TYPE_CHECKING, BinaryIO, Callable, Union
 
-from provd.servers.tftp.connection import RFC2347Connection, RFC1350Connection
-from provd.servers.tftp.packet import (
-    build_dgram,
-    err_packet,
-    ERR_UNDEF,
-    oack_packet,
-    parse_dgram,
-    PacketError,
-    OP_WRQ,
-    OP_RRQ,
-    RequestPacket,
-)
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
+from provd.servers.tftp.connection import RFC1350Connection, RFC2347Connection
+from provd.servers.tftp.packet import (
+    ERR_UNDEF,
+    OP_RRQ,
+    OP_WRQ,
+    PacketError,
+    RequestPacket,
+    build_dgram,
+    err_packet,
+    oack_packet,
+    parse_dgram,
+)
 from provd.util import encode_bytes
 
 if TYPE_CHECKING:
-    from ...devices.ident import TFTPRequestProcessingService, DevTFTPRequest
+    from ...devices.ident import DevTFTPRequest, TFTPRequestProcessingService
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ class TFTPProtocol(DatagramProtocol):
                     connection = RFC1350Connection(addr, fobj)
                 reactor.listenUDP(0, connection)
 
-            request: DevTFTPRequest = {'address': addr, 'packet': pkt}
+            request: DevTFTPRequest = {'address': addr, 'packet': pkt}  # type: ignore
             response = _Response(on_reject, on_accept)
             self._service.handle_read_request(request, response)
 

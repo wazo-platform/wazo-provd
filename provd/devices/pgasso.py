@@ -10,8 +10,9 @@ from collections import defaultdict
 from enum import IntEnum
 from operator import itemgetter
 
-from provd.devices.ident import AbstractDeviceUpdater
 from twisted.internet import defer
+
+from provd.devices.ident import AbstractDeviceUpdater
 
 logger = logging.getLogger(__name__)
 
