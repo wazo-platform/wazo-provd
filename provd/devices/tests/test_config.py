@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
+import pytest
 from hamcrest import (
     all_of,
     assert_that,
@@ -15,54 +16,125 @@ from hamcrest import (
     not_,
     starts_with,
 )
+from pydantic import ValidationError
 
-from ..config import DefaultConfigFactory, _remove_none_values
+from ..config import (
+    DefaultConfigFactory,
+    _remove_none_values,
+    ConfigSchema,
+    RawConfigSchema,
+)
 
 
-class TestDefaultConfigFactory(unittest.TestCase):
-    def setUp(self) -> None:
-        self.factory = DefaultConfigFactory()
+def test_config_schema_empty() -> None:
+    with pytest.raises(ValidationError) as exc_trace:
+        ConfigSchema()
 
-    def test_sip_line(self) -> None:
-        config: dict[str, Any] = {'raw_config': {}}
+    error = exc_trace.value
+    assert isinstance(error, ValidationError)
+    assert error.errors() == [
+        {'loc': ('id',), 'msg': 'field required', 'type': 'value_error.missing'},
+        {
+            'loc': ('parent_ids',),
+            'msg': 'field required',
+            'type': 'value_error.missing',
+        },
+        {
+            'loc': ('raw_config',),
+            'msg': 'field required',
+            'type': 'value_error.missing',
+        },
+        {'loc': ('transient',), 'msg': 'field required', 'type': 'value_error.missing'},
+    ]
 
-        result = self.factory(config)
 
-        assert_that(result, is_(none()))
+def test_raw_config_schema_missing_values() -> None:
+    with pytest.raises(ValidationError) as exc_trace:
+        RawConfigSchema(sip_lines={'1': {'username': 'test_username'}})
 
-    def test_with_a_valid_sip_configuration(self) -> None:
-        id_ = 'ap'
-        username = 'anonymous'
-        config = {
-            'id': id_,
-            'raw_config': {
-                'sip_lines': {
-                    '1': {
-                        'username': username,
-                    }
+    error = exc_trace.value
+    assert isinstance(error, ValidationError)
+    assert error.errors() == [
+        {'loc': ('ip',), 'msg': 'field required', 'type': 'value_error.missing'},
+        {
+            'loc': ('sip_lines', '1', 'password'),
+            'msg': 'field required',
+            'type': 'value_error.missing',
+        },
+        {
+            'loc': ('sip_lines', '1', 'display_name'),
+            'msg': 'field required',
+            'type': 'value_error.missing',
+        },
+        {
+            'loc': ('__root__',),
+            'msg': 'You must define either `tftp_port` or `http_port`.',
+            'type': 'value_error',
+        },
+    ]
+
+
+def test_raw_config_valid() -> None:
+    sip_line_1 = {
+        'username': 'test_username',
+        'password': 'a-password',
+        'display_name': 'name',
+    }
+    values = {
+        'ip': 'localhost',
+        'http_port': '443',
+        'sip_lines': {'1': sip_line_1},
+    }
+    config = RawConfigSchema(**values)
+    assert sip_line_1.items() <= config.dict()['sip_lines']['1'].items()
+
+
+@pytest.fixture(name='default_config_factory')
+def default_config_factory_fixture() -> DefaultConfigFactory:
+    return DefaultConfigFactory()
+
+
+def test_sip_line(default_config_factory: DefaultConfigFactory) -> None:
+    config: dict[str, Any] = {'raw_config': {}}
+    result = default_config_factory(config)
+    assert_that(result, is_(none()))
+
+
+def test_with_a_valid_sip_configuration(
+    default_config_factory: DefaultConfigFactory,
+) -> None:
+    id_ = 'ap'
+    username = 'anonymous'
+    config = {
+        'id': id_,
+        'raw_config': {
+            'sip_lines': {
+                '1': {
+                    'username': username,
                 }
-            },
-        }
+            }
+        },
+    }
 
-        result = self.factory(config)
+    result = default_config_factory(config)
 
-        assert_that(
-            result,
-            has_entries(
-                id=all_of(
-                    starts_with(id_),
-                    not_(equal_to(id_)),
-                ),
-                raw_config=has_entries(
-                    sip_lines=has_entries(
-                        '1',
-                        has_entries(
-                            username=username,
-                        ),
-                    )
-                ),
+    assert_that(
+        result,
+        has_entries(
+            id=all_of(
+                starts_with(id_),
+                not_(equal_to(id_)),
             ),
-        )
+            raw_config=has_entries(
+                sip_lines=has_entries(
+                    '1',
+                    has_entries(
+                        username=username,
+                    ),
+                )
+            ),
+        ),
+    )
 
 
 class TestRemoveNoneValues(unittest.TestCase):

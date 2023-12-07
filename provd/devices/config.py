@@ -29,10 +29,15 @@ Config collection objects are used as a storage for config objects.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections import defaultdict
 from copy import deepcopy
+from enum import Enum
 from functools import wraps
+from pydantic import BaseModel, root_validator, Field, validator
+from typing import Union, Any, Literal
+from zoneinfo import ZoneInfo
 
 from twisted.internet import defer
 
@@ -278,7 +283,7 @@ sip_transport [optional|default to 'udp']
   - tls
 
 sip_servers_root_and_intermediate_certificates [optional]
-  The list of certificates that particpated in the signing of the
+  The list of certificates that participated in the signing of the
   servers certificates, i.e. of the server the device will connect to,
   in PEM format. The list must be ordered by certificate signing, i.e.
   the root certificate must be the first in the list.
@@ -441,6 +446,189 @@ specific values to a template.
 """
 
 logger = logging.getLogger(__name__)
+
+INTEGER_KEY_REGEX = re.compile(r"^[0-9]+$")
+
+
+class SyslogLevel(str, Enum):
+    CRITICAL = 'critical'
+    ERROR = 'error'
+    WARNING = 'warning'
+    INFO = 'info'
+    DEBUG = 'debug'
+
+
+class DtmfMode(str, Enum):
+    RTP_IN_BAND = 'RTP-in-band'
+    RTP_OUT_OF_BAND = 'RTP-out-of-band'
+    SIP_INFO = 'SIP-INFO'
+
+
+class SrtpMode(str, Enum):
+    DISABLED = 'disabled'
+    PREFERRED = 'preferred'
+    REQUIRED = 'required'
+
+
+class Transport(str, Enum):
+    UDP = 'udp'
+    TCP = 'tcp'
+    TLS = 'tls'
+
+
+class FuncKeyType(str, Enum):
+    SPEED_DIAL = 'speeddial'
+    BLF = 'blf'
+    PARK = 'park'
+
+
+class SipLineSchema(BaseModel):
+    proxy_ip: Union[str, None]
+    proxy_port: Union[int, None]
+    backup_proxy_ip: Union[str, None]
+    backup_proxy_port: Union[int, None]
+    registrar_ip: Union[str, None]
+    registrar_port: Union[int, None]
+    backup_registrar_ip: Union[str, None]
+    backup_registrar_port: Union[int, None]
+    outbound_proxy_ip: Union[str, None]
+    outbound_proxy_port: Union[int, None]
+    username: str = Field(...)
+    password: str = Field(...)
+    auth_username: Union[str, None]
+    display_name: str = Field(...)
+    number: Union[str, None]
+    dtmf_mode: Union[DtmfMode, None]
+    srtp_mode: Union[SrtpMode, None]
+    voicemail: Union[str, None]
+
+    class Config:
+        use_enum_values = True
+
+
+class CallManagerSchema(BaseModel):
+    ip: str = Field(...)
+    port: Union[int, None]
+
+
+class FuncKeySchema(BaseModel):
+    type: FuncKeyType = Field()
+    value: Union[str, None]
+    label: Union[str, None]
+    line: Union[str, None]
+
+    @root_validator
+    def validate_type_if_required(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if not values.get('value') and values.get('type') in (
+            FuncKeyType.BLF,
+            FuncKeyType.SPEED_DIAL,
+        ):
+            raise ValueError('Value is required for BLF and Speed Dial types.')
+        return values
+
+
+class RawConfigSchema(BaseModel):
+    ip: str
+    http_port: Union[int, None]
+    http_base_url: Union[str, None]
+    tftp_port: Union[int, None]
+    dns_enabled: Union[bool, None]
+    dns_ip: Union[str, None]
+    ntp_enabled: Union[bool, None]
+    ntp_ip: Union[str, None]
+    vlan_enabled: Union[bool, None]
+    vlan_id: Union[int, None] = Field(gte=0, lte=4094)
+    vlan_priority: Union[int, None] = Field(gte=0, lte=7)
+    vlan_pc_port_id: Union[int, None] = Field(gte=0, lte=4094)
+    syslog_enabled: Union[bool, None]
+    syslog_ip: Union[str, None]
+    syslog_port: int = 514
+    syslog_level: SyslogLevel = Field(SyslogLevel.WARNING)
+    admin_username: Union[str, None]
+    admin_password: Union[str, None]
+    user_username: Union[str, None]
+    user_password: Union[str, None]
+    timezone: Union[ZoneInfo, str, None]
+    locale: Union[str, None] = Field(regex=r'[a-z]{2}_[A-Z]{2}')
+    protocol: Union[Literal['SIP', 'SCCP'], None]
+    sip_proxy_ip: Union[str, None]
+    sip_proxy_port: Union[int, None]
+    sip_backup_proxy_ip: Union[str, None]
+    sip_backup_proxy_port: Union[int, None]
+    sip_registrar_ip: Union[str, None]
+    sip_registrar_port: Union[int, None]
+    sip_backup_registrar_ip: Union[str, None]
+    sip_backup_registrar_port: Union[int, None]
+    sip_outbound_proxy_ip: Union[str, None]
+    sip_outbound_proxy_port: Union[int, None]
+    sip_dtmf_mode: Union[DtmfMode, None]
+    sip_srtp_mode: Union[SrtpMode, None] = Field(SrtpMode.DISABLED)
+    sip_transport: Union[Transport, None] = Field(Transport.UDP)
+    sip_servers_root_and_intermediate_certificates: Union[list[str], None]
+    sip_local_root_and_intermediate_certificates: Union[list[str], None]
+    sip_local_certificate: Union[str, None]
+    sip_local_key: Union[str, None]
+    sip_subscribe_mwi: Union[bool, None]
+    sip_lines: dict[str, SipLineSchema] = Field(default_factory=dict)
+    sccp_call_managers: dict[str, CallManagerSchema] = Field(default_factory=dict)
+    exten_dnd: Union[str, None]
+    exten_fwd_unconditional: Union[str, None]
+    exten_fwd_no_answer: Union[str, None]
+    exten_fwd_busy: Union[str, None]
+    exten_fwd_disable_all: Union[str, None]
+    exten_park: Union[str, None]
+    exten_pickup_group: Union[str, None]
+    exten_pickup_call: Union[str, None]
+    exten_voicemail: Union[str, None]
+    funckeys: dict[str, FuncKeySchema] = Field(default_factory=dict)
+    X_xivo_phonebook_ip: Union[str, None]
+
+    @validator('timezone')
+    def validate_timezone(cls, value: str | None) -> ZoneInfo | None:
+        return ZoneInfo(value) if value else None
+
+    @validator('sccp_call_managers', 'funckeys')
+    def validate_numeric_keys(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if not all(INTEGER_KEY_REGEX.match(k) for k in value):
+            raise ValueError(
+                "Dictionary keys must be a positive integer in string format."
+            )
+        return value
+
+    @root_validator
+    def validate_values(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if not values.get('tft_port') and not values.get('http_port'):
+            raise ValueError('You must define either `tftp_port` or `http_port`.')
+
+        required_if_enabled = (
+            ('dns', 'ip'),
+            ('ntp', 'ip'),
+            ('vlan', 'id'),
+            ('syslog', 'ip'),
+        )
+        for field, name in required_if_enabled:
+            if not values.get(f'{field}_{name}') and values.get(f'{field}_enabled'):
+                raise ValueError(
+                    f'Field `{name}_{field}` is required if {name} is enabled'
+                )
+
+        custom_fields = set(values) - {field.alias for field in cls.__fields__.values()}
+        if any(not custom_field.startswith('X_') for custom_field in custom_fields):
+            raise ValueError('Custom fields must start with `X_`')
+
+        return values
+
+    class Config:
+        extra = "allow"
+        use_enum_values = True
+        arbitrary_types_allowed = True
+
+
+class ConfigSchema(BaseModel):
+    id: str
+    parent_ids: list[str]
+    raw_config: dict[str, Any]
+    transient: bool
 
 
 class RawConfigError(Exception):
@@ -705,7 +893,7 @@ class DefaultConfigFactory:
 
     """
 
-    def _new_config(self, config_id, sip_line_1_username):
+    def _new_config(self, config_id: str, sip_line_1_username: str):
         new_suffix = str(uuid.uuid4())
         new_config = {
             'id': config_id + new_suffix,
