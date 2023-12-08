@@ -7,12 +7,18 @@ import functools
 import logging
 import os.path
 import re
-from typing import TYPE_CHECKING, Any, Literal, Union
+from collections.abc import Callable
+from twisted.internet import defer
+from typing import Any, Literal, TypeVar, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from twisted.internet import defer
+from twisted.internet.defer import Deferred
 
-from provd.devices.config import ConfigCollection, DefaultConfigFactory, RawConfigError
+from provd.devices.config import (
+    RawConfigError,
+    DefaultConfigFactory,
+    ConfigCollection,
+)
 from provd.devices.device import DeviceCollection, needs_reconfiguration
 from provd.localization import get_localization_service
 from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS
@@ -31,10 +37,15 @@ from provd.synchro import DeferredRWLock
 from provd.util import decode_bytes
 
 if TYPE_CHECKING:
+    from typing import Concatenate, ParamSpec
     from .config import ProvdConfigDict
+
+    P = ParamSpec('P')
 
 
 logger = logging.getLogger(__name__)
+
+R = TypeVar('R')
 
 
 class InvalidIdError(Exception):
@@ -47,13 +58,13 @@ class InvalidIdError(Exception):
 
 
 class DeviceNotInProvdTenantError(Exception):
-    def __init__(self, tenant_uuid):
+    def __init__(self, tenant_uuid: str) -> None:
         super().__init__('Device not in provd tenant')
         self.tenant_uuid = tenant_uuid
 
 
 class TenantInvalidForDeviceError(Exception):
-    def __init__(self, tenant_uuid):
+    def __init__(self, tenant_uuid: str) -> None:
         super().__init__('Tenant invalid for device')
         self.tenant_uuid = tenant_uuid
 
@@ -64,10 +75,12 @@ class NonDeletableError(Exception):
     pass
 
 
-def _rlock_arg(rw_lock):
-    def decorator(fun):
+def _rlock_arg(
+    rw_lock: DeferredRWLock,
+) -> Callable[[Callable[P, R]], Callable[P, Deferred]]:
+    def decorator(fun: Callable[P, R]) -> Callable[P, Deferred]:
         @functools.wraps(fun)
-        def aux(*args, **kwargs):
+        def aux(*args: P.args, **kwargs: P.kwargs) -> Deferred:
             d = rw_lock.read_lock.run(fun, *args, **kwargs)
             return d
 
@@ -76,10 +89,12 @@ def _rlock_arg(rw_lock):
     return decorator
 
 
-def _wlock_arg(rw_lock):
-    def decorator(fun):
+def _wlock_arg(
+    rw_lock: DeferredRWLock,
+) -> Callable[[Callable[P, R]], Callable[P, Deferred]]:
+    def decorator(fun: Callable[P, R]) -> Callable[P, Deferred]:
         @functools.wraps(fun)
-        def aux(*args, **kwargs):
+        def aux(*args: P.args, **kwargs: P.kwargs) -> Deferred:
             d = rw_lock.write_lock.run(fun, *args, **kwargs)
             return d
 
@@ -88,22 +103,30 @@ def _wlock_arg(rw_lock):
     return decorator
 
 
-def _rlock(fun):
+def _rlock(
+    fun: Callable[Concatenate[ProvisioningApplication, P], R]
+) -> Callable[Concatenate[ProvisioningApplication, P], Deferred]:
     # Decorator for instance method of ProvisioningApplication that need to
     # acquire the read lock
     @functools.wraps(fun)
-    def aux(self, *args, **kwargs):
+    def aux(
+        self: ProvisioningApplication, *args: P.args, **kwargs: P.kwargs
+    ) -> Deferred:
         d = self._rw_lock.read_lock.run(fun, self, *args, **kwargs)
         return d
 
     return aux
 
 
-def _wlock(fun):
+def _wlock(
+    fun: Callable[Concatenate[ProvisioningApplication, P], R]
+) -> Callable[Concatenate[ProvisioningApplication, P], Deferred]:
     # Decorator for instance method of ProvisioningApplication that need to
     # acquire the write lock
     @functools.wraps(fun)
-    def aux(self, *args, **kwargs):
+    def aux(
+        self: ProvisioningApplication, *args: P.args, **kwargs: P.kwargs
+    ) -> Deferred:
         d = self._rw_lock.write_lock.run(fun, self, *args, **kwargs)
         return d
 
@@ -117,7 +140,7 @@ def _check_common_raw_config_validity(raw_config: dict[str, Any]) -> None:
 
 
 def _check_raw_config_validity(raw_config: dict[str, Any]) -> None:
-    # XXX this is bit repetitive...
+    # XXX this is a bit repetitive...
     _check_common_raw_config_validity(raw_config)
     if raw_config.get('ntp_enabled'):
         if 'ntp_ip' not in raw_config:
@@ -201,12 +224,12 @@ class ProvisioningApplication:
         cfg_collection: ConfigCollection,
         dev_collection: DeviceCollection,
         config: ProvdConfigDict,
-    ):
+    ) -> None:
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
         self._split_config: ProvdConfigDict = config
-        self._token = None
-        self._tenant_uuid = None
+        self._token: str | None = None
+        self._tenant_uuid: str | None = None
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -245,35 +268,37 @@ class ProvisioningApplication:
         self._pg_load_all(True)
 
     @_wlock
-    def close(self):
+    def close(self) -> None:
         logger.info('Closing provisioning application...')
         self.pg_mgr.close()
         logger.info('Provisioning application closed')
 
-    def token(self):
+    def token(self) -> str | None:
         return self._token
 
-    def set_token(self, token_id):
+    def set_token(self, token_id: str) -> None:
         logger.debug('Setting token for provd app: %s', token_id)
         self._token = token_id
         auth_client = auth.get_auth_client()
         token = Tokens(auth_client).get(self._token)
         self.set_tenant_uuid(Tenant.from_token(token).uuid)
 
-    def tenant_uuid(self):
+    def tenant_uuid(self) -> str | None:
         return self._tenant_uuid
 
-    def set_tenant_uuid(self, tenant_uuid):
+    def set_tenant_uuid(self, tenant_uuid: str) -> None:
         self._tenant_uuid = tenant_uuid
         if not self.tenants.get(tenant_uuid):
             self.set_tenant_configuration(tenant_uuid, {})
 
-    def set_tenant_configuration(self, tenant_uuid, config):
+    def set_tenant_configuration(
+        self, tenant_uuid: str, config: dict[str, Any]
+    ) -> None:
         self.tenants[tenant_uuid] = config
 
     # device methods
 
-    def _dev_get_plugin(self, device):
+    def _dev_get_plugin(self, device: dict[str, Any]) -> dict | None:
         if 'plugin' in device:
             return self.pg_mgr.get(device['plugin'])
         return None
@@ -1097,7 +1122,7 @@ class ProvisioningApplication:
         return self.pg_mgr[plugin_id]
 
 
-def _check_is_server_url(value):
+def _check_is_server_url(value: str | None) -> None:
     if value is None:
         return
 
@@ -1112,7 +1137,7 @@ def _check_is_server_url(value):
         raise InvalidParameterError(f'no hostname: {value}')
 
 
-def _check_is_proxy(value):
+def _check_is_proxy(value: str | None) -> None:
     if value is None:
         return
 
@@ -1129,7 +1154,7 @@ def _check_is_proxy(value):
         raise InvalidParameterError(f'Path: {value}')
 
 
-def _check_is_https_proxy(value):
+def _check_is_https_proxy(value: str | None) -> None:
     if value is None:
         return
 
@@ -1164,7 +1189,7 @@ class ApplicationConfigureService:
             return None
         return l10n_service.get_locale()
 
-    def _set_param_locale(self, value, *args, **kwargs):
+    def _set_param_locale(self, value: str | None, *args: Any, **kwargs: Any) -> None:
         l10n_service = get_localization_service()
         if l10n_service is None:
             logger.info('No localization service registered')
@@ -1177,38 +1202,46 @@ class ApplicationConfigureService:
                 except (UnicodeError, ValueError) as e:
                     raise InvalidParameterError(e)
 
-    def _generic_set_proxy(self, key, value, *args, **kwargs):
+    def _generic_set_proxy(
+        self, key: str, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         if not value:
             if key in self._proxies:
                 del self._proxies[key]
         else:
             self._proxies[key] = value
 
-    def _get_param_http_proxy(self, *args, **kwargs):
+    def _get_param_http_proxy(self, *args: Any, **kwargs: Any) -> str | None:
         return self._proxies.get('http')
 
-    def _set_param_http_proxy(self, value, *args, **kwargs):
+    def _set_param_http_proxy(
+        self, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         _check_is_proxy(value)
         self._generic_set_proxy('http', value)
 
-    def _get_param_ftp_proxy(self, *args, **kwargs):
+    def _get_param_ftp_proxy(self, *args: Any, **kwargs: Any) -> str | None:
         return self._proxies.get('ftp')
 
-    def _set_param_ftp_proxy(self, value, *args, **kwargs):
+    def _set_param_ftp_proxy(self, value, *args, **kwargs) -> None:
         _check_is_proxy(value)
         self._generic_set_proxy('ftp', value)
 
-    def _get_param_https_proxy(self, *args, **kwargs):
+    def _get_param_https_proxy(self, *args, **kwargs) -> str | None:
         return self._proxies.get('https')
 
-    def _set_param_https_proxy(self, value, *args, **kwargs):
+    def _set_param_https_proxy(
+        self, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         _check_is_https_proxy(value)
         self._generic_set_proxy('https', value)
 
-    def _get_param_plugin_server(self, *args, **kwargs):
+    def _get_param_plugin_server(self, *args: Any, **kwargs: Any):
         return self._pg_mgr.server
 
-    def _set_param_plugin_server(self, value, *args, **kwargs):
+    def _set_param_plugin_server(
+        self, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         _check_is_server_url(value)
         self._pg_mgr.server = value
 
@@ -1224,20 +1257,22 @@ class ApplicationConfigureService:
             raise InvalidParameterError(value)
         self._app.nat = value
 
-    def _get_tenant_config(self, tenant_uuid):
+    def _get_tenant_config(self, tenant_uuid: str) -> dict[str, Any] | None:
         return self._app.tenants.get(tenant_uuid)
 
-    def _create_empty_tenant_config(self, tenant_uuid):
+    def _create_empty_tenant_config(self, tenant_uuid: str) -> dict[str, Any]:
         self._app.tenants[tenant_uuid] = {}
-        return self._get_tenant_config(tenant_uuid)
+        return self._get_tenant_config(tenant_uuid)  # type: ignore
 
-    def _get_param_provisioning_key(self, tenant_uuid):
+    def _get_param_provisioning_key(self, tenant_uuid: str) -> str | None:
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
         return tenant_config.get('provisioning_key')
 
-    def _set_param_provisioning_key(self, provisioning_key, tenant_uuid):
+    def _set_param_provisioning_key(
+        self, provisioning_key: str, tenant_uuid: str
+    ) -> None:
         if provisioning_key:
             if len(provisioning_key) < 8 or len(provisioning_key) > 256:
                 raise InvalidParameterError(
@@ -1263,27 +1298,31 @@ class ApplicationConfigureService:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
         tenant_config['provisioning_key'] = provisioning_key
 
-    def get_tenant_from_provisioning_key(self, provisioning_key):
+    def get_tenant_from_provisioning_key(self, provisioning_key: str) -> str | None:
         for tenant, config in self._app.tenants.items():
             if config.get('provisioning_key') == provisioning_key:
                 return tenant
+        return None
 
-    def _set_param_tenants(self, tenants, *args, **kwargs):
+    def _set_param_tenants(
+        self, tenants: dict[str, dict[str, Any]], *args: Any, **kwargs: Any
+    ) -> None:
         self._app.tenants = tenants
 
-    def _get_param_tenants(self, *args, **kwargs):
+    def _get_param_tenants(
+        self, *args: Any, **kwargs: Any
+    ) -> dict[str, dict[str, Any]]:
         return self._app.tenants
 
-    def get(self, name, *args, **kwargs):
+    def get(self, name: str, *args: Any, **kwargs: Any) -> Any:
         get_fun_name = f'_get_param_{name}'
         try:
             get_fun = getattr(self, get_fun_name)
         except AttributeError:
             raise KeyError(name)
-        else:
-            return get_fun(*args, **kwargs)
+        return get_fun(*args, **kwargs)
 
-    def set(self, name, value, *args, **kwargs):
+    def set(self, name: str, value: Any, *args: Any, **kwargs: Any) -> None:
         set_fun_name = f'_set_param_{name}'
         try:
             set_fun = getattr(self, set_fun_name)

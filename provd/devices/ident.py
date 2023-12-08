@@ -7,10 +7,11 @@ from __future__ import annotations
 import logging
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, cast, Protocol, TypedDict, Union, cast
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
@@ -19,7 +20,7 @@ from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import ErrorPage, NoResource, Resource
 
 from provd.devices.device import copy as copy_device
-from provd.plugins import BasePluginManagerObserver
+from provd.plugins import BasePluginManagerObserver, PluginManager
 from provd.security import log_security_msg
 from provd.servers.http import BaseHTTPHookService
 from provd.servers.http_site import Request
@@ -280,7 +281,13 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
 
     """
 
-    def __init__(self, extractor_factory, pg_mgr):
+    def __init__(
+        self,
+        extractor_factory: Callable[
+            [list[ExtractorProtocol]], AbstractDeviceInfoExtractor
+        ],
+        pg_mgr: PluginManager,
+    ) -> None:
         """
         extractor_factory -- a function taking a list of extractors and
           returning an extractor.
@@ -295,7 +302,7 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
         )
         pg_mgr.attach(self._obs)
 
-    def _xtor_name(self, request_type):
+    def _xtor_name(self, request_type: RequestType) -> str:
         return f'_{request_type}_xtor'
 
     def _set_xtors(self) -> None:
@@ -310,7 +317,7 @@ class AllPluginsDeviceInfoExtractor(AbstractDeviceInfoExtractor):
             xtor = self.extractor_factory(pg_extractors)
             setattr(self, self._xtor_name(request_type), xtor)
 
-    def _on_plugin_load_or_unload(self, pg_id):
+    def _on_plugin_load_or_unload(self, pg_id: str) -> None:
         self._set_xtors()
 
     def extract(self, request, request_type: RequestType) -> Deferred:
@@ -352,7 +359,7 @@ class SearchDeviceRetriever(AbstractDeviceRetriever):
 
 
 class IpDeviceRetriever(AbstractDeviceRetriever):
-    def __init__(self, app: ProvisioningApplication):
+    def __init__(self, app: ProvisioningApplication) -> None:
         self._app = app
 
     @defer.inlineCallbacks
