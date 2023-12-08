@@ -12,7 +12,6 @@ services:
 
   rabbitmq:
     image: rabbitmq
-    container_name: rabbitmq
     ports:
       - "5672"
     volumes:
@@ -41,3 +40,8 @@ services:
       - "./provd/plugins/pkgs:/var/www"
     ports:
       - "8080"
+
+  postgres:
+    image: wazoplatform/wazo-provd-db
+    ports:
+      - "5432"

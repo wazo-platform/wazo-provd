@@ -8,7 +8,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install
-ADD . /usr/src/wazo-provd
+COPY . /usr/src/wazo-provd
 WORKDIR /usr/src/wazo-provd
 RUN pip install -r requirements.txt && \
     python setup.py install
