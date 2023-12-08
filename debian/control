@@ -18,6 +18,8 @@ Depends:
     python3-openssl,
     python3-psycopg2,
     python3-pydantic,
+    python3-sqlalchemy,
+    python3-tenacity,
     python3-twisted,
     unar,
     unrar-free,

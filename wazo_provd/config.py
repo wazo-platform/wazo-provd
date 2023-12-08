@@ -136,6 +136,8 @@ class DatabaseConfigDict(TypedDict):
     generator: Literal['default', 'numeric', 'uuid']
     ensure_common_indexes: bool
     json_db_dir: str
+    uri: str
+    pool_size: int
 
 
 class AmidConfigDict(TypedDict):
@@ -217,6 +219,11 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
         'generator': 'default',
         'ensure_common_indexes': True,
         'json_db_dir': 'jsondb',
+        'uri': (
+            'postgresql://asterisk:proformatique'
+            '@localhost/asterisk?application_name=wazo-provd'
+        ),
+        'pool_size': 16,
     },
     'amid': {
         'host': 'localhost',
