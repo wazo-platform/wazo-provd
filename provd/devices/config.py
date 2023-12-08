@@ -36,14 +36,14 @@ from copy import deepcopy
 from enum import Enum
 from functools import wraps
 from pydantic import BaseModel, root_validator, Field, validator
-from typing import Union, Any, Literal
+from typing import Union, Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 from twisted.internet import defer
 
 from provd.persist.common import ID_KEY
 from provd.persist.util import ForwardingDocumentCollection
-from provd.util import decode_bytes
+from provd.util import decode_bytes, create_model_from_typeddict
 
 """Specification of the configuration parameters.
 
@@ -511,23 +511,31 @@ class CallManagerSchema(BaseModel):
     port: Union[int, None]
 
 
-class FuncKeySchema(BaseModel):
-    type: FuncKeyType = Field()
+class FuncKeyDict(TypedDict):
+    type: FuncKeyType
     value: Union[str, None]
     label: Union[str, None]
     line: Union[str, None]
 
-    @root_validator
-    def validate_type_if_required(cls, values: dict[str, Any]) -> dict[str, Any]:
-        if not values.get('value') and values.get('type') in (
-            FuncKeyType.BLF,
-            FuncKeyType.SPEED_DIAL,
-        ):
-            raise ValueError('Value is required for BLF and Speed Dial types.')
-        return values
+
+@root_validator
+def validate_type_if_required(cls, values: dict[str, Any]) -> dict[str, Any]:
+    if not values.get('value') and values.get('type') in (
+        FuncKeyType.BLF,
+        FuncKeyType.SPEED_DIAL,
+    ):
+        raise ValueError('Value is required for BLF and Speed Dial types.')
+    return values
 
 
-class RawConfigSchema(BaseModel):
+FuncKeySchema = create_model_from_typeddict(
+    FuncKeyDict,
+    {"type": Field(...)},
+    {'validate_type_if_required': validate_type_if_required},
+)
+
+
+class RawConfigDict(TypedDict):
     ip: str
     http_port: Union[int, None]
     http_base_url: Union[str, None]
@@ -537,19 +545,19 @@ class RawConfigSchema(BaseModel):
     ntp_enabled: Union[bool, None]
     ntp_ip: Union[str, None]
     vlan_enabled: Union[bool, None]
-    vlan_id: Union[int, None] = Field(gte=0, lte=4094)
-    vlan_priority: Union[int, None] = Field(gte=0, lte=7)
-    vlan_pc_port_id: Union[int, None] = Field(gte=0, lte=4094)
+    vlan_id: Union[int, None]
+    vlan_priority: Union[int, None]
+    vlan_pc_port_id: Union[int, None]
     syslog_enabled: Union[bool, None]
     syslog_ip: Union[str, None]
-    syslog_port: int = 514
-    syslog_level: SyslogLevel = Field(SyslogLevel.WARNING)
+    syslog_port: int
+    syslog_level: SyslogLevel
     admin_username: Union[str, None]
     admin_password: Union[str, None]
     user_username: Union[str, None]
     user_password: Union[str, None]
     timezone: Union[ZoneInfo, str, None]
-    locale: Union[str, None] = Field(regex=r'[a-z]{2}_[A-Z]{2}')
+    locale: Union[str, None]
     protocol: Union[Literal['SIP', 'SCCP'], None]
     sip_proxy_ip: Union[str, None]
     sip_proxy_port: Union[int, None]
@@ -562,15 +570,15 @@ class RawConfigSchema(BaseModel):
     sip_outbound_proxy_ip: Union[str, None]
     sip_outbound_proxy_port: Union[int, None]
     sip_dtmf_mode: Union[DtmfMode, None]
-    sip_srtp_mode: Union[SrtpMode, None] = Field(SrtpMode.DISABLED)
-    sip_transport: Union[Transport, None] = Field(Transport.UDP)
+    sip_srtp_mode: Union[SrtpMode, None]
+    sip_transport: Union[Transport, None]
     sip_servers_root_and_intermediate_certificates: Union[list[str], None]
     sip_local_root_and_intermediate_certificates: Union[list[str], None]
     sip_local_certificate: Union[str, None]
     sip_local_key: Union[str, None]
     sip_subscribe_mwi: Union[bool, None]
-    sip_lines: dict[str, SipLineSchema] = Field(default_factory=dict)
-    sccp_call_managers: dict[str, CallManagerSchema] = Field(default_factory=dict)
+    sip_lines: dict[str, SipLineSchema]
+    sccp_call_managers: dict[str, CallManagerSchema]
     exten_dnd: Union[str, None]
     exten_fwd_unconditional: Union[str, None]
     exten_fwd_no_answer: Union[str, None]
@@ -580,55 +588,94 @@ class RawConfigSchema(BaseModel):
     exten_pickup_group: Union[str, None]
     exten_pickup_call: Union[str, None]
     exten_voicemail: Union[str, None]
-    funckeys: dict[str, FuncKeySchema] = Field(default_factory=dict)
+    funckeys: dict[str, FuncKeySchema]  # type: ignore[valid-type]
     X_xivo_phonebook_ip: Union[str, None]
 
-    @validator('timezone')
-    def validate_timezone(cls, value: str | None) -> ZoneInfo | None:
-        return ZoneInfo(value) if value else None
 
-    @validator('sccp_call_managers', 'funckeys')
-    def validate_numeric_keys(cls, value: dict[str, Any]) -> dict[str, Any]:
-        if not all(INTEGER_KEY_REGEX.match(k) for k in value):
-            raise ValueError(
-                "Dictionary keys must be a positive integer in string format."
-            )
-        return value
-
-    @root_validator
-    def validate_values(cls, values: dict[str, Any]) -> dict[str, Any]:
-        if not values.get('tft_port') and not values.get('http_port'):
-            raise ValueError('You must define either `tftp_port` or `http_port`.')
-
-        required_if_enabled = (
-            ('dns', 'ip'),
-            ('ntp', 'ip'),
-            ('vlan', 'id'),
-            ('syslog', 'ip'),
-        )
-        for field, name in required_if_enabled:
-            if not values.get(f'{field}_{name}') and values.get(f'{field}_enabled'):
-                raise ValueError(
-                    f'Field `{name}_{field}` is required if {name} is enabled'
-                )
-
-        custom_fields = set(values) - {field.alias for field in cls.__fields__.values()}
-        if any(not custom_field.startswith('X_') for custom_field in custom_fields):
-            raise ValueError('Custom fields must start with `X_`')
-
-        return values
-
-    class Config:
-        extra = "allow"
-        use_enum_values = True
-        arbitrary_types_allowed = True
+class SchemaConfig:
+    extra = "allow"
+    use_enum_values = True
+    arbitrary_types_allowed = True
 
 
-class ConfigSchema(BaseModel):
+@validator('timezone')
+def validate_timezone(cls: type[BaseModel], value: str | None) -> ZoneInfo | None:
+    return ZoneInfo(value) if value else None
+
+
+@validator('sccp_call_managers', 'funckeys')
+def validate_numeric_keys(
+    cls: type[BaseModel], value: dict[str, Any]
+) -> dict[str, Any]:
+    if not all(INTEGER_KEY_REGEX.match(k) for k in value):
+        raise ValueError("Dictionary keys must be a positive integer in string format.")
+    return value
+
+
+@root_validator
+def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, Any]:
+    if not values.get('tft_port') and not values.get('http_port'):
+        raise ValueError('You must define either `tftp_port` or `http_port`.')
+
+    required_if_enabled = (
+        ('dns', 'ip'),
+        ('ntp', 'ip'),
+        ('vlan', 'id'),
+        ('syslog', 'ip'),
+    )
+    for field, name in required_if_enabled:
+        if not values.get(f'{field}_{name}') and values.get(f'{field}_enabled'):
+            raise ValueError(f'Field `{name}_{field}` is required if {name} is enabled')
+
+    custom_fields = set(values) - {field.alias for field in cls.__fields__.values()}
+    if any(not custom_field.startswith('X_') for custom_field in custom_fields):
+        raise ValueError('Custom fields must start with `X_`')
+
+    return values
+
+
+RawConfigSchema = create_model_from_typeddict(
+    RawConfigDict,
+    {
+        "ip": Field(...),
+        "funckeys": Field(default_factory=dict),
+        "locale": Field(regex=r'[a-z]{2}_[A-Z]{2}'),
+        "syslog_port": Field(514),
+        "syslog_level": Field(SyslogLevel.WARNING),
+        "sip_srtp_mode": Field(SrtpMode.DISABLED),
+        "sip_transport": Field(Transport.UDP),
+        "sip_lines": Field(default_factory=dict),
+        "sccp_call_managers": Field(default_factory=dict),
+        "vlan_id": Field(gte=0, lte=4094),
+        "vlan_priority": Field(gte=0, lte=7),
+        "vlan_pc_port_id": Field(gte=0, lte=4094),
+    },
+    {
+        "validate_timezone": validate_timezone,
+        "validate_numeric_keys": validate_numeric_keys,
+        "validate_values": validate_values,
+    },
+    config=SchemaConfig,
+)
+
+
+class ConfigDict(BaseModel):
     id: str
     parent_ids: list[str]
-    raw_config: dict[str, Any]
+    raw_config: RawConfigSchema  # type: ignore[valid-type]
     transient: bool
+
+
+ConfigSchema = create_model_from_typeddict(
+    ConfigDict,
+    {
+        "id": Field(...),
+        "parent_ids": Field(...),
+        "raw_config": Field(...),
+        "transient": Field(...),
+    },
+)
+ConfigSchema.update_forward_refs(RawConfigSchema=RawConfigSchema)
 
 
 class RawConfigError(Exception):

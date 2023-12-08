@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 import socket
-from typing import Any
+from typing import Any, Callable, cast, TypedDict
+
+from pydantic import BaseModel
 
 _MAC_ADDR = re.compile(
     r'^[\da-fA-F]{1,2}([:-]?)(?:[\da-fA-F]{1,2}\1){4}[\da-fA-F]{1,2}$'
@@ -206,6 +208,37 @@ def is_normed_uuid(uuid_string: str) -> bool:
 
     """
     return bool(_NORMED_UUID.match(uuid_string))
+
+
+def create_model_from_typeddict(
+    typed_dict: type[TypedDict],  # type: ignore[valid-type]
+    field_options: dict[str, type] | None = None,
+    validators: dict[str, Callable[..., None]] | None = None,
+    config: type | None = None,
+) -> type[BaseModel]:
+    """
+    This is a helper that creates a pydantic model from a TypedDict definition.
+    It allows us to define a TypedDict we can use for typing our dictionaries and
+    build a pydantic schema from that which can be used for validation.
+    It gives the same result as the built-in `create_model_from_typeddict`` in pydantic 1.9+.
+
+    If we updated to pydantic >=1.9,<2.0 we can replace this with the built-in version.
+    If we update to pydantic > 2.0 we can do validation directly with a TypedDict with:
+    TypeAdapter(MyTypedDict).validate(my_dict)
+    """
+    schema_name = typed_dict.__name__.rstrip('Dict') + 'Schema'
+    attrs: dict[str, Any] = {'__annotations__': typed_dict.__annotations__}
+    for field_name, field_annotation in typed_dict.__annotations__.items():
+        attrs[field_name] = (
+            field_options.get(field_name, None) if field_options else None
+        )
+    if config:
+        attrs['Config'] = config
+    if field_options:
+        attrs |= field_options
+    if validators:
+        attrs |= validators
+    return cast(type[BaseModel], type(schema_name, (BaseModel,), attrs))
 
 
 if __name__ == '__main__':
