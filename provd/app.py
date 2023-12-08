@@ -16,7 +16,7 @@ from twisted.internet.defer import Deferred
 
 from provd.devices.config import (
     RawConfigError,
-    DefaultConfigFactory,
+    build_autocreate_config,
     ConfigCollection,
 )
 from provd.devices.device import DeviceCollection, needs_reconfiguration
@@ -264,7 +264,6 @@ class ProvisioningApplication:
         logger.info('Using base raw config %s', self._base_raw_config)
         _check_common_raw_config_validity(self._base_raw_config)
         self._rw_lock = DeferredRWLock()
-        self._cfg_factory = DefaultConfigFactory()
         self._pg_load_all(True)
 
     @_wlock
@@ -877,8 +876,8 @@ class ProvisioningApplication:
                 # remove the role of the config so we don't create new config
                 # with the autocreate role
                 del config['role']
-                new_config = self._cfg_factory(config)
-                if new_config:
+                # remove factory and validation as it is automatically created
+                if new_config := build_autocreate_config(config):
                     new_config_id = yield self._cfg_collection.insert(new_config)
                 else:
                     logger.debug('Autocreate config factory returned null config')

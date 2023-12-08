@@ -886,26 +886,17 @@ class ConfigCollection(ForwardingDocumentCollection):
         return d
 
 
-class DefaultConfigFactory:
-    """A default config factory.
+def build_autocreate_config(config: dict[str, Any]) -> dict[str, Any] | None:
+    try:
+        config['raw_config']['sip_lines']['1']
+    except KeyError:
+        return None
 
-    Config factories are used to create new config automatically.
-
-    """
-
-    def _new_config(self, config_id: str, sip_line_1_username: str):
-        new_suffix = str(uuid.uuid4())
-        new_config = {
-            'id': config_id + new_suffix,
-            'parent_ids': [config_id],
-            'raw_config': {'sip_lines': {'1': {'username': sip_line_1_username}}},
-            'transient': True,
-        }
-        return new_config
-
-    def __call__(self, config):
-        try:
-            sip_line_1 = config['raw_config']['sip_lines']['1']
-        except KeyError:
-            return None
-        return self._new_config(config['id'], sip_line_1['username'])
+    config_id = config['id']
+    new_suffix = str(uuid.uuid4())
+    return {
+        'id': config_id + new_suffix,
+        'parent_ids': [config_id],
+        'raw_config': config['raw_config'],
+        'transient': True,
+    }

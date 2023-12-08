@@ -19,7 +19,7 @@ from hamcrest import (
 from pydantic import ValidationError
 
 from ..config import (
-    DefaultConfigFactory,
+    build_autocreate_config,
     _remove_none_values,
     ConfigSchema,
     RawConfigSchema,
@@ -89,20 +89,13 @@ def test_raw_config_valid() -> None:
     assert sip_line_1.items() <= config.dict()['sip_lines']['1'].items()
 
 
-@pytest.fixture(name='default_config_factory')
-def default_config_factory_fixture() -> DefaultConfigFactory:
-    return DefaultConfigFactory()
-
-
-def test_sip_line(default_config_factory: DefaultConfigFactory) -> None:
+def test_sip_line() -> None:
     config: dict[str, Any] = {'raw_config': {}}
-    result = default_config_factory(config)
+    result = build_autocreate_config(config)
     assert_that(result, is_(none()))
 
 
-def test_with_a_valid_sip_configuration(
-    default_config_factory: DefaultConfigFactory,
-) -> None:
+def test_with_a_valid_sip_configuration() -> None:
     id_ = 'ap'
     username = 'anonymous'
     config = {
@@ -116,7 +109,8 @@ def test_with_a_valid_sip_configuration(
         },
     }
 
-    result = default_config_factory(config)
+    result = build_autocreate_config(config)
+    assert result is not None
 
     assert_that(
         result,
