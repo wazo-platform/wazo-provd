@@ -18,4 +18,10 @@ setup(
         'twisted': ['.noinit'],
         'twisted.plugins': ['provd_plugins.py', '.noinit'],
     },
+    entry_points={
+        'console_scripts': [
+            'wazo-provd-init-db=provd.init_db:main',
+            'wazo-provd-upgrade-db=provd.upgrade_db:upgrade_db',
+        ],
+    },
 )
