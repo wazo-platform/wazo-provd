@@ -68,7 +68,7 @@ _comment [optional]
   Used as a standard way to add a human-readable comment in the raw config.
   This value MUST be ignored by plugins.
 
-ip [mandatory]
+ip [deprecated. Use http_base_url instead]
   The IP address or domain name of the provisioning server.
   If the followings are true:
   - this value represent a domain name
@@ -80,7 +80,7 @@ ip [mandatory]
   your devices support it or be prepared to see incorrect behaviour from
   your devices.
 
-http_port [mandatory if tftp_port is not defined]
+http_port [deprecated. Use http_base_url instead]
   The provisioning server HTTP port number.
   If the followings are true:
   - this value is defined
@@ -92,20 +92,20 @@ http_port [mandatory if tftp_port is not defined]
   If the device only support HTTP yet this value is not defined, an Exception
   SHOULD be raised.
 
-http_base_url [optional]
+http_base_url [mandatory]
   Used in place of the ip and http_port to be able to define the URL at which
   the provisioning server is accessible from. This allows to set the provisioning
   server behind a reverse proxy.
   If you are using a `url_key` strategy for provisioning authentication (provisioning
   key), then you MUST use this setting as the key is appended to this value.
-  This option has precedence over the ip + http_port combination.
+  This option has precedence over the deprecated ip + http_port combination.
 
-tftp_port [mandatory if http_port is not defined]
+tftp_port [mandatory if http_base_url is not defined]
   The provisioning server TFTP port number.
   If the followings are true:
   - this value is defined
   - the device supports retrieving its configuration file via TFTP
-  - the http_port parameter is not defined or the device does not support
+  - the http_base_url parameter is not defined or the device does not support
     retrieving its configuration file via HTTP
   then:
   - the device MUST be configured to use TFTP to retrieve its configuration

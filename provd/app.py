@@ -316,12 +316,7 @@ class ProvisioningApplication:
             )
 
             raw_config = copy.deepcopy(raw_config)
-            http_base_url = raw_config.get('http_base_url')
-            if not http_base_url:
-                host = raw_config['ip']
-                port = raw_config['http_port']
-                http_base_url = f'http://{host}:{port}'
-            # Inject the provisioning key into the device configuration
+            http_base_url = raw_config['http_base_url']
             raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
 
         try:
