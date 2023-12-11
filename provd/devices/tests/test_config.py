@@ -21,6 +21,7 @@ from pydantic import ValidationError
 from ..config import (
     build_autocreate_config,
     _remove_none_values,
+    FuncKeyType,
     ConfigSchema,
     RawConfigSchema,
 )
@@ -83,15 +84,59 @@ def test_raw_config_valid() -> None:
     values = {
         'ip': 'localhost',
         'http_port': '443',
+        'locale': 'en_CA',
         'sip_lines': {'1': sip_line_1},
     }
     config = RawConfigSchema(**values)
     assert sip_line_1.items() <= config.dict()['sip_lines']['1'].items()
 
 
+def test_raw_config_invalid() -> None:
+    sip_line_1 = {
+        'username': 'test_username',
+        'password': 'a-password',
+        'display_name': 'name',
+    }
+    values = {
+        'ip': 'localhost',
+        'http_port': 'invalid-port',
+        'locale': 'invalid-locale',
+        'sip_lines': {'1': sip_line_1},
+        'funckeys': {'alpha': {'type': FuncKeyType.BLF, 'value': None}},
+    }
+    with pytest.raises(ValidationError) as exc_trace:
+        RawConfigSchema(**values)
+
+    error = exc_trace.value
+    assert isinstance(error, ValidationError)
+    assert error.errors() == [
+        {
+            'loc': ('http_port',),
+            'msg': 'value is not a valid integer',
+            'type': 'type_error.integer',
+        },
+        {
+            'ctx': {'pattern': '[a-z]{2}_[A-Z]{2}'},
+            'loc': ('locale',),
+            'msg': 'string does not match regex "[a-z]{2}_[A-Z]{2}"',
+            'type': 'value_error.str.regex',
+        },
+        {
+            'loc': ('funckeys', 'alpha', '__root__'),
+            'msg': 'Value is required for BLF and Speed Dial types.',
+            'type': 'value_error',
+        },
+        {
+            'loc': ('__root__',),
+            'msg': 'You must define either `tftp_port` or `http_port`.',
+            'type': 'value_error',
+        },
+    ]
+
+
 def test_sip_line() -> None:
     config: dict[str, Any] = {'raw_config': {}}
-    result = build_autocreate_config(config)
+    result = build_autocreate_config(config)  # type: ignore
     assert_that(result, is_(none()))
 
 
@@ -109,7 +154,7 @@ def test_with_a_valid_sip_configuration() -> None:
         },
     }
 
-    result = build_autocreate_config(config)
+    result = build_autocreate_config(config)  # type: ignore
     assert result is not None
 
     assert_that(
