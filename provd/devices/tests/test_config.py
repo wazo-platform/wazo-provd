@@ -21,6 +21,8 @@ from pydantic import ValidationError
 from ..config import (
     build_autocreate_config,
     _remove_none_values,
+)
+from ..schemas import (
     FuncKeyType,
     ConfigSchema,
     RawConfigSchema,

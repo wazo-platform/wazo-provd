@@ -213,7 +213,7 @@ def is_normed_uuid(uuid_string: str) -> bool:
 def create_model_from_typeddict(
     typed_dict: type[TypedDict],  # type: ignore[valid-type]
     field_options: dict[str, type] | None = None,
-    validators: dict[str, Callable[..., None]] | None = None,
+    validators: dict[str, Callable[..., Any]] | None = None,
     config: type | None = None,
 ) -> type[BaseModel]:
     """
@@ -221,6 +221,8 @@ def create_model_from_typeddict(
     It allows us to define a TypedDict we can use for typing our dictionaries and
     build a pydantic schema from that which can be used for validation.
     It gives the same result as the built-in `create_model_from_typeddict`` in pydantic 1.9+.
+    **Note**: If your using lazy annotations in the file where this is called,
+    you will need to manually call `update_forward_refs` on the resulting class.
 
     If we updated to pydantic >=1.9,<2.0 we can replace this with the built-in version.
     If we update to pydantic > 2.0 we can do validation directly with a TypedDict with:
