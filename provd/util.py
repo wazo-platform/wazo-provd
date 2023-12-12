@@ -215,6 +215,7 @@ def create_model_from_typeddict(
     field_options: dict[str, type] | None = None,
     validators: dict[str, Callable[..., Any]] | None = None,
     config: type | None = None,
+    type_overrides: dict[str, type] | None = None,
 ) -> type[BaseModel]:
     """
     This is a helper that creates a pydantic model from a TypedDict definition.
@@ -229,11 +230,14 @@ def create_model_from_typeddict(
     TypeAdapter(MyTypedDict).validate(my_dict)
     """
     schema_name = typed_dict.__name__.rstrip('Dict') + 'Schema'
+    type_overrides = type_overrides or {}
     attrs: dict[str, Any] = {'__annotations__': typed_dict.__annotations__}
     for field_name, field_annotation in typed_dict.__annotations__.items():
         attrs[field_name] = (
             field_options.get(field_name, None) if field_options else None
         )
+        if override_type := type_overrides.get(field_name):
+            attrs['__annotations__'][field_name] = override_type
     if config:
         attrs['Config'] = config
     if field_options:

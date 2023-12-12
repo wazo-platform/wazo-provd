@@ -51,7 +51,13 @@ class FuncKeyType(str, Enum):
     PARK = 'park'
 
 
-class SipLineSchema(BaseModel):
+class SchemaConfig:
+    extra = "allow"
+    use_enum_values = True
+    arbitrary_types_allowed = True
+
+
+class SipLineDict(TypedDict):
     proxy_ip: Union[str, None]
     proxy_port: Union[int, None]
     backup_proxy_ip: Union[str, None]
@@ -62,22 +68,33 @@ class SipLineSchema(BaseModel):
     backup_registrar_port: Union[int, None]
     outbound_proxy_ip: Union[str, None]
     outbound_proxy_port: Union[int, None]
-    username: str = Field(...)
-    password: str = Field(...)
+    username: str
+    password: str
     auth_username: Union[str, None]
-    display_name: str = Field(...)
+    display_name: str
     number: Union[str, None]
     dtmf_mode: Union[DtmfMode, None]
     srtp_mode: Union[SrtpMode, None]
     voicemail: Union[str, None]
 
-    class Config:
-        use_enum_values = True
+
+SipLineSchema = create_model_from_typeddict(
+    SipLineDict,
+    {
+        "username": Field(...),
+        "password": Field(...),
+        "display_name": Field(...),
+    },
+    config=SchemaConfig,
+)
 
 
-class CallManagerSchema(BaseModel):
-    ip: str = Field(...)
+class CallManagerDict(TypedDict):
+    ip: str
     port: Union[int, None]
+
+
+CallManagerSchema = create_model_from_typeddict(CallManagerDict, {'ip': Field(...)})
 
 
 class FuncKeyDict(TypedDict):
@@ -148,8 +165,8 @@ class RawConfigDict(TypedDict):
     sip_local_certificate: Union[str, None]
     sip_local_key: Union[str, None]
     sip_subscribe_mwi: Union[bool, None]
-    sip_lines: dict[str, SipLineSchema]
-    sccp_call_managers: dict[str, CallManagerSchema]
+    sip_lines: dict[str, SipLineDict]
+    sccp_call_managers: dict[str, CallManagerDict]
     exten_dnd: Union[str, None]
     exten_fwd_unconditional: Union[str, None]
     exten_fwd_no_answer: Union[str, None]
@@ -159,15 +176,8 @@ class RawConfigDict(TypedDict):
     exten_pickup_group: Union[str, None]
     exten_pickup_call: Union[str, None]
     exten_voicemail: Union[str, None]
-    # Should also allow TypedDict, but unsupported in pydantic <1.9
-    funckeys: dict[str, FuncKeySchema]  # type: ignore[valid-type]
+    funckeys: FuncKeyDict
     X_xivo_phonebook_ip: Union[str, None]
-
-
-class SchemaConfig:
-    extra = "allow"
-    use_enum_values = True
-    arbitrary_types_allowed = True
 
 
 @validator('timezone', allow_reuse=True)
@@ -230,14 +240,18 @@ RawConfigSchema = create_model_from_typeddict(
         "validate_values": validate_values,
     },
     config=SchemaConfig,
+    type_overrides={
+        'funckeys': dict[str, FuncKeySchema],  # type: ignore[valid-type]
+        'sip_lines': dict[str, SipLineSchema],  # type: ignore[valid-type]
+        'sccp_call_managers': dict[str, CallManagerSchema],  # type: ignore[valid-type]
+    },
 )
-RawConfigSchema.update_forward_refs()
 
 
 class ConfigDict(TypedDict):
     id: str
     parent_ids: list[str]
-    raw_config: RawConfigSchema  # type: ignore[valid-type]
+    raw_config: RawConfigDict
     transient: bool
 
 
@@ -249,5 +263,5 @@ ConfigSchema = create_model_from_typeddict(
         "raw_config": Field(...),
         "transient": Field(...),
     },
+    type_overrides={'raw_config': RawConfigSchema},  # type: ignore[valid-type]
 )
-ConfigSchema.update_forward_refs(RawConfigSchema=RawConfigSchema)
