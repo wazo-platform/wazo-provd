@@ -1,12 +1,30 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-"""Return the current UTC offset and DST rules of arbitrary timezones.
-
+"""
+Return the current UTC offset and DST rules of arbitrary timezones.
 """
 from __future__ import annotations
 
 import os.path
+from typing import TypedDict, Union
+
+
+class DSTChangeDict(TypedDict):
+    month: int
+    day: str
+    time: Time
+
+
+class DSTRuleDict(TypedDict):
+    start: DSTChangeDict
+    end: DSTChangeDict
+    save: Time
+    as_string: str
+
+
+class TimeZoneInfoDict(TypedDict):
+    utcoffset: Time
+    dst: Union[DSTRuleDict, None]
 
 
 class TimezoneNotFoundError(Exception):
@@ -14,23 +32,23 @@ class TimezoneNotFoundError(Exception):
 
 
 class Time:
-    def __init__(self, raw_seconds):
+    def __init__(self, raw_seconds: int) -> None:
         self._raw_seconds = raw_seconds
 
     @property
-    def as_seconds(self):
+    def as_seconds(self) -> int:
         return self._raw_seconds
 
     @property
-    def as_minutes(self):
+    def as_minutes(self) -> int:
         return self._raw_seconds // 60
 
     @property
-    def as_hours(self):
+    def as_hours(self) -> int:
         return self._raw_seconds // 3600
 
     @property
-    def as_hms(self):
+    def as_hms(self) -> list[int]:
         """Return the time decomposed into hours, minutes and seconds.
 
         Note that if the time is negative, only the leftmost non-zero value will be
@@ -50,10 +68,9 @@ class Time:
                     result[i] = -result[i]
                     break
             return result
-        else:
-            return self._compute_positive_hms()
+        return self._compute_positive_hms()
 
-    def _compute_positive_hms(self):
+    def _compute_positive_hms(self) -> list[int]:
         seconds = abs(self._raw_seconds)
         return [seconds // 3600, seconds // 60 % 60, seconds % 60]
 
@@ -65,13 +82,14 @@ class TextTimezoneInfoDB:
     """
 
     _TZ_DEFAULT_FILENAME = os.path.join(os.path.dirname(__file__), 'tzinform/tzdatax')
+    _db: dict[str, TimeZoneInfoDict] = {}
 
-    def __init__(self, filename=None):
+    def __init__(self, filename: str | None = None) -> None:
         if filename is None:
             filename = self._TZ_DEFAULT_FILENAME
         self._read_file(filename)
 
-    def _read_file(self, filename):
+    def _read_file(self, filename: str) -> None:
         fobj = open(filename)
         try:
             self._db = {}
@@ -86,7 +104,7 @@ class TextTimezoneInfoDB:
             fobj.close()
 
     @classmethod
-    def _parse_dst_rule(cls, string: str):
+    def _parse_dst_rule(cls, string: str) -> DSTRuleDict | None:
         if string == '-':
             return None
 
@@ -99,11 +117,11 @@ class TextTimezoneInfoDB:
         }
 
     @classmethod
-    def _parse_dst_change(cls, string: str):
+    def _parse_dst_change(cls, string: str) -> DSTChangeDict:
         tokens = string.split('/')
         return {'month': int(tokens[0]), 'day': tokens[1], 'time': Time(int(tokens[2]))}
 
-    def get_timezone_info(self, timezone_name):
+    def get_timezone_info(self, timezone_name: str) -> TimeZoneInfoDict:
         """Return timezone information for the timezone named timezone_name.
 
         The method returns a dictionary with the following key:
@@ -136,11 +154,11 @@ class DefaultTimezoneInfoDB:
     1
     """
 
-    def __init__(self, default_tz, db):
+    def __init__(self, default_tz: str, db: TextTimezoneInfoDB) -> None:
         self.db = db
         self.default = db.get_timezone_info(default_tz)
 
-    def get_timezone_info(self, timezone_name):
+    def get_timezone_info(self, timezone_name: str) -> TimeZoneInfoDict:
         try:
             return self.db.get_timezone_info(timezone_name)
         except TimezoneNotFoundError:
