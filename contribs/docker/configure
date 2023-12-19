@@ -1,19 +1,20 @@
 #!/usr/bin/python3
 from __future__ import annotations
 
+import json
+from urllib.parse import urlencode
+from urllib.request import (
+    HTTPDigestAuthHandler,
+    HTTPPasswordMgrWithDefaultRealm,
+    Request,
+    build_opener,
+)
+
 # Basic configuration provd for XiVO
 
 # FIXME: since authentication has been added to provd, this script does not work.
 # To fix it, it would be necessary to get a valid token from wazo-auth and use wazo-provd-client
 
-import json
-from urllib.parse import urlencode
-from urllib.request import (
-    Request,
-    HTTPPasswordMgrWithDefaultRealm,
-    HTTPDigestAuthHandler,
-    build_opener,
-)
 
 ADDRESS = '192.168.113.99'  # XiVO ip address
 PROVD_ADDRESS = '192.168.32.41'

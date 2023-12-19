@@ -1,27 +1,20 @@
 # Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from hamcrest import (
-    assert_that,
-    has_key,
-    calling,
-    has_properties,
-    has_entry,
-)
-
+from hamcrest import assert_that, calling, has_entry, has_key, has_properties
+from wazo_provd_client.exceptions import ProvdError
 from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
-from wazo_provd_client.exceptions import ProvdError
 
 from .helpers.base import (
-    BaseIntegrationTest,
     INVALID_TENANT,
     INVALID_TOKEN,
     SUB_TENANT_1,
     SUB_TENANT_2,
     VALID_TOKEN_MULTITENANT,
+    BaseIntegrationTest,
 )
-from .helpers.operation import operation_successful, operation_fail
+from .helpers.operation import operation_fail, operation_successful
 from .helpers.wait_strategy import NoWaitStrategy
 
 

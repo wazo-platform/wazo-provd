@@ -28,15 +28,17 @@ Config collection objects are used as a storage for config objects.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 import logging
 import uuid
+from collections import defaultdict
 from copy import deepcopy
 from functools import wraps
+
+from twisted.internet import defer
+
 from provd.persist.common import ID_KEY
 from provd.persist.util import ForwardingDocumentCollection
 from provd.util import decode_bytes
-from twisted.internet import defer
 
 """Specification of the configuration parameters.
 

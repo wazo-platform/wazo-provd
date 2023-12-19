@@ -7,14 +7,14 @@ from hamcrest import (
     equal_to,
     has_entry,
     has_key,
-    is_,
     has_properties,
+    is_,
 )
-from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
+from wazo_test_helpers.hamcrest.raises import raises
 
 from .helpers import fixtures
-from .helpers.base import BaseIntegrationTest, INVALID_TOKEN
+from .helpers.base import INVALID_TOKEN, BaseIntegrationTest
 from .helpers.wait_strategy import NoWaitStrategy
 
 

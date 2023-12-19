@@ -6,9 +6,20 @@ import builtins
 import logging
 import os.path
 from collections.abc import Generator
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
+from twisted.application import internet
+from twisted.application.service import IServiceMaker, MultiService, Service
+from twisted.internet import defer, reactor, ssl, task
 from twisted.internet.defer import Deferred
+from twisted.plugin import IPlugin
+from twisted.python import log
+from twisted.python.util import sibpath
+from twisted.web.resource import Resource as UnsecuredResource
+from xivo.status import Status
+from xivo.token_renewer import TokenRenewer
+from xivo.xivo_logging import setup_logging, silence_loggers
+from xivo_bus.consumer import BusConsumer
 from zope.interface import implementer
 
 import provd.config
@@ -16,31 +27,19 @@ import provd.localization
 import provd.synchronize
 from provd import security, status
 from provd.app import ProvisioningApplication
+from provd.devices import ident, pgasso
 from provd.devices.config import ConfigCollection
 from provd.devices.device import DeviceCollection
-from provd.devices import ident
-from provd.devices import pgasso
-from provd.rest.server import auth
-from provd.servers.tftp.proto import TFTPProtocol
-from provd.servers.http_site import Site, AuthResource
 from provd.persist.json_backend import JsonDatabaseFactory
-from provd.rest.server.server import new_authenticated_server_resource
-from twisted.application.service import IServiceMaker, Service, MultiService
-from twisted.application import internet
-from twisted.internet import ssl, defer, task, reactor
-from twisted.web.resource import Resource as UnsecuredResource
-from twisted.plugin import IPlugin
-from twisted.python import log
-from twisted.python.util import sibpath
 from provd.rest.api.resource import ResponseFile
-from xivo.xivo_logging import setup_logging, silence_loggers
-from xivo.status import Status
-from xivo.token_renewer import TokenRenewer
-from xivo_bus.consumer import BusConsumer
+from provd.rest.server import auth
+from provd.rest.server.server import new_authenticated_server_resource
+from provd.servers.http_site import AuthResource, Site
+from provd.servers.tftp.proto import TFTPProtocol
 
 if TYPE_CHECKING:
+    from .config import BusConfigDict, Options, ProvdConfigDict
     from .persist.common import AbstractDatabase
-    from .config import Options, ProvdConfigDict, BusConfigDict
 
 
 logger = logging.getLogger(__name__)
@@ -494,9 +493,9 @@ class SyncdbService(ResourcesDeletionService):
     @defer.inlineCallbacks
     def remove_resources_for_deleted_tenants(self) -> Deferred:
         auth_client = auth.get_auth_client()
-        auth_tenants = set(
+        auth_tenants = {
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
-        )
+        }
         yield self.remove_devices_for_deleted_tenants(auth_tenants)
         self.remove_configuration_for_deleted_tenants(auth_tenants)
 
@@ -506,7 +505,7 @@ class SyncdbService(ResourcesDeletionService):
 
         find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
         devices = yield app.dev_find(**find_arguments)
-        provd_tenants = set(device['tenant_uuid'] for device in devices)
+        provd_tenants = {device['tenant_uuid'] for device in devices}
         removed_tenants = provd_tenants - auth_tenants
 
         for t in removed_tenants:

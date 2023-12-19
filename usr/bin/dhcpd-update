@@ -11,15 +11,15 @@ installed on a Wazo.
 from __future__ import annotations
 
 import contextlib
-from argparse import ArgumentParser
 import os
 import sys
 import tarfile
 import tempfile
+from argparse import ArgumentParser
 from configparser import RawConfigParser
 from typing import Any, BinaryIO
 from urllib.parse import urljoin
-from urllib.request import build_opener, ProxyHandler, OpenerDirector
+from urllib.request import OpenerDirector, ProxyHandler, build_opener
 
 PKG_FILENAME = 'dhcpd.tar.bz2'
 DHCPD_UPDATE_FILENAME = 'dhcpd_update.conf'

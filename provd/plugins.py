@@ -8,13 +8,15 @@ import logging
 import operator
 import os
 import shutil
-from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, TypedDict
-
 import tarfile
-from weakref import WeakKeyDictionary
+from abc import ABCMeta, abstractmethod
 from binascii import a2b_hex
+from typing import Any, Callable, TypedDict
+from weakref import WeakKeyDictionary
 
+from jinja2.environment import Environment, Template
+from jinja2.exceptions import TemplateNotFound
+from twisted.internet import defer, threads
 from twisted.internet.defer import Deferred
 from xivo_fetchfw.download import (
     DefaultDownloader,
@@ -23,33 +25,30 @@ from xivo_fetchfw.download import (
     new_downloaders_from_handlers,
 )
 from xivo_fetchfw.package import (
-    PackageManager,
     InstallerController,
+    PackageManager,
     UninstallerController,
 )
 from xivo_fetchfw.storage import (
-    DefaultRemoteFileBuilder,
     DefaultFilterBuilder,
     DefaultInstallablePkgStorage,
+    DefaultInstalledPkgStorage,
     DefaultInstallMgrFactoryBuilder,
     DefaultPkgBuilder,
-    DefaultInstalledPkgStorage,
+    DefaultRemoteFileBuilder,
 )
-from provd import phonebook
-from provd import phoned_users
-from provd.download import async_download_with_oip, OperationInProgressHook
+
+from provd import phonebook, phoned_users
+from provd.download import OperationInProgressHook, async_download_with_oip
 from provd.loaders import ProvdFileSystemLoader
 from provd.localization import get_locale_and_language
-from provd.operation import OperationInProgress, OIP_PROGRESS, OIP_SUCCESS, OIP_FAIL
+from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS, OperationInProgress
 from provd.proxy import DynProxyHandler
 from provd.services import (
+    AbstractConfigurationService,
     AbstractInstallationService,
     InvalidParameterError,
-    AbstractConfigurationService,
 )
-from jinja2.environment import Environment, Template
-from jinja2.exceptions import TemplateNotFound
-from twisted.internet import defer, threads
 
 logger = logging.getLogger(__name__)
 

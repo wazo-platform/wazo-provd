@@ -20,7 +20,7 @@ def add_xivo_phonebook_url(
     entry_point: str = 'input',
     qs_prefix: str = '',
     qs_suffix: str = '',
-):
+) -> None:
     url_format = _build_url_format(vendor, entry_point, qs_prefix, qs_suffix)
     add_xivo_phonebook_url_from_format(raw_config, url_format)
 
@@ -40,7 +40,7 @@ def _build_url_format(
     )
 
 
-def add_xivo_phonebook_url_from_format(raw_config, url_format):
+def add_xivo_phonebook_url_from_format(raw_config, url_format) -> None:
     if not (hostname := raw_config.get('X_xivo_phonebook_ip')):
         return
 

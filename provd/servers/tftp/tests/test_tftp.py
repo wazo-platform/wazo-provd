@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import unittest
-from provd.servers.tftp.packet import parse_dgram, PacketError, OP_RRQ
+
+from provd.servers.tftp.packet import OP_RRQ, PacketError, parse_dgram
 
 
 class TestTFTP(unittest.TestCase):

@@ -6,7 +6,6 @@ import re
 import socket
 from typing import Any
 
-
 _MAC_ADDR = re.compile(
     r'^[\da-fA-F]{1,2}([:-]?)(?:[\da-fA-F]{1,2}\1){4}[\da-fA-F]{1,2}$'
 )

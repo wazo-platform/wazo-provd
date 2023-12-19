@@ -10,7 +10,13 @@ from collections import defaultdict
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import TYPE_CHECKING, TypedDict, cast, Any, Union, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, Union, cast
+
+from twisted.internet import defer
+from twisted.internet.defer import Deferred
+from twisted.web import rewrite
+from twisted.web.http import INTERNAL_SERVER_ERROR
+from twisted.web.resource import ErrorPage, NoResource, Resource
 
 from provd.devices.device import copy as copy_device
 from provd.plugins import BasePluginManagerObserver
@@ -19,18 +25,11 @@ from provd.servers.http import BaseHTTPHookService
 from provd.servers.http_site import Request
 from provd.servers.tftp.packet import ERR_UNDEF
 from provd.servers.tftp.service import TFTPNullService, TFTPRequest
-from twisted.internet import defer
-from twisted.internet.defer import Deferred
-from twisted.web.http import INTERNAL_SERVER_ERROR
-from twisted.web.resource import Resource, NoResource, ErrorPage
-from twisted.web import rewrite
-
 from provd.util import decode_bytes
 
-
 if TYPE_CHECKING:
-    from ..servers.tftp.proto import _Response
     from ..main import ProvisioningApplication
+    from ..servers.tftp.proto import _Response
 
     class Request(Request):  # type: ignore[no-redef]
         num_http_proxies: int | None
@@ -200,7 +199,7 @@ class LastSeenUpdater:
         self.dev_info: DeviceInfo = {}
 
     def update(self, dev_info: DeviceInfo) -> None:
-        self.dev_info |= dev_info
+        self.dev_info |= dev_info  # type: ignore[operator]
 
 
 KeyPool = dict[Any, int]

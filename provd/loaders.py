@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from os import walk
-from os.path import join, getmtime, sep
 from itertools import chain
+from os import walk
+from os.path import getmtime, join, sep
+
 from jinja2.exceptions import TemplateNotFound
-from jinja2.loaders import split_template_path, BaseLoader
+from jinja2.loaders import BaseLoader, split_template_path
 from jinja2.utils import open_if_exists
 
 

@@ -1,9 +1,10 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import unittest
+
 from hamcrest import assert_that, equal_to
 
-import unittest
 from provd.devices.device import copy, needs_reconfiguration
 
 

@@ -4,27 +4,25 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from typing import Any
-
-from hamcrest import assert_that, equal_to, has_entry
 from unittest.mock import Mock, patch
 
+from hamcrest import assert_that, equal_to, has_entry
+from twisted.internet import defer
 from twisted.internet.defer import Deferred
+from twisted.trial import unittest
 
 from provd.devices import ident
 from provd.devices.ident import (
     AddDeviceRetriever,
+    DHCPRequest,
     LastSeenUpdater,
     RemoveOutdatedIpDeviceUpdater,
+    Request,
     RequestType,
     VotingUpdater,
     _get_ip_from_http_request_with_proxies,
     _RequestHelper,
-    Request,
-    DHCPRequest,
 )
-from twisted.internet import defer
-from twisted.trial import unittest
-
 from provd.servers.tftp import TFTPRequest
 
 

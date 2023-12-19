@@ -7,14 +7,10 @@ asynchronous application.
 """
 from __future__ import annotations
 
+from twisted.internet import defer, threads
 from xivo_fetchfw import download
-from provd.operation import (
-    OperationInProgress,
-    OIP_SUCCESS,
-    OIP_FAIL,
-    OIP_PROGRESS,
-)
-from twisted.internet import threads, defer
+
+from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS, OperationInProgress
 
 
 def async_download(remote_file, supp_hooks=None):

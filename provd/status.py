@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from xivo.status import StatusAggregator
 
-
 _STATUS_AGGREGATOR: StatusAggregator = StatusAggregator()
 
 

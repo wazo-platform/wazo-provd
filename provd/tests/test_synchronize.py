@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from collections.abc import Generator
 from unittest.mock import Mock
+
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
+
 from provd import synchronize
 
 

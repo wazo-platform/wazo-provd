@@ -7,30 +7,28 @@ import functools
 import logging
 import os.path
 import re
-from typing import Any, Literal, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Union
 from urllib.parse import urlparse
 
-from provd.devices.config import RawConfigError, DefaultConfigFactory, ConfigCollection
-from provd.devices.device import needs_reconfiguration, DeviceCollection
+from twisted.internet import defer
+
+from provd.devices.config import ConfigCollection, DefaultConfigFactory, RawConfigError
+from provd.devices.device import DeviceCollection, needs_reconfiguration
 from provd.localization import get_localization_service
-from provd.operation import OIP_PROGRESS, OIP_FAIL, OIP_SUCCESS
-from provd.persist.common import (
-    ID_KEY,
-    InvalidIdError as PersistInvalidIdError,
-    NonDeletableError as PersistNonDeletableError,
-)
+from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS
+from provd.persist.common import ID_KEY
+from provd.persist.common import InvalidIdError as PersistInvalidIdError
+from provd.persist.common import NonDeletableError as PersistNonDeletableError
 from provd.plugins import PluginManager, PluginNotLoadedError
+from provd.rest.server import auth
+from provd.rest.server.helpers.tenants import Tenant, Tokens
 from provd.services import (
     InvalidParameterError,
     JsonConfigPersister,
     PersistentConfigurationServiceDecorator,
 )
 from provd.synchro import DeferredRWLock
-from twisted.internet import defer
-from provd.rest.server import auth
-from provd.rest.server.helpers.tenants import Tenant, Tokens
 from provd.util import decode_bytes
-
 
 if TYPE_CHECKING:
     from .config import ProvdConfigDict

@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
-
 
 logger = logging.getLogger(__name__)
 

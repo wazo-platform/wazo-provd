@@ -5,7 +5,8 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
-from hamcrest import assert_that, equal_to, is_not, has_key
+from hamcrest import assert_that, equal_to, has_key, is_not
+
 from provd.phonebook import add_xivo_phonebook_url, add_xivo_phonebook_url_from_format
 
 

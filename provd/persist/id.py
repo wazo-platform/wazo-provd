@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import Generator, Callable, Literal
-
 import binascii
 import uuid
+from collections.abc import Generator
+from typing import Callable, Literal
 
 GeneratorFactory = Callable[..., Generator[str, None, None]]
 

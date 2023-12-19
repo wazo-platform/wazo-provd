@@ -2,43 +2,41 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import Any, Generator
+from collections.abc import Generator
+from contextlib import contextmanager
+from typing import Any
 
 from hamcrest import (
     assert_that,
     calling,
     empty,
     equal_to,
-    has_entry,
     has_entries,
+    has_entry,
     has_key,
+    has_properties,
     is_,
     is_not,
-    has_properties,
 )
-from wazo_test_helpers import until
-from wazo_test_helpers.hamcrest.raises import raises
 from wazo_provd_client.exceptions import ProvdError
+from wazo_test_helpers import until
+from wazo_test_helpers.auth import AuthClient as MockAuthClient
+from wazo_test_helpers.auth import MockUserToken
+from wazo_test_helpers.hamcrest.raises import raises
 
 from .helpers import fixtures
 from .helpers.base import (
-    BaseIntegrationTest,
-    VALID_TOKEN,
     INVALID_TOKEN,
     MAIN_TENANT,
     SUB_TENANT_1,
     SUB_TENANT_2,
+    VALID_TOKEN,
+    BaseIntegrationTest,
 )
 from .helpers.bus import BusClient, setup_bus
 from .helpers.filesystem import FileSystemClient
 from .helpers.operation import operation_successful
 from .helpers.wait_strategy import EverythingOkWaitStrategy
-
-from contextlib import contextmanager
-from wazo_test_helpers.auth import (
-    MockUserToken,
-    AuthClient as MockAuthClient,
-)
 
 TOKEN = '00000000-0000-4000-9000-000000070435'
 TOKEN_SUB_TENANT = '00000000-0000-4000-9000-000000000222'

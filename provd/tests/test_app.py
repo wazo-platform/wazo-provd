@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import Mock, sentinel
 
 from hamcrest import assert_that, equal_to, is_
+
 from provd.app import ApplicationConfigureService
 from provd.services import InvalidParameterError
 
