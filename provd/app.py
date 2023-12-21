@@ -148,46 +148,14 @@ def _check_common_raw_config_validity(raw_config: dict[str, Any]) -> None:
             raise RawConfigError(f'missing {param} parameter')
 
 
-def _check_raw_config_validity(raw_config: dict[str, Any]) -> None:
-    # XXX this is a bit repetitive...
-    _check_common_raw_config_validity(raw_config)
-    if raw_config.get('ntp_enabled'):
-        if 'ntp_ip' not in raw_config:
-            raise RawConfigError('missing ntp_ip parameter')
-    if raw_config.get('vlan_enabled'):
-        if 'vlan_id' not in raw_config:
-            raise RawConfigError('missing vlan_id parameter')
-    if raw_config.get('syslog_enabled'):
-        if 'syslog_ip' not in raw_config:
-            raise RawConfigError('missing syslog_ip parameter')
-    if 'sip_lines' in raw_config:
-        for line_no, line in raw_config['sip_lines'].items():
-            if 'proxy_ip' not in line and 'sip_proxy_ip' not in raw_config:
-                raise RawConfigError(f'missing proxy_ip parameter for line {line_no}')
-            if 'protocol' in raw_config and raw_config['protocol'] == 'SIP':
-                for param in ['username', 'password', 'display_name']:
-                    if param not in line:
-                        raise RawConfigError(
-                            f'missing {param} parameter for line {line_no}'
-                        )
-    if 'sccp_call_managers' in raw_config:
-        for priority, call_manager in raw_config['sccp_call_managers'].items():
-            if 'ip' not in call_manager:
-                raise RawConfigError(
-                    f'missing ip parameter for call manager {priority}'
-                )
-    if 'funckeys' in raw_config:
-        funckeys = raw_config['funckeys']
-        for funckey_no, funckey in funckeys.items():
-            try:
-                type_ = funckey['type']
-            except KeyError:
-                raise RawConfigError(f'missing type parameter for funckey {funckey_no}')
-            else:
-                if (type_ == 'speeddial' or type_ == 'blf') and 'value' not in funckey:
-                    raise RawConfigError(
-                        f'missing value parameter for funckey {funckey_no}'
-                    )
+def _check_raw_config_validity(raw_config: RawConfigDict) -> None:
+    try:
+        RawConfigSchema.validate(raw_config)
+    except ValidationError as e:
+        # Try to resemble as close as possible to the old method. Do we really want this?
+        error = e.errors()[0]
+        field = '.'.join(error['loc'])
+        raise RawConfigError(f'{field}: {error["msg"]}')
 
 
 def _set_defaults_raw_config(raw_config: RawConfigDict) -> None:
