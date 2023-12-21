@@ -28,24 +28,25 @@ Config collection objects are used as a storage for config objects.
 """
 from __future__ import annotations
 
-from collections import defaultdict
 import logging
 import uuid
+from collections import defaultdict
 from collections.abc import Callable, Generator
 from copy import deepcopy
 from functools import wraps
+from typing import TYPE_CHECKING, Any
 
-from typing import Any, TYPE_CHECKING
+from twisted.internet import defer
+from twisted.internet.defer import Deferred
 
+from provd.devices.schemas import ConfigSchema
 from provd.persist.common import ID_KEY
 from provd.persist.util import ForwardingDocumentCollection
 from provd.util import decode_bytes
-from twisted.internet import defer
-from twisted.internet.defer import Deferred
-from provd.devices.schemas import ConfigSchema
 
 if TYPE_CHECKING:
-    from typing import ParamSpec, TypeVar, Concatenate
+    from typing import Concatenate, ParamSpec, TypeVar
+
     from provd.devices.schemas import ConfigDict
 
     P = ParamSpec("P")

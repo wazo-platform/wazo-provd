@@ -43,7 +43,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any, TypeVar
 
-from provd.devices.schemas import DeviceSchema, DeviceDict
+from provd.devices.schemas import DeviceDict, DeviceSchema
 from provd.persist.util import ForwardingDocumentCollection
 from provd.util import is_normed_ip, is_normed_mac
 

@@ -19,10 +19,10 @@ import json
 import logging
 from binascii import a2b_base64
 from collections.abc import Callable, Generator
-from typing import Any, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from twisted.web import http
-from twisted.web.resource import Resource, IResource
+from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
 from xivo.tenant_helpers import UnauthorizedTenant
 
@@ -35,9 +35,9 @@ from provd.app import (
 )
 from provd.localization import get_locale_and_language
 from provd.operation import (
+    OperationInProgress,
     format_oip,
     operation_in_progres_from_deferred,
-    OperationInProgress,
 )
 from provd.persist.common import ID_KEY
 from provd.plugins import BasePluginManagerObserver, PluginManager
@@ -51,7 +51,7 @@ from provd.util import decode_bytes, decode_value, norm_ip, norm_mac
 from .auth import get_auth_verifier, required_acl
 
 if TYPE_CHECKING:
-    from provd.devices.ident import DHCPRequestProcessingService, DHCPRequest
+    from provd.devices.ident import DHCPRequest, DHCPRequestProcessingService
 
 R = TypeVar('R')
 

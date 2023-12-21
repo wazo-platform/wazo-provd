@@ -11,7 +11,7 @@ from collections.abc import Callable
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import TYPE_CHECKING, Any, cast, Protocol, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, Union, cast
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred

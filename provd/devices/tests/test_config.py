@@ -18,15 +18,8 @@ from hamcrest import (
 )
 from pydantic import ValidationError
 
-from ..config import (
-    build_autocreate_config,
-    _remove_none_values,
-)
-from ..schemas import (
-    FuncKeyType,
-    ConfigSchema,
-    RawConfigSchema,
-)
+from ..config import _remove_none_values, build_autocreate_config
+from ..schemas import ConfigSchema, FuncKeyType, RawConfigSchema
 
 
 def test_config_schema_empty() -> None:

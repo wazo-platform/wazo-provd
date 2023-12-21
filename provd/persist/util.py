@@ -6,8 +6,8 @@ import contextlib
 import logging
 from typing import Any
 
-from twisted.internet.defer import Deferred
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 
 from provd.persist.common import (
     ID_KEY,

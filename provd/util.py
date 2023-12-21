@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import socket
-from typing import Any, Callable, cast, TypedDict
+from typing import Any, Callable, TypedDict, cast
 
 from pydantic import BaseModel
 

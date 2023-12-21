@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from wazo_provd_client import Client as ProvdClient
 from wazo_test_helpers import until
@@ -11,7 +11,7 @@ from wazo_test_helpers import until
 from .operation import operation_successful
 
 if TYPE_CHECKING:
-    from provd.devices.schemas import ConfigDict, BaseDeviceDict
+    from provd.devices.schemas import BaseDeviceDict, ConfigDict
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 

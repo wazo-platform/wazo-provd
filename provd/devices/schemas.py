@@ -10,12 +10,12 @@ pydantic 1.9+ and can use their more robust implementation.
 import re
 from enum import Enum
 from ipaddress import IPv4Address
-from typing import Union, TypedDict, Any, Literal
+from typing import Any, Literal, TypedDict, Union
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, root_validator, validator
 
-from provd.util import create_model_from_typeddict, _NORMED_MAC
+from provd.util import _NORMED_MAC, create_model_from_typeddict
 
 INTEGER_KEY_REGEX = re.compile(r"^[0-9]+$")
 

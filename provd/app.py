@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from copy import deepcopy
 import functools
 import logging
 import os.path
 import re
 from collections.abc import Callable, Generator
-from typing import Any, Literal, Union, TYPE_CHECKING
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any, Literal, Union
 from urllib.parse import urlparse
 
 from pydantic import ValidationError
@@ -16,9 +16,9 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
 from provd.devices.config import (
+    ConfigCollection,
     RawConfigError,
     build_autocreate_config,
-    ConfigCollection,
 )
 from provd.devices.device import DeviceCollection, needs_reconfiguration
 from provd.localization import get_localization_service
@@ -38,15 +38,16 @@ from provd.synchro import DeferredRWLock
 from provd.util import decode_bytes
 
 from .devices.schemas import (
-    RawConfigSchema,
-    ConfigDict,
     BaseDeviceDict,
+    ConfigDict,
     DeviceDict,
     RawConfigDict,
+    RawConfigSchema,
 )
 
 if TYPE_CHECKING:
     from typing import Concatenate, ParamSpec, TypeVar
+
     from .config import ProvdConfigDict
 
     P = ParamSpec('P')
