@@ -208,7 +208,7 @@ class TestDevices(BaseIntegrationTest):
 
     def test_update(self) -> None:
         with fixtures.Device(self._client) as device:
-            device |= {'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}
+            device |= {'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}  # type: ignore
             self._client.devices.update(device)
 
             result = self._client.devices.get(device['id'])

@@ -9,12 +9,13 @@ pydantic 1.9+ and can use their more robust implementation.
 """
 import re
 from enum import Enum
+from ipaddress import IPv4Address
 from typing import Union, TypedDict, Any, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, root_validator, validator
 
-from provd.util import create_model_from_typeddict
+from provd.util import create_model_from_typeddict, _NORMED_MAC
 
 INTEGER_KEY_REGEX = re.compile(r"^[0-9]+$")
 
@@ -248,11 +249,16 @@ RawConfigSchema = create_model_from_typeddict(
 )
 
 
-class ConfigDict(TypedDict):
+class BaseConfigDict(TypedDict):
     id: str
     parent_ids: list[str]
     raw_config: RawConfigDict
+
+
+class ConfigDict(BaseConfigDict, total=False):
     transient: bool
+    deletable: bool
+    role: str
 
 
 ConfigSchema = create_model_from_typeddict(
@@ -261,7 +267,32 @@ ConfigSchema = create_model_from_typeddict(
         "id": Field(...),
         "parent_ids": Field(...),
         "raw_config": Field(...),
-        "transient": Field(...),
     },
     type_overrides={'raw_config': RawConfigSchema},  # type: ignore[valid-type]
+)
+
+
+class BaseDeviceDict(TypedDict, total=False):
+    id: Union[str, None]
+    mac: Union[str, None]
+    ip: Union[IPv4Address, str]
+    config: Union[str, None]
+    model: Union[str, None]
+    plugin: Union[str, None]
+    description: Union[str, None]
+    configured: bool
+    is_new: bool
+    vendor: Union[str, None]
+    version: Union[str, None]
+
+
+class DeviceDict(BaseDeviceDict, total=False):
+    tenant_uuid: str
+
+
+DeviceSchema = create_model_from_typeddict(
+    DeviceDict,
+    {
+        "mac": Field(regex=_NORMED_MAC.pattern),
+    },
 )

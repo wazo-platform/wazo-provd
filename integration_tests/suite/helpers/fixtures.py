@@ -2,12 +2,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from typing import Any
+from types import TracebackType
+from typing import Any, TYPE_CHECKING
 
 from wazo_provd_client import Client as ProvdClient
 from wazo_test_helpers import until
 
 from .operation import operation_successful
+
+if TYPE_CHECKING:
+    from provd.devices.schemas import ConfigDict, BaseDeviceDict
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 
@@ -22,13 +26,13 @@ class Device:
         tenant_uuid: str | None = None,
     ) -> None:
         self._client = client
-        self._device: dict[str, Any] = None  # type: ignore[assignment]
+        self._device: BaseDeviceDict = None  # type: ignore[assignment]
         self._delete_on_exit = delete_on_exit
         self._tenant_uuid = tenant_uuid
 
-    def __enter__(self):
+    def __enter__(self) -> BaseDeviceDict:
         Device.device_counter += 1
-        config = {
+        config: BaseDeviceDict = {
             'config': 'defaultconfigdevice',
             'configured': True,
             'description': 'Test device',
@@ -46,7 +50,12 @@ class Device:
         )
         return self._device
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(
+        self,
+        exec_type: type[BaseException] | None,
+        exception: BaseException,
+        traceback: TracebackType | None,
+    ) -> None:
         if self._delete_on_exit:
             Device.device_counter -= 1
             self._client.devices.delete(self._device['id'])
@@ -58,7 +67,7 @@ class Plugin:
         self._plugin = None
         self._delete_on_exit = delete_on_exit
 
-    def __enter__(self):
+    def __enter__(self) -> dict[str, Any] | None:
         with self._client.plugins.update() as current_operation:
             until.assert_(
                 operation_successful, current_operation, tries=20, interval=0.5
@@ -72,7 +81,12 @@ class Plugin:
         self._plugin = self._client.plugins.get(PLUGIN_TO_INSTALL)
         return self._plugin
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(
+        self,
+        exec_type: type[BaseException] | None,
+        exception: BaseException,
+        traceback: TracebackType | None,
+    ) -> None:
         if self._delete_on_exit:
             self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
 
@@ -80,16 +94,18 @@ class Plugin:
 class Configuration:
     def __init__(self, client: ProvdClient, delete_on_exit: bool = True) -> None:
         self._client = client
-        self._config: dict[str, Any] = None  # type: ignore[assignment]
+        self._config: ConfigDict = None  # type: ignore[assignment]
         self._delete_on_exit = delete_on_exit
 
-    def __enter__(self) -> dict[str, Any]:
+    def __enter__(self) -> ConfigDict:
         config = {
             'id': 'test1',
             'parent_ids': ['base'],
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
+                'ip': '127.0.0.1',
+                'http_port': 80,
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
                 'ntp_enabled': True,
@@ -99,6 +115,11 @@ class Configuration:
         self._config = self._client.configs.get(result['id'])
         return self._config
 
-    def __exit__(self, type, value, traceback) -> None:
+    def __exit__(
+        self,
+        exec_type: type[BaseException] | None,
+        exception: BaseException,
+        traceback: TracebackType | None,
+    ) -> None:
         if self._delete_on_exit:
             self._client.configs.delete(self._config['id'])

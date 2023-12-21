@@ -114,6 +114,8 @@ def provd():
         'parent_ids': ['base', 'defaultconfigdevice'],
         'raw_config': {
             'sccp_call_managers': {'1': {'ip': ADDRESS}},
+            'ip': ADDRESS,
+            'http_port': 80,
             'sip_lines': {
                 '1': {
                     'display_name': 'Autoprov',

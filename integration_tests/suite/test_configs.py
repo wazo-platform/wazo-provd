@@ -86,6 +86,8 @@ class TestConfigs(BaseIntegrationTest):
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
+                'ip': '127.0.0.1',
+                'http_port': 80,
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
                 'ntp_enabled': True,
@@ -101,6 +103,8 @@ class TestConfigs(BaseIntegrationTest):
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
+                'ip': '127.0.0.1',
+                'http_port': 80,
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
                 'ntp_enabled': True,
@@ -119,6 +123,8 @@ class TestConfigs(BaseIntegrationTest):
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
+                'ip': '127.0.0.1',
+                'http_port': 80,
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
                 'ntp_enabled': True,
@@ -169,6 +175,8 @@ class TestConfigs(BaseIntegrationTest):
             'deletable': False,
             'X_type': 'internal',
             'raw_config': {
+                'ip': '127.0.0.1',
+                'http_port': 80,
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
                 'ntp_enabled': True,

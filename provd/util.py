@@ -115,7 +115,7 @@ def to_mac(mac_string: str) -> str:
     - 001A2B3C4D5E
     - 00:A:2B:C:d:5e
 
-    >>> to_mac(u'ff:ff:ff:ff:ff:ff')
+    >>> to_mac('ff:ff:ff:ff:ff:ff')
     '\xff\xff\xff\xff\xff\xff'
 
     """

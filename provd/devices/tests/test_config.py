@@ -47,7 +47,6 @@ def test_config_schema_empty() -> None:
             'msg': 'field required',
             'type': 'value_error.missing',
         },
-        {'loc': ('transient',), 'msg': 'field required', 'type': 'value_error.missing'},
     ]
 
 

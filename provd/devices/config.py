@@ -42,6 +42,7 @@ from provd.persist.util import ForwardingDocumentCollection
 from provd.util import decode_bytes
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
+from provd.devices.schemas import ConfigSchema
 
 if TYPE_CHECKING:
     from typing import ParamSpec, TypeVar, Concatenate
@@ -480,7 +481,7 @@ def _rec_update_dict(base_dict, overlay_dict):
             base_dict[k] = v
 
 
-def _check_config_validity(config):
+def _check_config_validity(config: ConfigDict) -> None:
     if 'parent_ids' not in config:
         raise ValueError('missing "parent_ids" field in config')
     if not isinstance(config['parent_ids'], list):
@@ -499,6 +500,9 @@ def _check_config_validity(config):
         raise ValueError(
             f'"raw_config" field must be a dict; is {type(config["raw_config"])}'
         )
+    # This also does the same as all the validations above and more,
+    # the others were only left since apparently we want the same messages.
+    ConfigSchema.validate(config)
 
 
 def _needs_child_and_parent_indexes(
@@ -721,9 +725,10 @@ def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
 
     config_id = config['id']
     new_suffix = str(uuid.uuid4())
-    return {
+    full_config: ConfigDict = {
         'id': config_id + new_suffix,
         'parent_ids': [config_id],
         'raw_config': config['raw_config'],
         'transient': True,
     }
+    return full_config

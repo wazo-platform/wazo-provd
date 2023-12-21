@@ -43,6 +43,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any, TypeVar
 
+from provd.devices.schemas import DeviceSchema, DeviceDict
 from provd.persist.util import ForwardingDocumentCollection
 from provd.util import is_normed_ip, is_normed_mac
 
@@ -66,7 +67,7 @@ def copy(device: T) -> T:
     return deepcopy(device)
 
 
-def needs_reconfiguration(old_device, new_device):
+def needs_reconfiguration(old_device: DeviceDict, new_device: DeviceDict) -> bool:
     for key in _RECONF_KEYS:
         if old_device.get(key) != new_device.get(key):
             logger.debug('%s is now %s', old_device, new_device)
@@ -74,22 +75,24 @@ def needs_reconfiguration(old_device, new_device):
     return False
 
 
-def _check_device_validity(device):
-    if 'mac' in device:
-        if not is_normed_mac(device['mac']):
-            raise ValueError(f'Non-normalized MAC address {device["mac"]}')
-    if 'ip' in device:
-        if not is_normed_ip(device['ip']):
-            raise ValueError(f'Non-normalized IP address {device["ip"]}')
+# do
+def _check_device_validity(device: DeviceDict) -> None:
+    if device_mac := device.get('mac'):
+        if not is_normed_mac(device_mac):
+            raise ValueError(f'Non-normalized MAC address {device_mac}')
+    if device_ip := device.get('ip'):
+        if not is_normed_ip(device_ip):
+            raise ValueError(f'Non-normalized IP address {device_ip}')
     if 'tenant_uuid' not in device:
         raise ValueError('Tenant UUID not specified')
+    DeviceSchema.validate(device)
 
 
 class DeviceCollection(ForwardingDocumentCollection):
-    def insert(self, device):
+    def insert(self, device: DeviceDict):
         _check_device_validity(device)
         return self._collection.insert(device)
 
-    def update(self, device):
+    def update(self, device: DeviceDict):
         _check_device_validity(device)
         return self._collection.update(device)
