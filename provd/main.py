@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ from twisted.plugin import IPlugin
 from twisted.python import log
 from twisted.python.util import sibpath
 from twisted.web.resource import Resource as UnsecuredResource
+from wazo_bus.consumer import BusConsumer
 from xivo.status import Status
 from xivo.token_renewer import TokenRenewer
 from xivo.xivo_logging import setup_logging, silence_loggers
-from xivo_bus.consumer import BusConsumer
 from zope.interface import implementer
 
 import provd.config
