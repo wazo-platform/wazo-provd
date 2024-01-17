@@ -29,7 +29,7 @@ VERSION_TABLE = 'provd_alembic_version'
 URI = os.getenv('ALEMBIC_DB_URI', None)
 
 
-def get_url() -> str:
+def get_url() -> str | None:
     from provd.config import Options, get_config
 
     provd_config = get_config(Options())
