@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import unittest
 
 from wazo_provd_client import Client
 from wazo_test_helpers import until
@@ -70,7 +69,7 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
         )
 
     @classmethod
-    def make_db_session(cls) -> SynchronousDatabaseAdapter:
+    def make_db_session(cls) -> SynchronousDatabaseAdapter | WrongClient:
         try:
             port = cls.service_port(5432, 'postgres')
         except (NoSuchService, NoSuchPort):
@@ -107,4 +106,4 @@ class BaseIntegrationTest(_BaseIntegrationTest):
 class DBIntegrationTest(_BaseIntegrationTest):
     asset = 'database'
     service = 'postgres'
-    wait_strategy = NoWaitStrategy()
+    wait_strategy: WaitStrategy = NoWaitStrategy()

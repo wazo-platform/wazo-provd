@@ -41,7 +41,7 @@ from provd.servers.http_site import AuthResource, Site
 from provd.servers.tftp.proto import TFTPProtocol
 
 if TYPE_CHECKING:
-    from .config import BusConfigDict, Options, ProvdConfigDict
+    from .config import BusConfigDict, ProvdConfigDict
     from .persist.common import AbstractDatabase
 
 
