@@ -18,9 +18,6 @@ class SynchronousDatabaseAdapter:
         self._pool.close()
 
     def execute(self, query: str) -> Any:
-        res = self._pool.runQuery(query)
-        res.addCallbacks(query_ok, query_error)
-
         result = None
 
         def query_ok(query_result):
@@ -33,6 +30,9 @@ class SynchronousDatabaseAdapter:
         def query_has_result():
             nonlocal result
             return result is not None
+
+        res = self._pool.runQuery(query)
+        res.addCallbacks(query_ok, query_error)
 
         until.true(query_has_result, tries=10)
         return result
