@@ -13,6 +13,7 @@ Depends:
     ${python3:Depends},
     ${misc:Depends},
     adduser,
+    python3-alembic,
     python3-jinja2,
     python3-kombu,
     python3-openssl,
