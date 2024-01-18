@@ -11,6 +11,7 @@ from wazo_test_helpers.asset_launching_test_case import (
     AssetLaunchingTestCase,
     NoSuchPort,
     NoSuchService,
+    WrongClient,
 )
 
 from provd.database.helpers import init_db
@@ -29,19 +30,6 @@ VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
 MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
 SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
 SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
-
-
-class ClientCreateException(Exception):
-    def __init__(self, client_name):
-        super().__init__(f'Could not create client {client_name}')
-
-
-class WrongClient:
-    def __init__(self, client_name):
-        self.client_name = client_name
-
-    def __getattr__(self, member):
-        raise ClientCreateException(self.client_name)
 
 
 class _BaseIntegrationTest(AssetLaunchingTestCase):
