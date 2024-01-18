@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from wazo_provd_client import Client
+from wazo_provd_client import Client as ProvdClient
 from wazo_test_helpers import until
 from wazo_test_helpers.asset_launching_test_case import (
     AssetLaunchingTestCase,
@@ -46,10 +46,14 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     @classmethod
-    def make_provd(cls, token: str) -> Client:
-        return Client(
+    def make_provd(cls, token: str) -> ProvdClient:
+        try:
+            port = cls.service_port(8666, 'provd')
+        except (NoSuchService, NoSuchPort):
+            return WrongClient('postgres')
+        return ProvdClient(
             '127.0.0.1',
-            port=cls.service_port(8666, 'provd'),
+            port=port,
             version=API_VERSION,
             prefix=None,
             https=False,
@@ -67,8 +71,8 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
 
     @classmethod
     def start_postgres_service(cls) -> None:
-        cls.asset_cls.start_service('postgres')
-        cls._Session = cls.asset_cls.make_db_session()
+        cls.start_service('postgres')
+        cls._Session = cls.make_db_session()
 
         def db_is_up() -> bool:
             try:
@@ -82,7 +86,7 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
     @classmethod
     def stop_postgres_service(cls) -> None:
         cls._Session.close()
-        cls.asset_cls.stop_service('postgres')
+        cls.stop_service('postgres')
 
 
 class BaseIntegrationTest(_BaseIntegrationTest):
