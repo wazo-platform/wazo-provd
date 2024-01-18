@@ -2,10 +2,6 @@ version: '3'
 services:
   sync:
     depends_on:
-      - auth
-      - provd
-      - rabbitmq
-      - pluginserver
       - postgres
     environment:
-      TARGETS: "auth:9497,provd:8666,rabbitmq:5672,pluginserver:8080,postgres:5432"
+      TARGETS: "postgres:5432"
