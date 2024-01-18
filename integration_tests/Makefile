@@ -4,7 +4,7 @@ DOCKER_DIR ?= docker
 test-setup: egg-info provd provd-test db
 
 provd:
-	docker build -t wazoplatform/wazo-provd $(PROVD_DIR)
+	docker build --pull -t wazoplatform/wazo-provd $(PROVD_DIR)
 
 provd-test:
 	docker build --no-cache -t wazo-provd-tests -f Dockerfile $(PROVD_DIR)
