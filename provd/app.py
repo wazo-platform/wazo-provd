@@ -322,6 +322,7 @@ class ProvisioningApplication:
             http_base_url = raw_config['http_base_url']
             raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
 
+        _set_defaults_raw_config(raw_config)
         try:
             RawConfigSchema.validate(raw_config)
         except ValidationError as e:
@@ -335,7 +336,6 @@ class ProvisioningApplication:
             # Do we really want to catch **any** exception?
             logger.error('Error while configuring device %s', device_id, exc_info=True)
         else:
-            _set_defaults_raw_config(raw_config)
             try:
                 plugin.configure(device, raw_config)
             except Exception:
