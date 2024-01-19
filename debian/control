@@ -19,6 +19,7 @@ Depends:
     python3-jinja2,
     python3-kombu,
     python3-openssl,
+    python3-pydantic,
     python3-twisted,
     rename,
     unar,

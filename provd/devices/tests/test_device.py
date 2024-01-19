@@ -1,16 +1,18 @@
 # Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 import unittest
 
 from hamcrest import assert_that, equal_to
 
 from provd.devices.device import copy, needs_reconfiguration
+from provd.devices.schemas import DeviceDict
 
 
 class TestDevice(unittest.TestCase):
     def test_copy_is_a_copy(self) -> None:
-        device_orig = {'id': '1', 'mac': '00:11:22:33:44:55'}
+        device_orig: DeviceDict = {'id': '1', 'mac': '00:11:22:33:44:55'}
 
         device_copy = copy(device_orig)
 
@@ -25,18 +27,34 @@ class TestDevice(unittest.TestCase):
         assert_that(device_orig, equal_to({'id': '1', 'foo': [1]}))
 
     def test_is_reconfigured_needed_same_device(self) -> None:
-        device = {'id': '1', 'config': 'a'}
+        device: DeviceDict = {'id': '1', 'config': 'a', 'tenant_uuid': 'tenant_uuid'}
 
         self.assertFalse(needs_reconfiguration(device, device))
 
     def test_is_reconfigured_needed_different_significant_key(self) -> None:
-        old_device = {'id': '1', 'config': 'a'}
-        new_device = {'id': '1', 'config': 'b'}
+        old_device: DeviceDict = {
+            'id': '1',
+            'config': 'a',
+            'tenant_uuid': 'tenant_uuid',
+        }
+        new_device: DeviceDict = {
+            'id': '1',
+            'config': 'b',
+            'tenant_uuid': 'tenant_uuid',
+        }
 
         self.assertTrue(needs_reconfiguration(old_device, new_device))
 
     def test_is_reconfigured_needed_different_insignificant_key(self) -> None:
-        old_device = {'id': '1', 'foo': 'a'}
-        new_device = {'id': '1', 'foo': 'b'}
+        old_device: DeviceDict = {
+            'id': '1',
+            'foo': 'a',  # type: ignore[typeddict-unknown-key]
+            'tenant_uuid': 'tenant_uuid',
+        }
+        new_device: DeviceDict = {
+            'id': '1',
+            'foo': 'b',  # type: ignore[typeddict-unknown-key]
+            'tenant_uuid': 'tenant_uuid',
+        }
 
         self.assertFalse(needs_reconfiguration(old_device, new_device))

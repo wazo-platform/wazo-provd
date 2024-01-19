@@ -2,20 +2,27 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-import copy
 import functools
 import logging
 import os.path
 import re
+from collections.abc import Callable, Generator
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal, Union
 from urllib.parse import urlparse
 
+from pydantic import ValidationError
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 
-from provd.devices.config import ConfigCollection, DefaultConfigFactory, RawConfigError
+from provd.devices.config import (
+    ConfigCollection,
+    RawConfigError,
+    build_autocreate_config,
+)
 from provd.devices.device import DeviceCollection, needs_reconfiguration
 from provd.localization import get_localization_service
-from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS
+from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS, OperationInProgress
 from provd.persist.common import ID_KEY
 from provd.persist.common import InvalidIdError as PersistInvalidIdError
 from provd.persist.common import NonDeletableError as PersistNonDeletableError
@@ -30,8 +37,21 @@ from provd.services import (
 from provd.synchro import DeferredRWLock
 from provd.util import decode_bytes
 
+from .devices.schemas import (
+    BaseDeviceDict,
+    ConfigDict,
+    DeviceDict,
+    RawConfigDict,
+    RawConfigSchema,
+)
+
 if TYPE_CHECKING:
+    from typing import Concatenate, ParamSpec, TypeVar
+
     from .config import ProvdConfigDict
+
+    P = ParamSpec('P')
+    R = TypeVar('R')
 
 
 logger = logging.getLogger(__name__)
@@ -47,13 +67,13 @@ class InvalidIdError(Exception):
 
 
 class DeviceNotInProvdTenantError(Exception):
-    def __init__(self, tenant_uuid):
+    def __init__(self, tenant_uuid: str) -> None:
         super().__init__('Device not in provd tenant')
         self.tenant_uuid = tenant_uuid
 
 
 class TenantInvalidForDeviceError(Exception):
-    def __init__(self, tenant_uuid):
+    def __init__(self, tenant_uuid: str) -> None:
         super().__init__('Tenant invalid for device')
         self.tenant_uuid = tenant_uuid
 
@@ -64,10 +84,12 @@ class NonDeletableError(Exception):
     pass
 
 
-def _rlock_arg(rw_lock):
-    def decorator(fun):
+def _rlock_arg(
+    rw_lock: DeferredRWLock,
+) -> Callable[[Callable[P, R]], Callable[P, Deferred]]:
+    def decorator(fun: Callable[P, R]) -> Callable[P, Deferred]:
         @functools.wraps(fun)
-        def aux(*args, **kwargs):
+        def aux(*args: P.args, **kwargs: P.kwargs) -> Deferred:
             d = rw_lock.read_lock.run(fun, *args, **kwargs)
             return d
 
@@ -76,10 +98,12 @@ def _rlock_arg(rw_lock):
     return decorator
 
 
-def _wlock_arg(rw_lock):
-    def decorator(fun):
+def _wlock_arg(
+    rw_lock: DeferredRWLock,
+) -> Callable[[Callable[P, R]], Callable[P, Deferred]]:
+    def decorator(fun: Callable[P, R]) -> Callable[P, Deferred]:
         @functools.wraps(fun)
-        def aux(*args, **kwargs):
+        def aux(*args: P.args, **kwargs: P.kwargs) -> Deferred:
             d = rw_lock.write_lock.run(fun, *args, **kwargs)
             return d
 
@@ -88,22 +112,30 @@ def _wlock_arg(rw_lock):
     return decorator
 
 
-def _rlock(fun):
+def _rlock(
+    fun: Callable[Concatenate[ProvisioningApplication, P], R]
+) -> Callable[Concatenate[ProvisioningApplication, P], Deferred]:
     # Decorator for instance method of ProvisioningApplication that need to
     # acquire the read lock
     @functools.wraps(fun)
-    def aux(self, *args, **kwargs):
+    def aux(
+        self: ProvisioningApplication, *args: P.args, **kwargs: P.kwargs
+    ) -> Deferred:
         d = self._rw_lock.read_lock.run(fun, self, *args, **kwargs)
         return d
 
     return aux
 
 
-def _wlock(fun):
+def _wlock(
+    fun: Callable[Concatenate[ProvisioningApplication, P], R]
+) -> Callable[Concatenate[ProvisioningApplication, P], Deferred]:
     # Decorator for instance method of ProvisioningApplication that need to
     # acquire the write lock
     @functools.wraps(fun)
-    def aux(self, *args, **kwargs):
+    def aux(
+        self: ProvisioningApplication, *args: P.args, **kwargs: P.kwargs
+    ) -> Deferred:
         d = self._rw_lock.write_lock.run(fun, self, *args, **kwargs)
         return d
 
@@ -116,56 +148,25 @@ def _check_common_raw_config_validity(raw_config: dict[str, Any]) -> None:
             raise RawConfigError(f'missing {param} parameter')
 
 
-def _check_raw_config_validity(raw_config: dict[str, Any]) -> None:
-    # XXX this is bit repetitive...
-    _check_common_raw_config_validity(raw_config)
-    if raw_config.get('ntp_enabled'):
-        if 'ntp_ip' not in raw_config:
-            raise RawConfigError('missing ntp_ip parameter')
-    if raw_config.get('vlan_enabled'):
-        if 'vlan_id' not in raw_config:
-            raise RawConfigError('missing vlan_id parameter')
-    if raw_config.get('syslog_enabled'):
-        if 'syslog_ip' not in raw_config:
-            raise RawConfigError('missing syslog_ip parameter')
-    if 'sip_lines' in raw_config:
-        for line_no, line in raw_config['sip_lines'].items():
-            if 'proxy_ip' not in line and 'sip_proxy_ip' not in raw_config:
-                raise RawConfigError(f'missing proxy_ip parameter for line {line_no}')
-            if 'protocol' in raw_config and raw_config['protocol'] == 'SIP':
-                for param in ['username', 'password', 'display_name']:
-                    if param not in line:
-                        raise RawConfigError(
-                            f'missing {param} parameter for line {line_no}'
-                        )
-    if 'sccp_call_managers' in raw_config:
-        for priority, call_manager in raw_config['sccp_call_managers'].items():
-            if 'ip' not in call_manager:
-                raise RawConfigError(
-                    f'missing ip parameter for call manager {priority}'
-                )
-    if 'funckeys' in raw_config:
-        funckeys = raw_config['funckeys']
-        for funckey_no, funckey in funckeys.items():
-            try:
-                type_ = funckey['type']
-            except KeyError:
-                raise RawConfigError(f'missing type parameter for funckey {funckey_no}')
-            else:
-                if (type_ == 'speeddial' or type_ == 'blf') and 'value' not in funckey:
-                    raise RawConfigError(
-                        f'missing value parameter for funckey {funckey_no}'
-                    )
+def _check_raw_config_validity(raw_config: RawConfigDict) -> None:
+    try:
+        RawConfigSchema.validate(raw_config)
+    except ValidationError as e:
+        # Try to resemble as close as possible to the old method. Do we really want this?
+        error = e.errors()[0]
+        field = '.'.join(error['loc'])
+        raise RawConfigError(f'{field}: {error["msg"]}')
 
 
-def _set_defaults_raw_config(raw_config: dict[str, Any]) -> None:
+def _set_defaults_raw_config(raw_config: RawConfigDict) -> None:
     if raw_config.get('syslog_enabled'):
         raw_config.setdefault('syslog_port', 514)
-        raw_config.setdefault('level', 'warning')
+        # Isn't this syslog_level?
+        raw_config.setdefault('level', 'warning')  # type: ignore[typeddict-item]
     if 'sip_proxy_ip' in raw_config:
         raw_config.setdefault('sip_registrar_ip', raw_config['sip_proxy_ip'])
-    raw_config.setdefault('sip_srtp_mode', 'disabled')
-    raw_config.setdefault('sip_transport', 'udp')
+    raw_config.setdefault('sip_srtp_mode', 'disabled')  # type: ignore[typeddict-item]
+    raw_config.setdefault('sip_transport', 'udp')  # type: ignore[typeddict-item]
     if 'sip_lines' not in raw_config:
         raw_config['sip_lines'] = {}
     else:
@@ -175,7 +176,7 @@ def _set_defaults_raw_config(raw_config: dict[str, Any]) -> None:
             if 'username' in line:
                 line.setdefault('auth_username', line['username'])
     raw_config.setdefault('sccp_call_managers', {})
-    raw_config.setdefault('funckeys', {})
+    raw_config.setdefault('funckeys', {})  # type: ignore[typeddict-item]
 
 
 class ProvisioningApplication:
@@ -201,12 +202,12 @@ class ProvisioningApplication:
         cfg_collection: ConfigCollection,
         dev_collection: DeviceCollection,
         config: ProvdConfigDict,
-    ):
+    ) -> None:
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
         self._split_config: ProvdConfigDict = config
-        self._token = None
-        self._tenant_uuid = None
+        self._token: str | None = None
+        self._tenant_uuid: str | None = None
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -241,39 +242,40 @@ class ProvisioningApplication:
         logger.info('Using base raw config %s', self._base_raw_config)
         _check_common_raw_config_validity(self._base_raw_config)
         self._rw_lock = DeferredRWLock()
-        self._cfg_factory = DefaultConfigFactory()
         self._pg_load_all(True)
 
     @_wlock
-    def close(self):
+    def close(self) -> None:
         logger.info('Closing provisioning application...')
         self.pg_mgr.close()
         logger.info('Provisioning application closed')
 
-    def token(self):
+    def token(self) -> str | None:
         return self._token
 
-    def set_token(self, token_id):
+    def set_token(self, token_id: str) -> None:
         logger.debug('Setting token for provd app: %s', token_id)
         self._token = token_id
         auth_client = auth.get_auth_client()
         token = Tokens(auth_client).get(self._token)
         self.set_tenant_uuid(Tenant.from_token(token).uuid)
 
-    def tenant_uuid(self):
+    def tenant_uuid(self) -> str | None:
         return self._tenant_uuid
 
-    def set_tenant_uuid(self, tenant_uuid):
+    def set_tenant_uuid(self, tenant_uuid: str) -> None:
         self._tenant_uuid = tenant_uuid
         if not self.tenants.get(tenant_uuid):
             self.set_tenant_configuration(tenant_uuid, {})
 
-    def set_tenant_configuration(self, tenant_uuid, config):
+    def set_tenant_configuration(
+        self, tenant_uuid: str, config: dict[str, Any]
+    ) -> None:
         self.tenants[tenant_uuid] = config
 
     # device methods
 
-    def _dev_get_plugin(self, device):
+    def _dev_get_plugin(self, device: BaseDeviceDict | DeviceDict) -> dict | None:
         if 'plugin' in device:
             return self.pg_mgr.get(device['plugin'])
         return None
@@ -290,53 +292,62 @@ class ProvisioningApplication:
     def _dev_get_plugin_and_raw_config(self, device):
         # Return a deferred that will fire with a tuple (plugin, raw_config)
         # associated with the device, or fire with the tuple (None, None) if
-        # there's at least one without etc etc
+        # there's at least one without etc. etc
         if (plugin := self._dev_get_plugin(device)) is not None:
             raw_config = yield self._dev_get_raw_config(device)
             if raw_config is not None:
                 defer.returnValue((plugin, raw_config))
         defer.returnValue((None, None))
 
-    def _dev_configure(self, device, plugin, raw_config):
+    def _dev_configure(
+        self, device: BaseDeviceDict | DeviceDict, plugin, raw_config: RawConfigDict
+    ):
         # Return true if the device has been successfully configured (i.e.
         # no exception were raised), else false.
-        logger.info('Configuring device %s with plugin %s', device[ID_KEY], plugin.id)
+        device_id = device[ID_KEY]
+        logger.info('Configuring device %s with plugin %s', device_id, plugin.id)
         if self.use_provisioning_key:
             tenant_uuid = device.get('tenant_uuid', None)
             if not tenant_uuid:
                 logger.warning(
                     'Device %s is using provisioning key but has no tenant_uuid',
-                    device[ID_KEY],
+                    device_id,
                 )
                 return False
             provisioning_key = self.configure_service.get(
                 'provisioning_key', tenant_uuid
             )
 
-            raw_config = copy.deepcopy(raw_config)
+            raw_config = deepcopy(raw_config)
             http_base_url = raw_config['http_base_url']
             raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
 
+        _set_defaults_raw_config(raw_config)
         try:
-            _check_raw_config_validity(raw_config)
-        except Exception:
+            RawConfigSchema.validate(raw_config)
+        except ValidationError as e:
             logger.error(
-                'Error while configuring device %s', device[ID_KEY], exc_info=True
+                'Error while configuring device %s. '
+                'There were errors with some values: %s',
+                device_id,
+                e.errors(),
             )
+        except Exception:
+            # Do we really want to catch **any** exception?
+            logger.error('Error while configuring device %s', device_id, exc_info=True)
         else:
-            _set_defaults_raw_config(raw_config)
             try:
                 plugin.configure(device, raw_config)
             except Exception:
                 logger.error(
-                    'Error while configuring device %s', device[ID_KEY], exc_info=True
+                    'Error while configuring device %s', device_id, exc_info=True
                 )
             else:
                 return True
         return False
 
     @defer.inlineCallbacks
-    def _dev_configure_if_possible(self, device):
+    def _dev_configure_if_possible(self, device: BaseDeviceDict | DeviceDict):
         # Return a deferred that fire with true if the device has been
         # successfully configured (i.e. no exception were raised), else false.
         plugin, raw_config = yield self._dev_get_plugin_and_raw_config(device)
@@ -345,7 +356,7 @@ class ProvisioningApplication:
         else:
             defer.returnValue(self._dev_configure(device, plugin, raw_config))
 
-    def _dev_deconfigure(self, device, plugin):
+    def _dev_deconfigure(self, device: BaseDeviceDict | DeviceDict, plugin):
         # Return true if the device has been successfully deconfigured (i.e.
         # no exception were raised), else false.
         logger.info('Deconfiguring device %s with plugin %s', device[ID_KEY], plugin.id)
@@ -359,14 +370,16 @@ class ProvisioningApplication:
         else:
             return True
 
-    def _dev_deconfigure_if_possible(self, device):
+    def _dev_deconfigure_if_possible(self, device: BaseDeviceDict | DeviceDict):
         # Return true if the device has been successfully configured (i.e.
         # no exception were raised), else false.
         if (plugin := self._dev_get_plugin(device)) is None:
             return False
         return self._dev_deconfigure(device, plugin)
 
-    def _dev_synchronize(self, device, plugin, raw_config):
+    def _dev_synchronize(
+        self, device: BaseDeviceDict | DeviceDict, plugin, raw_config: RawConfigDict
+    ):
         # Return a deferred that will fire with None once the device
         # synchronization is completed.
         logger.info('Synchronizing device %s with plugin %s', device[ID_KEY], plugin.id)
@@ -374,7 +387,7 @@ class ProvisioningApplication:
         return plugin.synchronize(device, raw_config)
 
     @defer.inlineCallbacks
-    def _dev_synchronize_if_possible(self, device):
+    def _dev_synchronize_if_possible(self, device: BaseDeviceDict | DeviceDict):
         # Return a deferred that will fire with None once the device
         # synchronization is completed.
         plugin, raw_config = yield self._dev_get_plugin_and_raw_config(device)
@@ -387,7 +400,7 @@ class ProvisioningApplication:
         yield self._dev_synchronize(device, plugin, raw_config)
 
     @defer.inlineCallbacks
-    def _dev_get_or_raise(self, device_id):
+    def _dev_get_or_raise(self, device_id: str):
         device = yield self._dev_collection.retrieve(device_id)
         if device is None:
             raise InvalidIdError(f'invalid device ID "{device_id}"')
@@ -396,7 +409,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def dev_insert(self, device):
+    def dev_insert(self, device: DeviceDict):
         """Insert a new device into the provisioning application.
 
         Return a deferred that will fire with the ID of the device.
@@ -427,7 +440,7 @@ class ProvisioningApplication:
             device['configured'] = False
 
             if not device.get('tenant_uuid'):
-                device['tenant_uuid'] = self._tenant_uuid
+                device['tenant_uuid'] = self._tenant_uuid  # type: ignore
 
             device['is_new'] = device['tenant_uuid'] == self._tenant_uuid
 
@@ -447,7 +460,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def dev_update(self, device, pre_update_hook=None):
+    def dev_update(self, device: DeviceDict, pre_update_hook=None):
         """Update the device.
 
         The pre_update_hook function is called with the device and
@@ -516,7 +529,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def dev_delete(self, device_id):
+    def dev_delete(self, device_id: str):
         """Delete the device with the given ID.
 
         Return a deferred that will fire with None once the device is
@@ -551,7 +564,7 @@ class ProvisioningApplication:
             logger.error('Error while deleting device', exc_info=True)
             raise
 
-    def dev_retrieve(self, device_id):
+    def dev_retrieve(self, device_id: str):
         """Return a deferred that fire with the device with the given ID, or
         fire with None if there's no such document.
 
@@ -566,7 +579,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def dev_reconfigure(self, device_id):
+    def dev_reconfigure(self, device_id: str):
         """Force the reconfiguration of the device. This is usually not
         necessary since configuration is usually done automatically.
 
@@ -594,7 +607,7 @@ class ProvisioningApplication:
 
     @_rlock
     @defer.inlineCallbacks
-    def dev_synchronize(self, device_id):
+    def dev_synchronize(self, device_id: str):
         """Synchronize the physical device with its config.
 
         Return a deferred that will fire with None once the device is
@@ -623,7 +636,7 @@ class ProvisioningApplication:
     # config methods
 
     @defer.inlineCallbacks
-    def _cfg_get_or_raise(self, config_id):
+    def _cfg_get_or_raise(self, config_id: str):
         config = yield self._cfg_collection.retrieve(config_id)
         if config is None:
             raise InvalidIdError(f'Invalid config ID "{config_id}"')
@@ -631,7 +644,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def cfg_insert(self, config):
+    def cfg_insert(self, config: ConfigDict):
         """Insert a new config into the provisioning application.
 
         Return a Deferred that will fire with the ID of the config.
@@ -836,7 +849,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def cfg_create_new(self):
+    def cfg_create_new(self) -> Generator[None, ConfigDict | None, None]:
         """Create a new config from the config with the autocreate role.
 
         Return a deferred that will fire with the ID of the newly created
@@ -849,11 +862,11 @@ class ProvisioningApplication:
             new_config_id = None
             config = yield self._cfg_collection.find_one({'role': 'autocreate'})
             if config:
-                # remove the role of the config so we don't create new config
+                # remove the role of the config, so we don't create new config
                 # with the autocreate role
                 del config['role']
-                new_config = self._cfg_factory(config)
-                if new_config:
+                # remove factory and validation as it is automatically created
+                if new_config := build_autocreate_config(config):
                     new_config_id = yield self._cfg_collection.insert(new_config)
                 else:
                     logger.debug('Autocreate config factory returned null config')
@@ -867,7 +880,7 @@ class ProvisioningApplication:
 
     # plugin methods
 
-    def _pg_load_all(self, catch_error=False):
+    def _pg_load_all(self, catch_error: bool = False) -> None:
         logger.info('Loading all plugins')
         loaded_plugins = 0
         for pg_id in self.pg_mgr.list_installed():
@@ -881,10 +894,10 @@ class ProvisioningApplication:
                     raise
         logger.info('Loaded %d plugins.', loaded_plugins)
 
-    def _pg_configure_pg(self, plugin_id):
+    def _pg_configure_pg(self, plugin_id: str) -> None:
         # Raise an exception if configure_common fail
         plugin = self.pg_mgr[plugin_id]
-        common_config = copy.deepcopy(self._base_raw_config)
+        common_config = deepcopy(self._base_raw_config)
         logger.info('Configuring plugin %s with config %s', plugin_id, common_config)
         try:
             plugin.configure_common(common_config)
@@ -892,7 +905,7 @@ class ProvisioningApplication:
             logger.error('Error while configuring plugin %s', plugin_id, exc_info=True)
             raise
 
-    def _pg_load(self, plugin_id):
+    def _pg_load(self, plugin_id: str) -> None:
         # Raise an exception if plugin loading or common configuration fail
         gen_cfg = dict(self._split_config['general'])
         gen_cfg['proxies'] = self.proxies
@@ -905,7 +918,7 @@ class ProvisioningApplication:
         else:
             self._pg_configure_pg(plugin_id)
 
-    def _pg_unload(self, plugin_id):
+    def _pg_unload(self, plugin_id: str) -> None:
         # This method should never raise an exception
         try:
             self.pg_mgr.unload(plugin_id)
@@ -915,7 +928,7 @@ class ProvisioningApplication:
             logger.info('Plugin %s was not loaded ', plugin_id)
 
     @defer.inlineCallbacks
-    def _pg_configure_all_devices(self, plugin_id):
+    def _pg_configure_all_devices(self, plugin_id: str):
         logger.info('Reconfiguring all devices using plugin %s', plugin_id)
         devices = yield self._dev_collection.find({'plugin': plugin_id})
         for device in devices:
@@ -928,7 +941,7 @@ class ProvisioningApplication:
                 device['configured'] = configured
                 yield self._dev_collection.update(device)
 
-    def pg_install(self, plugin_id):
+    def pg_install(self, plugin_id: str) -> tuple[Deferred, OperationInProgress]:
         """Install the plugin with the given id.
 
         Return a tuple (deferred, operation in progress).
@@ -975,7 +988,7 @@ class ProvisioningApplication:
         deferred.addCallbacks(callback3, errback3)
         return deferred, oip
 
-    def pg_upgrade(self, plugin_id):
+    def pg_upgrade(self, plugin_id: str) -> tuple[Deferred, OperationInProgress]:
         """Upgrade the plugin with the given id.
 
         Same contract as pg_install, except that the plugin must already be
@@ -989,12 +1002,12 @@ class ProvisioningApplication:
             logger.error('Error: plugin %s is not already installed', plugin_id)
             raise Exception(f'plugin {plugin_id} is not already installed')
 
-        def callback1(_):
+        def callback1(_: Any) -> None:
             # reset the state to in progress
             oip.state = OIP_PROGRESS
 
         @_wlock_arg(self._rw_lock)
-        def callback2(_):
+        def callback2(_: Any):
             # The lock apply only to the deferred return by this function
             # and not on the function itself
             if plugin_id in self.pg_mgr:
@@ -1003,10 +1016,10 @@ class ProvisioningApplication:
             self._pg_load(plugin_id)
             return self._pg_configure_all_devices(plugin_id)
 
-        def callback3(_):
+        def callback3(_: Any) -> None:
             oip.state = OIP_SUCCESS
 
-        def errback3(err):
+        def errback3(err: Exception) -> Exception:
             oip.state = OIP_FAIL
             return err
 
@@ -1019,7 +1032,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def pg_uninstall(self, plugin_id):
+    def pg_uninstall(self, plugin_id: str):
         """Uninstall the plugin with the given id.
 
         Return a deferred that will fire with None once the operation is
@@ -1046,7 +1059,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def pg_reload(self, plugin_id):
+    def pg_reload(self, plugin_id: str):
         """Reload the plugin with the given id.
 
         If the plugin is not loaded yet, load it.
@@ -1093,11 +1106,11 @@ class ProvisioningApplication:
                 device['configured'] = configured
                 yield self._dev_collection.update(device)
 
-    def pg_retrieve(self, plugin_id):
+    def pg_retrieve(self, plugin_id: str):
         return self.pg_mgr[plugin_id]
 
 
-def _check_is_server_url(value):
+def _check_is_server_url(value: str | None) -> None:
     if value is None:
         return
 
@@ -1112,7 +1125,7 @@ def _check_is_server_url(value):
         raise InvalidParameterError(f'no hostname: {value}')
 
 
-def _check_is_proxy(value):
+def _check_is_proxy(value: str | None) -> None:
     if value is None:
         return
 
@@ -1129,7 +1142,7 @@ def _check_is_proxy(value):
         raise InvalidParameterError(f'Path: {value}')
 
 
-def _check_is_https_proxy(value):
+def _check_is_https_proxy(value: str | None) -> None:
     if value is None:
         return
 
@@ -1157,14 +1170,14 @@ class ApplicationConfigureService:
         self._proxies = proxies
         self._app = app
 
-    def _get_param_locale(self, *args, **kwargs):
+    def _get_param_locale(self, *args: Any, **kwargs: Any) -> str | None:
         l10n_service = get_localization_service()
         if l10n_service is None:
             logger.info('No localization service registered')
             return None
         return l10n_service.get_locale()
 
-    def _set_param_locale(self, value, *args, **kwargs):
+    def _set_param_locale(self, value: str | None, *args: Any, **kwargs: Any) -> None:
         l10n_service = get_localization_service()
         if l10n_service is None:
             logger.info('No localization service registered')
@@ -1177,38 +1190,46 @@ class ApplicationConfigureService:
                 except (UnicodeError, ValueError) as e:
                     raise InvalidParameterError(e)
 
-    def _generic_set_proxy(self, key, value, *args, **kwargs):
+    def _generic_set_proxy(
+        self, key: str, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         if not value:
             if key in self._proxies:
                 del self._proxies[key]
         else:
             self._proxies[key] = value
 
-    def _get_param_http_proxy(self, *args, **kwargs):
+    def _get_param_http_proxy(self, *args: Any, **kwargs: Any) -> str | None:
         return self._proxies.get('http')
 
-    def _set_param_http_proxy(self, value, *args, **kwargs):
+    def _set_param_http_proxy(
+        self, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         _check_is_proxy(value)
         self._generic_set_proxy('http', value)
 
-    def _get_param_ftp_proxy(self, *args, **kwargs):
+    def _get_param_ftp_proxy(self, *args: Any, **kwargs: Any) -> str | None:
         return self._proxies.get('ftp')
 
-    def _set_param_ftp_proxy(self, value, *args, **kwargs):
+    def _set_param_ftp_proxy(self, value, *args, **kwargs) -> None:
         _check_is_proxy(value)
         self._generic_set_proxy('ftp', value)
 
-    def _get_param_https_proxy(self, *args, **kwargs):
+    def _get_param_https_proxy(self, *args, **kwargs) -> str | None:
         return self._proxies.get('https')
 
-    def _set_param_https_proxy(self, value, *args, **kwargs):
+    def _set_param_https_proxy(
+        self, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         _check_is_https_proxy(value)
         self._generic_set_proxy('https', value)
 
-    def _get_param_plugin_server(self, *args, **kwargs):
+    def _get_param_plugin_server(self, *args: Any, **kwargs: Any):
         return self._pg_mgr.server
 
-    def _set_param_plugin_server(self, value, *args, **kwargs):
+    def _set_param_plugin_server(
+        self, value: str | None, *args: Any, **kwargs: Any
+    ) -> None:
         _check_is_server_url(value)
         self._pg_mgr.server = value
 
@@ -1224,20 +1245,22 @@ class ApplicationConfigureService:
             raise InvalidParameterError(value)
         self._app.nat = value
 
-    def _get_tenant_config(self, tenant_uuid):
+    def _get_tenant_config(self, tenant_uuid: str) -> dict[str, Any] | None:
         return self._app.tenants.get(tenant_uuid)
 
-    def _create_empty_tenant_config(self, tenant_uuid):
+    def _create_empty_tenant_config(self, tenant_uuid: str) -> dict[str, Any]:
         self._app.tenants[tenant_uuid] = {}
-        return self._get_tenant_config(tenant_uuid)
+        return self._get_tenant_config(tenant_uuid)  # type: ignore
 
-    def _get_param_provisioning_key(self, tenant_uuid):
+    def _get_param_provisioning_key(self, tenant_uuid: str) -> str | None:
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
         return tenant_config.get('provisioning_key')
 
-    def _set_param_provisioning_key(self, provisioning_key, tenant_uuid):
+    def _set_param_provisioning_key(
+        self, provisioning_key: str, tenant_uuid: str
+    ) -> None:
         if provisioning_key:
             if len(provisioning_key) < 8 or len(provisioning_key) > 256:
                 raise InvalidParameterError(
@@ -1263,27 +1286,31 @@ class ApplicationConfigureService:
             tenant_config = self._create_empty_tenant_config(tenant_uuid)
         tenant_config['provisioning_key'] = provisioning_key
 
-    def get_tenant_from_provisioning_key(self, provisioning_key):
+    def get_tenant_from_provisioning_key(self, provisioning_key: str) -> str | None:
         for tenant, config in self._app.tenants.items():
             if config.get('provisioning_key') == provisioning_key:
                 return tenant
+        return None
 
-    def _set_param_tenants(self, tenants, *args, **kwargs):
+    def _set_param_tenants(
+        self, tenants: dict[str, dict[str, Any]], *args: Any, **kwargs: Any
+    ) -> None:
         self._app.tenants = tenants
 
-    def _get_param_tenants(self, *args, **kwargs):
+    def _get_param_tenants(
+        self, *args: Any, **kwargs: Any
+    ) -> dict[str, dict[str, Any]]:
         return self._app.tenants
 
-    def get(self, name, *args, **kwargs):
+    def get(self, name: str, *args: Any, **kwargs: Any) -> Any:
         get_fun_name = f'_get_param_{name}'
         try:
             get_fun = getattr(self, get_fun_name)
         except AttributeError:
             raise KeyError(name)
-        else:
-            return get_fun(*args, **kwargs)
+        return get_fun(*args, **kwargs)
 
-    def set(self, name, value, *args, **kwargs):
+    def set(self, name: str, value: Any, *args: Any, **kwargs: Any) -> None:
         set_fun_name = f'_set_param_{name}'
         try:
             set_fun = getattr(self, set_fun_name)

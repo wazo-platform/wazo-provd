@@ -6,11 +6,15 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
 logger = logging.getLogger(__name__)
+
+R = TypeVar('R')
 
 
 class InvalidLockUsage(Exception):
@@ -18,19 +22,21 @@ class InvalidLockUsage(Exception):
 
 
 class _DeferredRWLock_Base:
-    def __init__(self, acquire_fun, release_fun):
+    def __init__(
+        self, acquire_fun: Callable[[], Deferred], release_fun: Callable[[], None]
+    ) -> None:
         self._acquire_fun = acquire_fun
         self._release_fun = release_fun
 
-    def acquire(self):
+    def acquire(self) -> Deferred:
         return self._acquire_fun()
 
-    def _releaseAndReturn(self, r):
+    def _releaseAndReturn(self, r: R) -> R:
         self.release()
         return r
 
-    def run(self, f, *args, **kwargs):
-        def execute(ignoredResult):
+    def run(self, f: Callable, *args: Any, **kwargs: Any):
+        def execute(ignored_result: Any) -> Deferred:
             d = defer.maybeDeferred(f, *args, **kwargs)
             d.addBoth(self._releaseAndReturn)
             return d
@@ -57,7 +63,7 @@ class DeferredRWLock:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._read_waiting: deque[Deferred] = deque()
         self._write_waiting: deque[Deferred] = deque()
         self._reading = 0
@@ -69,21 +75,21 @@ class DeferredRWLock:
             self._acquire_write_lock, self._release_write_lock
         )
 
-    def _acquire_read_lock(self):
+    def _acquire_read_lock(self) -> Deferred:
         logger.debug('Waiting for read lock acquisition of RWLock %s', self)
         d = defer.Deferred()
         self._read_waiting.append(d)
         self._reschedule()
         return d
 
-    def _acquire_write_lock(self):
+    def _acquire_write_lock(self) -> Deferred:
         logger.debug('Waiting for write lock acquisition of RWLock %s', self)
         d = defer.Deferred()
         self._write_waiting.append(d)
         self._reschedule()
         return d
 
-    def _unlock_all_readers(self):
+    def _unlock_all_readers(self) -> None:
         assert self._read_waiting
         while self._read_waiting:
             logger.debug('Acquiring read lock %d of RWLock %s', self._reading, self)
@@ -91,14 +97,14 @@ class DeferredRWLock:
             d = self._read_waiting.popleft()
             d.callback(self)
 
-    def _unlock_one_writer(self):
+    def _unlock_one_writer(self) -> None:
         assert self._write_waiting
         logger.debug('Acquiring write lock %d of RWLock %s', self._writing, self)
         self._writing += 1
         d = self._write_waiting.popleft()
         d.callback(self)
 
-    def _reschedule(self):
+    def _reschedule(self) -> None:
         # Check if we can fire new callbacks
         if self._reading:
             assert not self._writing
@@ -136,14 +142,14 @@ class DeferredRWLock:
                 # do nothing
                 pass
 
-    def _release_read_lock(self):
+    def _release_read_lock(self) -> None:
         if not self._reading:
             raise InvalidLockUsage('read lock released while no one was reading')
         logger.debug('Releasing read lock %d of RWLock %s', self._reading - 1, self)
         self._reading -= 1
         self._reschedule()
 
-    def _release_write_lock(self):
+    def _release_write_lock(self) -> None:
         if not self._writing:
             raise InvalidLockUsage('write lock released while no one was writing')
         logger.debug('Releasing write lock %d of RWLock %s', self._writing - 1, self)

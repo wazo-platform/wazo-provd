@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 
 from provd.persist.common import (
     ID_KEY,
@@ -527,25 +528,25 @@ class SimpleBackendDocumentCollection(AbstractDocumentCollection):
             self._new_value_for_index(index, key, value)
         self._indexes[complex_key] = index
 
-    def ensure_index(self, complex_key):
+    def ensure_index(self, complex_key: str) -> Deferred:
         if complex_key not in self._indexes:
             self._create_index(complex_key)
         return defer.succeed(None)
 
 
-def new_backend_based_collection(backend, generator):
+def new_backend_based_collection(backend, generator) -> SimpleBackendDocumentCollection:
     return SimpleBackendDocumentCollection(backend, generator)
 
 
 class ForwardingDocumentCollection:
-    def __init__(self, collection):
+    def __init__(self, collection) -> None:
         self._collection = collection
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         return getattr(self._collection, name)
 
 
-def _new_key_fun_from_key(key):
+def _new_key_fun_from_key(key: str):
     """
     Return a function usable for the key parameter of the sorted function
     from a [sort] key

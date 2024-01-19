@@ -50,7 +50,7 @@ from typing import Any, Literal, TypedDict, Union
 
 from twisted.internet.defer import Deferred
 
-ID_KEY = 'id'
+ID_KEY: Literal["id"] = "id"
 
 
 class BaseDocumentDict(TypedDict):
