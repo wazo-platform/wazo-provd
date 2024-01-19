@@ -1,4 +1,4 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -82,7 +82,7 @@ class TestDevices(BaseIntegrationTest):
         super().setUpClass()
         cls.wait_strategy.wait(cls)
         cls.setup_token()
-        setup_bus(host='localhost', port=cls.service_port(5672, 'rabbitmq'))
+        setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
         cls.filesystem = cls.make_filesystem()
 
     @classmethod
