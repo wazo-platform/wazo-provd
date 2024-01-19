@@ -14,9 +14,7 @@ from wazo_test_helpers.asset_launching_test_case import (
     WrongClient,
 )
 
-from provd.database.helpers import init_db
-
-from .database import SynchronousDatabaseAdapter
+from .database import DatabaseClient
 from .wait_strategy import NoWaitStrategy, WaitStrategy
 
 API_VERSION = '0.2'
@@ -62,22 +60,21 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
         )
 
     @classmethod
-    def make_db_session(cls) -> SynchronousDatabaseAdapter | WrongClient:
+    def make_db(cls) -> DatabaseClient | WrongClient:
         try:
             port = cls.service_port(5432, 'postgres')
         except (NoSuchService, NoSuchPort):
             return WrongClient('postgres')
-        connection_pool = init_db(DB_URI.format(port=port))
-        return SynchronousDatabaseAdapter(connection_pool)
+        return DatabaseClient(DB_URI.format(port=port))
 
     @classmethod
     def start_postgres_service(cls) -> None:
         cls.start_service('postgres')
-        cls._Session = cls.make_db_session()
+        cls.db = cls.make_db()
 
         def db_is_up() -> bool:
             try:
-                cls._Session.execute('SELECT 1')
+                cls.db.execute('SELECT 1')
             except Exception:
                 return False
             return True
@@ -86,7 +83,6 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
 
     @classmethod
     def stop_postgres_service(cls) -> None:
-        cls._Session.close()
         cls.stop_service('postgres')
 
 

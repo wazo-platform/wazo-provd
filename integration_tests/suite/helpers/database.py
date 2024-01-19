@@ -1,36 +1,34 @@
 # Copyright 2023-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import Any
+from contextlib import contextmanager
 
-from twisted.enterprise import adbapi
-from wazo_test_helpers import until
+import psycopg2
+from psycopg2.extras import DictCursor
 
 
-class SynchronousDatabaseAdapter:
-    def __init__(self, connection_pool: adbapi.ConnectionPool):
-        self._pool = connection_pool
-        self._pool.start()
+class DatabaseClient:
+    def __init__(self, db_uri: str):
+        self._db_uri = db_uri
 
-    def stop(self) -> None:
-        self._pool.close()
+    @contextmanager
+    def connection(self):
+        with psycopg2.connect(self._db_uri) as connection:
+            yield connection
 
-    def execute(self, query: str) -> Any:
-        result = None
+    @contextmanager
+    def transaction(self, connection) -> DictCursor:
+        try:
+            with connection.cursor(cursor_factory=DictCursor) as cursor:
+                yield cursor
+                connection.commit()
+        except psycopg2.DatabaseError:
+            print("Database error encountered. Rolling back.")
+            connection.rollback()
+            raise
 
-        def query_ok(query_result):
-            nonlocal result
-            result = query_result
-
-        def query_error(err):
-            err.raiseException()
-
-        def query_has_result():
-            nonlocal result
-            return result is not None
-
-        res = self._pool.runQuery(query)
-        res.addCallbacks(query_ok, query_error)
-
-        until.true(query_has_result, tries=10)
-        return result
+    def execute(self, query: str) -> list[tuple]:
+        with self.connection() as conn:
+            with self.transaction(conn) as cursor:
+                cursor.execute(query)
+                return cursor.fetchall()
