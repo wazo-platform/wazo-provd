@@ -1,12 +1,10 @@
 # Copyright 2023-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-from typing import TYPE_CHECKING, Any
+
+from typing import Any
 
 from twisted.enterprise import adbapi
 from wazo_test_helpers import until
-
-if TYPE_CHECKING:
-    from twisted.python.failure import Failure
 
 
 class SynchronousDatabaseAdapter:
@@ -24,7 +22,7 @@ class SynchronousDatabaseAdapter:
             nonlocal result
             result = query_result
 
-        def query_error(err: Failure):
+        def query_error(err):
             err.raiseException()
 
         def query_has_result():
