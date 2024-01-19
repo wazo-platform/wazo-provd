@@ -125,9 +125,9 @@ FuncKeySchema = create_model_from_typeddict(
 
 
 class RawConfigDict(TypedDict):
-    ip: str
+    ip: Union[str, None]
     http_port: Union[int, None]
-    http_base_url: Union[str, None]
+    http_base_url: str
     tftp_port: Union[int, None]
     dns_enabled: Union[bool, None]
     dns_ip: Union[str, None]
