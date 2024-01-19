@@ -9,4 +9,4 @@ requests
 service-identity
 
 # for database tests
--r ../requirements.txt
+psycopg2-binary
