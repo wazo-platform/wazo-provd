@@ -115,7 +115,7 @@ def provd():
         'raw_config': {
             'sccp_call_managers': {'1': {'ip': ADDRESS}},
             'ip': ADDRESS,
-            'http_port': 80,
+            'http_port': 8667,
             'sip_lines': {
                 '1': {
                     'display_name': 'Autoprov',

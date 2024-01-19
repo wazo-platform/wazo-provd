@@ -105,7 +105,7 @@ class Configuration:
             'X_type': 'internal',
             'raw_config': {
                 'ip': '127.0.0.1',
-                'http_port': 80,
+                'http_port': 8667,
                 'ntp_ip': '127.0.0.1',
                 'X_xivo_phonebook_ip': '127.0.0.1',
                 'ntp_enabled': True,
