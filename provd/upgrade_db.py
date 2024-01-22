@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def upgrade(uri: str) -> None:
     current_dir = os.path.dirname(__file__)
-    config = alembic.config.Config(f'{current_dir}/alembic.ini')
-    config.set_main_option('script_location', f'{current_dir}/alembic')
+    config = alembic.config.Config(f'{current_dir}/database/alembic.ini')
+    config.set_main_option('script_location', f'{current_dir}/database/alembic')
     config.set_main_option('sqlalchemy.url', uri)
     config.set_main_option('configure_logging', 'false')
 
