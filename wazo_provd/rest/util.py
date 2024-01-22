@@ -20,10 +20,10 @@ def uri_append_path(base: bytes | str, *path: bytes | str) -> str:
     """
     if not path:
         return decode_bytes(base)
-    base = decode_bytes(base)
+    base_decoded: str = decode_bytes(base)
     path_to_append = '/'.join(decode_bytes(p) for p in path)
-    if base.endswith('/'):
+    if base_decoded.endswith('/'):
         fmt = '%s%s'
     else:
         fmt = '%s/%s'
-    return fmt % (base, path_to_append)
+    return fmt % (base_decoded, path_to_append)

@@ -24,5 +24,22 @@ Things to note:
 """
 
 
-from wazo_provd.servers.tftp.proto import TFTPProtocol  # noqa
-from wazo_provd.servers.tftp.service import *  # noqa
+from wazo_provd.servers.tftp.proto import TFTPProtocol
+from wazo_provd.servers.tftp.service import (
+    TFTPFileService,
+    TFTPHookService,
+    TFTPLogService,
+    TFTPNullService,
+    TFTPRequest,
+    TFTPStringService,
+)
+
+__all__ = [
+    'TFTPRequest',
+    'TFTPNullService',
+    'TFTPStringService',
+    'TFTPFileService',
+    'TFTPHookService',
+    'TFTPLogService',
+    'TFTPProtocol',
+]
