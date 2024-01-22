@@ -1,4 +1,4 @@
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import functools
 
 from twisted.web import http
 
-from provd.util import decode_bytes
+from wazo_provd.util import decode_bytes
 
 
 def numeric_id_generator(prefix='', start=0):

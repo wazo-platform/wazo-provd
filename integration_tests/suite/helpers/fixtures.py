@@ -1,4 +1,4 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from wazo_test_helpers import until
 from .operation import operation_successful
 
 if TYPE_CHECKING:
-    from provd.devices.schemas import BaseDeviceDict, ConfigDict
+    from wazo_provd.devices.schemas import BaseDeviceDict, ConfigDict
 
 PLUGIN_TO_INSTALL = 'test-plugin'
 

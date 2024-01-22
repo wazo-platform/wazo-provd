@@ -22,20 +22,20 @@ from xivo.token_renewer import TokenRenewer
 from xivo.xivo_logging import setup_logging, silence_loggers
 from zope.interface import implementer
 
-import provd.config
-import provd.localization
-import provd.synchronize
-from provd import security, status
-from provd.app import ProvisioningApplication
-from provd.devices import ident, pgasso
-from provd.devices.config import ConfigCollection
-from provd.devices.device import DeviceCollection
-from provd.persist.json_backend import JsonDatabaseFactory
-from provd.rest.api.resource import ResponseFile
-from provd.rest.server import auth
-from provd.rest.server.server import new_authenticated_server_resource
-from provd.servers.http_site import AuthResource, Site
-from provd.servers.tftp.proto import TFTPProtocol
+import wazo_provd.config
+import wazo_provd.localization
+import wazo_provd.synchronize
+from wazo_provd import security, status
+from wazo_provd.app import ProvisioningApplication
+from wazo_provd.devices import ident, pgasso
+from wazo_provd.devices.config import ConfigCollection
+from wazo_provd.devices.device import DeviceCollection
+from wazo_provd.persist.json_backend import JsonDatabaseFactory
+from wazo_provd.rest.api.resource import ResponseFile
+from wazo_provd.rest.server import auth
+from wazo_provd.rest.server.server import new_authenticated_server_resource
+from wazo_provd.servers.http_site import AuthResource, Site
+from wazo_provd.servers.tftp.proto import TFTPProtocol
 
 if TYPE_CHECKING:
     from .config import BusConfigDict, Options, ProvdConfigDict
@@ -338,16 +338,16 @@ class SynchronizeService(Service):
 
     def _new_sync_service_asterisk_ami(
         self,
-    ) -> provd.synchronize.AsteriskAMISynchronizeService:
-        amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
-        return provd.synchronize.AsteriskAMISynchronizeService(amid_client)
+    ) -> wazo_provd.synchronize.AsteriskAMISynchronizeService:
+        amid_client = wazo_provd.synchronize.get_AMID_client(**self._config['amid'])
+        return wazo_provd.synchronize.AsteriskAMISynchronizeService(amid_client)
 
     def _new_sync_service_none(self) -> None:
         return None
 
     def _new_sync_service(
         self, sync_service_type: str
-    ) -> provd.synchronize.AsteriskAMISynchronizeService | None:
+    ) -> wazo_provd.synchronize.AsteriskAMISynchronizeService | None:
         name = f'_new_sync_service_{sync_service_type}'
         try:
             fun = getattr(self, name)
@@ -361,23 +361,23 @@ class SynchronizeService(Service):
             self._config['general']['sync_service_type']
         )
         if sync_service is not None:
-            provd.synchronize.register_sync_service(sync_service)
+            wazo_provd.synchronize.register_sync_service(sync_service)
         Service.startService(self)
 
     def stopService(self) -> None:
         Service.stopService(self)
-        provd.synchronize.unregister_sync_service()
+        wazo_provd.synchronize.unregister_sync_service()
 
 
 class LocalizationService(Service):
     def startService(self) -> None:
-        l10n_service = provd.localization.LocalizationService()
-        provd.localization.register_localization_service(l10n_service)
+        l10n_service = wazo_provd.localization.LocalizationService()
+        wazo_provd.localization.register_localization_service(l10n_service)
         Service.startService(self)
 
     def stopService(self) -> None:
         Service.stopService(self)
-        provd.localization.unregister_localization_service()
+        wazo_provd.localization.unregister_localization_service()
 
 
 class TokenRenewerService(Service):
@@ -392,7 +392,7 @@ class TokenRenewerService(Service):
     def startService(self) -> None:
         app = self._prov_service.app
         auth_client = auth.get_auth_client(**self._config['auth'])
-        amid_client = provd.synchronize.get_AMID_client(**self._config['amid'])
+        amid_client = wazo_provd.synchronize.get_AMID_client(**self._config['amid'])
         self._token_renewer = TokenRenewer(auth_client)
         self._token_renewer.subscribe_to_token_change(app.set_token)
         self._token_renewer.subscribe_to_token_change(auth_client.set_token)
@@ -532,7 +532,7 @@ class SyncdbService(ResourcesDeletionService):
 class ProvisioningServiceMaker:
     tapname = 'wazo-provd'
     description = 'A provisioning server.'
-    options = provd.config.Options
+    options = wazo_provd.config.Options
 
     def _configure_logging(self, options: Options) -> None:
         setup_logging(LOG_FILE_NAME, debug=options['verbose'])
@@ -541,7 +541,7 @@ class ProvisioningServiceMaker:
 
     def _read_config(self, options: Options) -> ProvdConfigDict:
         logger.info('Reading application configuration')
-        return provd.config.get_config(options)
+        return wazo_provd.config.get_config(options)
 
     def makeService(self, options: Options) -> MultiService:
         self._configure_logging(options)

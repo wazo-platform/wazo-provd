@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import unittest
 
 from hamcrest import assert_that, equal_to
 
-from provd.devices.device import copy, needs_reconfiguration
-from provd.devices.schemas import DeviceDict
+from wazo_provd.devices.device import copy, needs_reconfiguration
+from wazo_provd.devices.schemas import DeviceDict
 
 
 class TestDevice(unittest.TestCase):

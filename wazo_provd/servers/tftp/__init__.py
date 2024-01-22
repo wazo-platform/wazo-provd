@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """A TFTP server implementation with twisted.
@@ -24,5 +24,5 @@ Things to note:
 """
 
 
-from provd.servers.tftp.proto import TFTPProtocol  # noqa
-from provd.servers.tftp.service import *  # noqa
+from wazo_provd.servers.tftp.proto import TFTPProtocol  # noqa
+from wazo_provd.servers.tftp.service import *  # noqa

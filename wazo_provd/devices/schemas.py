@@ -1,5 +1,5 @@
 """
-Copyright 2023 The Wazo Authors  (see the AUTHORS file)
+Copyright 2023-2024 The Wazo Authors  (see the AUTHORS file)
 SPDX-License-Identifier: GPL-3.0-or-later
 
 **NOTE**: `annotations` are not intentionally imported from __future__.
@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, root_validator, validator
 
-from provd.util import _NORMED_MAC, create_model_from_typeddict
+from wazo_provd.util import _NORMED_MAC, create_model_from_typeddict
 
 INTEGER_KEY_REGEX = re.compile(r"^[0-9]+$")
 

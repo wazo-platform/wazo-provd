@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
 
-from provd.devices import ident
-from provd.devices.ident import (
+from wazo_provd.devices import ident
+from wazo_provd.devices.ident import (
     AddDeviceRetriever,
     DHCPRequest,
     LastSeenUpdater,
@@ -23,7 +23,7 @@ from provd.devices.ident import (
     _get_ip_from_http_request_with_proxies,
     _RequestHelper,
 )
-from provd.servers.tftp import TFTPRequest
+from wazo_provd.servers.tftp import TFTPRequest
 
 
 class TestAddDeviceRetriever(unittest.TestCase):
@@ -31,7 +31,7 @@ class TestAddDeviceRetriever(unittest.TestCase):
         self.app = Mock()
         self.dev_retriever = AddDeviceRetriever(self.app)
 
-    @patch('provd.devices.ident.log_security_msg')
+    @patch('wazo_provd.devices.ident.log_security_msg')
     @defer.inlineCallbacks
     def test_retrieve_log_security_event(self, mock_log_security_msg):
         device_id = 'some-id'
@@ -361,7 +361,7 @@ class TestLogSensitiveRequest(unittest.TestCase):
         self.request.path = f'/{self.filename}'.encode('ascii')
         self.plugin = Mock()
 
-    @patch('provd.devices.ident.log_security_msg')
+    @patch('wazo_provd.devices.ident.log_security_msg')
     def test_no_log_when_plugin_doesnt_have_method(self, mock_log_security_msg):
         del self.plugin.is_sensitive_filename
 
@@ -369,7 +369,7 @@ class TestLogSensitiveRequest(unittest.TestCase):
 
         assert_that(mock_log_security_msg.called, equal_to(False))
 
-    @patch('provd.devices.ident.log_security_msg')
+    @patch('wazo_provd.devices.ident.log_security_msg')
     def test_log_when_sensitive_filename(self, mock_log_security_msg):
         self.plugin.is_sensitive_filename.return_value = True
 

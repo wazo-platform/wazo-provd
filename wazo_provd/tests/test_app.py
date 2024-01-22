@@ -1,4 +1,4 @@
-# Copyright 2014-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2014-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from unittest.mock import Mock, sentinel
 
 from hamcrest import assert_that, equal_to, is_
 
-from provd.app import ApplicationConfigureService
-from provd.services import InvalidParameterError
+from wazo_provd.app import ApplicationConfigureService
+from wazo_provd.services import InvalidParameterError
 
 
 class TestAppConfigureService(unittest.TestCase):

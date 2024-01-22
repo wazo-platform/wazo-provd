@@ -1,4 +1,4 @@
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Automatic plugin association."""
@@ -12,7 +12,7 @@ from operator import itemgetter
 
 from twisted.internet import defer
 
-from provd.devices.ident import AbstractDeviceUpdater
+from wazo_provd.devices.ident import AbstractDeviceUpdater
 
 logger = logging.getLogger(__name__)
 

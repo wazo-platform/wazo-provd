@@ -1,4 +1,4 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from wazo_auth_client.exceptions import (
 )
 from xivo import auth_verifier
 
-from provd.util import decode_bytes
+from wazo_provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)
 

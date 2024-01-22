@@ -1,4 +1,4 @@
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # NOTE: these tests are not automated (yet). You need to manually check
@@ -9,7 +9,7 @@ import time
 
 from twisted.internet import defer, reactor
 
-from provd.synchro import DeferredRWLock
+from wazo_provd.synchro import DeferredRWLock
 
 _load_time = time.time()
 

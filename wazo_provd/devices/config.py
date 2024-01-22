@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Config and config collection module.
 
@@ -39,15 +39,15 @@ from typing import TYPE_CHECKING, Any
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
-from provd.devices.schemas import ConfigSchema
-from provd.persist.common import ID_KEY
-from provd.persist.util import ForwardingDocumentCollection
-from provd.util import decode_bytes
+from wazo_provd.devices.schemas import ConfigSchema
+from wazo_provd.persist.common import ID_KEY
+from wazo_provd.persist.util import ForwardingDocumentCollection
+from wazo_provd.util import decode_bytes
 
 if TYPE_CHECKING:
     from typing import Concatenate, ParamSpec, TypeVar
 
-    from provd.devices.schemas import ConfigDict
+    from wazo_provd.devices.schemas import ConfigDict
 
     P = ParamSpec("P")
     R = TypeVar("R")

@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Device and device collection module.
@@ -43,9 +43,9 @@ from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any, TypeVar
 
-from provd.devices.schemas import DeviceDict, DeviceSchema
-from provd.persist.util import ForwardingDocumentCollection
-from provd.util import is_normed_ip, is_normed_mac
+from wazo_provd.devices.schemas import DeviceDict, DeviceSchema
+from wazo_provd.persist.util import ForwardingDocumentCollection
+from wazo_provd.util import is_normed_ip, is_normed_mac
 
 logger = logging.getLogger(__name__)
 

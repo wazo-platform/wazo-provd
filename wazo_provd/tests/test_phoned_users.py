@@ -1,4 +1,4 @@
-# Copyright 2020-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2020-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import unittest
 
 from hamcrest import assert_that, equal_to, has_key, not_
 
-from provd.phoned_users import add_wazo_phoned_user_service_url
+from wazo_provd.phoned_users import add_wazo_phoned_user_service_url
 
 
 class TestAddWazoPhonedUserServiceURL(unittest.TestCase):

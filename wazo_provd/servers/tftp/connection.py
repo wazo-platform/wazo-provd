@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Manage the transfer between two host."""
@@ -11,7 +11,7 @@ from typing import BinaryIO
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
-from provd.servers.tftp.packet import (
+from wazo_provd.servers.tftp.packet import (
     ERR_ILL,
     ERR_UNDEF,
     ERR_UNKNWN_TID,

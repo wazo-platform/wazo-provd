@@ -1,10 +1,10 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
 import unittest
 
-from provd.servers.tftp.packet import OP_RRQ, PacketError, parse_dgram
+from wazo_provd.servers.tftp.packet import OP_RRQ, PacketError, parse_dgram
 
 
 class TestTFTP(unittest.TestCase):

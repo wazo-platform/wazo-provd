@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Standardized service definition and helper."""
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 if TYPE_CHECKING:
     from twisted.internet.defer import Deferred
 
-    from provd.operation import OperationInProgress
+    from wazo_provd.operation import OperationInProgress
 
 logger = logging.getLogger(__name__)
 

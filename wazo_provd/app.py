@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -15,27 +15,32 @@ from pydantic import ValidationError
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
-from provd.devices.config import (
+from wazo_provd.devices.config import (
     ConfigCollection,
     RawConfigError,
     build_autocreate_config,
 )
-from provd.devices.device import DeviceCollection, needs_reconfiguration
-from provd.localization import get_localization_service
-from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS, OperationInProgress
-from provd.persist.common import ID_KEY
-from provd.persist.common import InvalidIdError as PersistInvalidIdError
-from provd.persist.common import NonDeletableError as PersistNonDeletableError
-from provd.plugins import PluginManager, PluginNotLoadedError
-from provd.rest.server import auth
-from provd.rest.server.helpers.tenants import Tenant, Tokens
-from provd.services import (
+from wazo_provd.devices.device import DeviceCollection, needs_reconfiguration
+from wazo_provd.localization import get_localization_service
+from wazo_provd.operation import (
+    OIP_FAIL,
+    OIP_PROGRESS,
+    OIP_SUCCESS,
+    OperationInProgress,
+)
+from wazo_provd.persist.common import ID_KEY
+from wazo_provd.persist.common import InvalidIdError as PersistInvalidIdError
+from wazo_provd.persist.common import NonDeletableError as PersistNonDeletableError
+from wazo_provd.plugins import PluginManager, PluginNotLoadedError
+from wazo_provd.rest.server import auth
+from wazo_provd.rest.server.helpers.tenants import Tenant, Tokens
+from wazo_provd.services import (
     InvalidParameterError,
     JsonConfigPersister,
     PersistentConfigurationServiceDecorator,
 )
-from provd.synchro import DeferredRWLock
-from provd.util import decode_bytes
+from wazo_provd.synchro import DeferredRWLock
+from wazo_provd.util import decode_bytes
 
 from .devices.schemas import (
     BaseDeviceDict,

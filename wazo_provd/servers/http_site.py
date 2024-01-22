@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """This module add support to returning Deferred in Resource getChild/getChildWithDefault.
@@ -16,10 +16,10 @@ from twisted.web import http, resource, server
 from twisted.web.error import UnsupportedMethod
 from twisted.web.resource import _computeAllowedMethods
 
-from provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
-from provd.rest.server import auth
-from provd.rest.server.helpers.tenants import Tenant, Tokens, tenant_helpers
-from provd.util import decode_bytes
+from wazo_provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
+from wazo_provd.rest.server import auth
+from wazo_provd.rest.server.helpers.tenants import Tenant, Tokens, tenant_helpers
+from wazo_provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)
 

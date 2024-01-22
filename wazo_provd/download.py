@@ -1,4 +1,4 @@
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Extension to the `fetchfw.download` module so that it's usable in an
@@ -10,7 +10,12 @@ from __future__ import annotations
 from twisted.internet import defer, threads
 from xivo_fetchfw import download
 
-from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS, OperationInProgress
+from wazo_provd.operation import (
+    OIP_FAIL,
+    OIP_PROGRESS,
+    OIP_SUCCESS,
+    OperationInProgress,
+)
 
 
 def async_download(remote_file, supp_hooks=None):

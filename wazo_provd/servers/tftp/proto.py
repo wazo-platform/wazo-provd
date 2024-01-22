@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, BinaryIO, Callable, Union
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
-from provd.servers.tftp.connection import RFC1350Connection, RFC2347Connection
-from provd.servers.tftp.packet import (
+from wazo_provd.servers.tftp.connection import RFC1350Connection, RFC2347Connection
+from wazo_provd.servers.tftp.packet import (
     ERR_UNDEF,
     OP_RRQ,
     OP_WRQ,
@@ -20,7 +20,7 @@ from provd.servers.tftp.packet import (
     oack_packet,
     parse_dgram,
 )
-from provd.util import encode_bytes
+from wazo_provd.util import encode_bytes
 
 if TYPE_CHECKING:
     from ...devices.ident import DevTFTPRequest, TFTPRequestProcessingService

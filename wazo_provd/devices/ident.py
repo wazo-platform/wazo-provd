@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
@@ -19,14 +19,14 @@ from twisted.web import rewrite
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import ErrorPage, NoResource, Resource
 
-from provd.devices.device import copy as copy_device
-from provd.plugins import BasePluginManagerObserver, PluginManager
-from provd.security import log_security_msg
-from provd.servers.http import BaseHTTPHookService
-from provd.servers.http_site import Request
-from provd.servers.tftp.packet import ERR_UNDEF
-from provd.servers.tftp.service import TFTPNullService, TFTPRequest
-from provd.util import decode_bytes
+from wazo_provd.devices.device import copy as copy_device
+from wazo_provd.plugins import BasePluginManagerObserver, PluginManager
+from wazo_provd.security import log_security_msg
+from wazo_provd.servers.http import BaseHTTPHookService
+from wazo_provd.servers.http_site import Request
+from wazo_provd.servers.tftp.packet import ERR_UNDEF
+from wazo_provd.servers.tftp.service import TFTPNullService, TFTPRequest
+from wazo_provd.util import decode_bytes
 
 if TYPE_CHECKING:
     from ..main import ProvisioningApplication

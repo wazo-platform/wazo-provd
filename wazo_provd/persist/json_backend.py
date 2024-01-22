@@ -1,4 +1,4 @@
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from collections.abc import Generator
 from copy import deepcopy
 from typing import Any, Literal
 
-from provd.persist.common import (
+from wazo_provd.persist.common import (
     AbstractBackend,
     AbstractDatabase,
     AbstractDatabaseFactory,
 )
-from provd.persist.id import GeneratorFactory, get_id_generator_factory
-from provd.persist.util import (
+from wazo_provd.persist.id import GeneratorFactory, get_id_generator_factory
+from wazo_provd.persist.util import (
     SimpleBackendDocumentCollection,
     new_backend_based_collection,
 )

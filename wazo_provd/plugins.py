@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -38,13 +38,18 @@ from xivo_fetchfw.storage import (
     DefaultRemoteFileBuilder,
 )
 
-from provd import phonebook, phoned_users
-from provd.download import OperationInProgressHook, async_download_with_oip
-from provd.loaders import ProvdFileSystemLoader
-from provd.localization import get_locale_and_language
-from provd.operation import OIP_FAIL, OIP_PROGRESS, OIP_SUCCESS, OperationInProgress
-from provd.proxy import DynProxyHandler
-from provd.services import (
+from wazo_provd import phonebook, phoned_users
+from wazo_provd.download import OperationInProgressHook, async_download_with_oip
+from wazo_provd.loaders import ProvdFileSystemLoader
+from wazo_provd.localization import get_locale_and_language
+from wazo_provd.operation import (
+    OIP_FAIL,
+    OIP_PROGRESS,
+    OIP_SUCCESS,
+    OperationInProgress,
+)
+from wazo_provd.proxy import DynProxyHandler
+from wazo_provd.services import (
     AbstractConfigurationService,
     AbstractInstallationService,
     InvalidParameterError,

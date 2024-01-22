@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Low-level functions to manipulate packets and datagrams.
@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TypedDict, Union
 
-from provd.app import logger
+from wazo_provd.app import logger
 
 PacketOptions = dict[bytes, Union[bytes, int]]
 

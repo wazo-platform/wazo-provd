@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """HTTP service definition module.
@@ -57,7 +57,7 @@ class HTTPAsyncHookService(BaseHTTPHookService):
     value, since this value is going to be ignored.
 
     IT CAN ONLY BE USED WITH A NON STANDARD IMPLEMENTATION OF SITE (see
-    provd.servers.http_site.Site).
+    wazo_provd.servers.http_site.Site).
 
     """
 

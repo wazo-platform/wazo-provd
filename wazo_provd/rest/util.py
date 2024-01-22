@@ -1,8 +1,8 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
-from provd.util import decode_bytes
+from wazo_provd.util import decode_bytes
 
 PROV_MIME_TYPE = 'application/vnd.proformatique.provd+json'
 

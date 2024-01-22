@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2019-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 from xivo import tenant_helpers
 from xivo.tenant_helpers import InvalidTenant, InvalidToken, UnauthorizedTenant
 
-from provd.util import decode_bytes
+from wazo_provd.util import decode_bytes
 
 if TYPE_CHECKING:
-    from provd.servers.http_site import Request
+    from wazo_provd.servers.http_site import Request
 
 
 class Tenant(tenant_helpers.Tenant):

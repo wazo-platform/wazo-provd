@@ -1,4 +1,4 @@
-# Copyright 2014-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2014-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from collections.abc import Generator
 from unittest.mock import Mock
@@ -7,7 +7,7 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
 
-from provd import synchronize
+from wazo_provd import synchronize
 
 
 class TestStandardSipSynchronize(unittest.TestCase):

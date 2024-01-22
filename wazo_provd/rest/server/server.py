@@ -1,4 +1,4 @@
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -26,32 +26,32 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
 from xivo.tenant_helpers import UnauthorizedTenant
 
-from provd.app import (
+from wazo_provd.app import (
     DeviceNotInProvdTenantError,
     InvalidIdError,
     NonDeletableError,
     ProvisioningApplication,
     TenantInvalidForDeviceError,
 )
-from provd.localization import get_locale_and_language
-from provd.operation import (
+from wazo_provd.localization import get_locale_and_language
+from wazo_provd.operation import (
     OperationInProgress,
     format_oip,
     operation_in_progres_from_deferred,
 )
-from provd.persist.common import ID_KEY
-from provd.plugins import BasePluginManagerObserver, PluginManager
-from provd.rest.server.util import accept_mime_type, numeric_id_generator
-from provd.rest.util import PROV_MIME_TYPE, uri_append_path
-from provd.servers.http_site import AuthResource, Request
-from provd.services import InvalidParameterError
-from provd.status import get_status_aggregator
-from provd.util import decode_bytes, decode_value, norm_ip, norm_mac
+from wazo_provd.persist.common import ID_KEY
+from wazo_provd.plugins import BasePluginManagerObserver, PluginManager
+from wazo_provd.rest.server.util import accept_mime_type, numeric_id_generator
+from wazo_provd.rest.util import PROV_MIME_TYPE, uri_append_path
+from wazo_provd.servers.http_site import AuthResource, Request
+from wazo_provd.services import InvalidParameterError
+from wazo_provd.status import get_status_aggregator
+from wazo_provd.util import decode_bytes, decode_value, norm_ip, norm_mac
 
 from .auth import get_auth_verifier, required_acl
 
 if TYPE_CHECKING:
-    from provd.devices.ident import DHCPRequest, DHCPRequestProcessingService
+    from wazo_provd.devices.ident import DHCPRequest, DHCPRequestProcessingService
 
 R = TypeVar('R')
 
