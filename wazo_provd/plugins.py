@@ -38,6 +38,7 @@ from xivo_fetchfw.storage import (
     DefaultRemoteFileBuilder,
 )
 
+from provd.abstract_plugin import AbstractPlugin as LegacyImportPlugin
 from wazo_provd import phonebook, phoned_users
 from wazo_provd.download import OperationInProgressHook, async_download_with_oip
 from wazo_provd.loaders import ProvdFileSystemLoader
@@ -54,6 +55,8 @@ from wazo_provd.services import (
     AbstractInstallationService,
     InvalidParameterError,
 )
+
+from .abstract_plugin import AbstractPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +131,7 @@ def _new_localize_fun() -> Callable[[dict[str, Any]], None]:
     return set_lang_description
 
 
-class Plugin(metaclass=ABCMeta):
+class Plugin(AbstractPlugin):
     """Base class and entry point of every plugin.
 
     Here's some guideline every plugin should follow:
@@ -1180,7 +1183,7 @@ class PluginManager:
         # return true if obj is a plugin class with IS_PLUGIN true
         return (
             isinstance(obj, type)
-            and issubclass(obj, Plugin)
+            and (issubclass(obj, Plugin) or issubclass(obj, LegacyImportPlugin))
             and getattr(obj, 'IS_PLUGIN', None)
         )
 

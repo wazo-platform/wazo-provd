@@ -10,8 +10,11 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install
 ADD . /usr/src/wazo-provd
 WORKDIR /usr/src/wazo-provd
-RUN pip install -r requirements.txt && \
-    python setup.py install
+RUN pip install -r requirements.txt
+RUN python setup.py install
+
+# Install compatibility module for old plugins
+RUN cp -r provd /opt/venv/lib/python3.9/site-packages/provd
 
 FROM python:3.9-slim-bullseye AS build-image
 COPY --from=compile-image /opt/venv /opt/venv
