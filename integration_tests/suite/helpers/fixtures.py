@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from wazo_provd.devices.schemas import BaseDeviceDict, ConfigDict
 
 PLUGIN_TO_INSTALL = 'test-plugin'
+LEGACY_PLUGIN_TO_INSTALL = 'test-plugin-legacy-import'
 
 
 class Device:

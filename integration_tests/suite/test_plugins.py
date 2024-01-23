@@ -1,4 +1,4 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import assert_that, calling, has_key, has_properties, not_
@@ -8,7 +8,7 @@ from wazo_test_helpers.hamcrest.raises import raises
 
 from .helpers import fixtures
 from .helpers.base import INVALID_TOKEN, BaseIntegrationTest
-from .helpers.fixtures import PLUGIN_TO_INSTALL
+from .helpers.fixtures import LEGACY_PLUGIN_TO_INSTALL, PLUGIN_TO_INSTALL
 from .helpers.operation import operation_successful
 from .helpers.wait_strategy import NoWaitStrategy
 
@@ -179,3 +179,30 @@ class TestPlugins(BaseIntegrationTest):
                 ),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
             )
+
+
+class TestPluginsLegacy(BaseIntegrationTest):
+    asset = 'base'
+    wait_strategy = NoWaitStrategy()
+
+    def test_install_with_legacy_import(self) -> None:
+        # Legacy plugin use module "provd" instead of "wazo_provd"
+        with self._client.plugins.update() as operation_progress:
+            until.assert_(
+                operation_successful,
+                operation_progress,
+                tries=20,
+                interval=0.5,
+            )
+
+        with self._client.plugins.install(
+            LEGACY_PLUGIN_TO_INSTALL
+        ) as operation_progress:
+            until.assert_(
+                operation_successful,
+                operation_progress,
+                tries=20,
+                interval=0.5,
+            )
+
+        self._client.plugins.uninstall(LEGACY_PLUGIN_TO_INSTALL)
