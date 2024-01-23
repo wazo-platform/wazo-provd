@@ -219,7 +219,7 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
 RawConfigSchema = create_model_from_typeddict(
     RawConfigDict,
     {
-        "ip": Field(...),
+        "ip": Field(),
         "funckeys": Field(default_factory=dict),
         "locale": Field(regex=r'[a-z]{2}_[A-Z]{2}'),
         "syslog_port": Field(514),

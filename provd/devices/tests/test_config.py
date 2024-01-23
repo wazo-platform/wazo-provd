@@ -50,7 +50,6 @@ def test_raw_config_schema_missing_values() -> None:
     error = exc_trace.value
     assert isinstance(error, ValidationError)
     assert error.errors() == [
-        {'loc': ('ip',), 'msg': 'field required', 'type': 'value_error.missing'},
         {
             'loc': ('sip_lines', '1', 'password'),
             'msg': 'field required',
