@@ -38,6 +38,6 @@ services:
   pluginserver:
     image: trinitronx/python-simplehttpserver
     volumes:
-      - "./provd/plugins/pkgs:/var/www"
+      - "./plugins/pkgs:/var/www"
     ports:
       - "8080"
