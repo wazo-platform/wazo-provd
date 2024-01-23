@@ -61,11 +61,6 @@ def test_raw_config_schema_missing_values() -> None:
             'msg': 'field required',
             'type': 'value_error.missing',
         },
-        {
-            'loc': ('__root__',),
-            'msg': 'You must define either `tftp_port` or `http_port`.',
-            'type': 'value_error',
-        },
     ]
 
 
@@ -118,11 +113,6 @@ def test_raw_config_invalid() -> None:
         {
             'loc': ('funckeys', 'alpha', '__root__'),
             'msg': 'Value is required for BLF and Speed Dial types.',
-            'type': 'value_error',
-        },
-        {
-            'loc': ('__root__',),
-            'msg': 'You must define either `tftp_port` or `http_port`.',
             'type': 'value_error',
         },
     ]

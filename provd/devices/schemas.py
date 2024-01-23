@@ -199,9 +199,6 @@ def validate_numeric_keys(
 
 @root_validator(allow_reuse=True)
 def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, Any]:
-    if not values.get('tft_port') and not values.get('http_port'):
-        raise ValueError('You must define either `tftp_port` or `http_port`.')
-
     required_if_enabled = (
         ('dns', 'ip'),
         ('ntp', 'ip'),
