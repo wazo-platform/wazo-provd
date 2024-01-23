@@ -199,9 +199,6 @@ def validate_numeric_keys(
 
 @root_validator(allow_reuse=True)
 def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, Any]:
-    if not values.get('tft_port') and not values.get('http_port'):
-        raise ValueError('You must define either `tftp_port` or `http_port`.')
-
     required_if_enabled = (
         ('dns', 'ip'),
         ('ntp', 'ip'),
@@ -222,7 +219,7 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
 RawConfigSchema = create_model_from_typeddict(
     RawConfigDict,
     {
-        "ip": Field(...),
+        "ip": Field(),
         "funckeys": Field(default_factory=dict),
         "locale": Field(regex=r'[a-z]{2}_[A-Z]{2}'),
         "syslog_port": Field(514),
