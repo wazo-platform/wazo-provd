@@ -677,7 +677,7 @@ class ConfigCollection(ForwardingDocumentCollection):
         def aux(cur_id: str) -> None:
             if cur_id in self._child_idx:
                 for child_id in self._child_idx[cur_id]:
-                    if child_id not in visited:
+                    if child_id and child_id not in visited:
                         visited.add(child_id)
                         aux(child_id)
 
