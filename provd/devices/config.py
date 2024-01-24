@@ -677,7 +677,7 @@ class ConfigCollection(ForwardingDocumentCollection):
         def aux(cur_id: str) -> None:
             if cur_id in self._child_idx:
                 for child_id in self._child_idx[cur_id]:
-                    if child_id not in visited:
+                    if child_id and child_id not in visited:
                         visited.add(child_id)
                         aux(child_id)
 
@@ -724,7 +724,7 @@ def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
     except KeyError:
         return None
 
-    config_id = config['id']
+    config_id = config['id'] or ''
     new_suffix = str(uuid.uuid4())
     full_config: ConfigDict = {
         'id': config_id + new_suffix,

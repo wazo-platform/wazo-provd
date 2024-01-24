@@ -69,25 +69,17 @@ class SipLineDict(TypedDict):
     backup_registrar_port: Union[int, None]
     outbound_proxy_ip: Union[str, None]
     outbound_proxy_port: Union[int, None]
-    username: str
-    password: str
+    username: Union[str, None]
+    password: Union[str, None]
     auth_username: Union[str, None]
-    display_name: str
+    display_name: Union[str, None]
     number: Union[str, None]
     dtmf_mode: Union[DtmfMode, None]
     srtp_mode: Union[SrtpMode, None]
     voicemail: Union[str, None]
 
 
-SipLineSchema = create_model_from_typeddict(
-    SipLineDict,
-    {
-        "username": Field(...),
-        "password": Field(...),
-        "display_name": Field(...),
-    },
-    config=SchemaConfig,
-)
+SipLineSchema = create_model_from_typeddict(SipLineDict, config=SchemaConfig)
 
 
 class CallManagerDict(TypedDict):
@@ -179,6 +171,9 @@ class RawConfigDict(TypedDict):
     exten_voicemail: Union[str, None]
     funckeys: FuncKeyDict
     X_xivo_phonebook_ip: Union[str, None]
+    config_version: Union[
+        int, None
+    ]  # NOTE(afournier): this variable is unused. See WAZO-3619
 
 
 @validator('timezone', allow_reuse=True)
@@ -247,7 +242,7 @@ RawConfigSchema = create_model_from_typeddict(
 
 
 class BaseConfigDict(TypedDict):
-    id: str
+    id: Union[str, None]
     parent_ids: list[str]
     raw_config: RawConfigDict
 
@@ -261,7 +256,7 @@ class ConfigDict(BaseConfigDict, total=False):
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
-        "id": Field(...),
+        "id": Field(),
         "parent_ids": Field(...),
         "raw_config": Field(...),
     },
