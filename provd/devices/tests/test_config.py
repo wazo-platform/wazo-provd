@@ -29,7 +29,6 @@ def test_config_schema_empty() -> None:
     error = exc_trace.value
     assert isinstance(error, ValidationError)
     assert error.errors() == [
-        {'loc': ('id',), 'msg': 'field required', 'type': 'value_error.missing'},
         {
             'loc': ('parent_ids',),
             'msg': 'field required',

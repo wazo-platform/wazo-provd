@@ -247,7 +247,7 @@ RawConfigSchema = create_model_from_typeddict(
 
 
 class BaseConfigDict(TypedDict):
-    id: str
+    id: Union[str, None]
     parent_ids: list[str]
     raw_config: RawConfigDict
 
@@ -261,7 +261,7 @@ class ConfigDict(BaseConfigDict, total=False):
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
-        "id": Field(...),
+        "id": Field(),
         "parent_ids": Field(...),
         "raw_config": Field(...),
     },
