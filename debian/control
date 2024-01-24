@@ -1,6 +1,6 @@
 Source: wazo-provd
 Section: python
-Priority: extra
+Priority: optional
 Maintainer: Wazo Maintainers <dev@wazo.community>
 Build-Depends: debhelper (>= 10), dh-python, python3-all, python3-setuptools
 Standards-Version: 3.9.6
@@ -8,9 +8,6 @@ X-Python3-Version: >= 3.9
 
 Package: wazo-provd
 Architecture: all
-Provides: xivo-provd, xivo-libprovd
-Conflicts: xivo-provd, xivo-libprovd
-Replaces: xivo-provd, xivo-libprovd
 Pre-Depends: ${misc:Pre-Depends}
 Depends:
     ${python3:Depends},
@@ -21,7 +18,6 @@ Depends:
     python3-openssl,
     python3-pydantic,
     python3-twisted,
-    rename,
     unar,
     unrar-free,
     unzip,
