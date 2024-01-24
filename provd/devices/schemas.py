@@ -171,6 +171,9 @@ class RawConfigDict(TypedDict):
     exten_voicemail: Union[str, None]
     funckeys: FuncKeyDict
     X_xivo_phonebook_ip: Union[str, None]
+    config_version: Union[
+        int, None
+    ]  # NOTE(afournier): this variable is unused. See WAZO-3619
 
 
 @validator('timezone', allow_reuse=True)
