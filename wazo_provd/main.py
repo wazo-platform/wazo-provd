@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from twisted.application import internet
 from twisted.application.service import IServiceMaker, MultiService, Service
+from twisted.enterprise import adbapi
 from twisted.internet import defer, reactor, ssl, task
 from twisted.internet.defer import Deferred
 from twisted.plugin import IPlugin
@@ -27,6 +28,8 @@ import wazo_provd.localization
 import wazo_provd.synchronize
 from wazo_provd import security, status
 from wazo_provd.app import ProvisioningApplication
+from wazo_provd.config import Options
+from wazo_provd.database import helpers
 from wazo_provd.devices import ident, pgasso
 from wazo_provd.devices.config import ConfigCollection
 from wazo_provd.devices.device import DeviceCollection
@@ -38,7 +41,7 @@ from wazo_provd.servers.http_site import AuthResource, Site
 from wazo_provd.servers.tftp.proto import TFTPProtocol
 
 if TYPE_CHECKING:
-    from .config import BusConfigDict, Options, ProvdConfigDict
+    from .config import BusConfigDict, ProvdConfigDict
     from .persist.common import AbstractDatabase
 
 
@@ -94,8 +97,15 @@ class ProvisioningService(Service):
             logger.error('Error while closing database', exc_info=True)
         logger.info('/Database closed')
 
+    def _create_sql_database(self) -> adbapi.ConnectionPool:
+        db_uri = self._config['database']['uri']
+        pool_size = self._config['database']['pool_size']
+        return helpers.init_db(db_uri, pool_size=pool_size)
+
     def startService(self) -> None:
         self._database = self._create_database()
+        self._sql_database = self._create_sql_database()
+
         try:
             cfg_collection = ConfigCollection(self._database.collection('configs'))
             dev_collection = DeviceCollection(self._database.collection('devices'))
