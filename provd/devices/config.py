@@ -724,7 +724,7 @@ def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
     except KeyError:
         return None
 
-    config_id = config['id']
+    config_id = config['id'] or ''
     new_suffix = str(uuid.uuid4())
     full_config: ConfigDict = {
         'id': config_id + new_suffix,

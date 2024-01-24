@@ -69,25 +69,17 @@ class SipLineDict(TypedDict):
     backup_registrar_port: Union[int, None]
     outbound_proxy_ip: Union[str, None]
     outbound_proxy_port: Union[int, None]
-    username: str
-    password: str
+    username: Union[str, None]
+    password: Union[str, None]
     auth_username: Union[str, None]
-    display_name: str
+    display_name: Union[str, None]
     number: Union[str, None]
     dtmf_mode: Union[DtmfMode, None]
     srtp_mode: Union[SrtpMode, None]
     voicemail: Union[str, None]
 
 
-SipLineSchema = create_model_from_typeddict(
-    SipLineDict,
-    {
-        "username": Field(...),
-        "password": Field(...),
-        "display_name": Field(...),
-    },
-    config=SchemaConfig,
-)
+SipLineSchema = create_model_from_typeddict(SipLineDict, config=SchemaConfig)
 
 
 class CallManagerDict(TypedDict):

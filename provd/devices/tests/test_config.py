@@ -42,26 +42,6 @@ def test_config_schema_empty() -> None:
     ]
 
 
-def test_raw_config_schema_missing_values() -> None:
-    with pytest.raises(ValidationError) as exc_trace:
-        RawConfigSchema(sip_lines={'1': {'username': 'test_username'}})
-
-    error = exc_trace.value
-    assert isinstance(error, ValidationError)
-    assert error.errors() == [
-        {
-            'loc': ('sip_lines', '1', 'password'),
-            'msg': 'field required',
-            'type': 'value_error.missing',
-        },
-        {
-            'loc': ('sip_lines', '1', 'display_name'),
-            'msg': 'field required',
-            'type': 'value_error.missing',
-        },
-    ]
-
-
 def test_raw_config_valid() -> None:
     sip_line_1 = {
         'username': 'test_username',
