@@ -1,9 +1,7 @@
 #!/usr/bin/make -f
 
+export PYBUILD_NAME=wazo-provd
 export PYBUILD_DISABLE=test
 
 %:
-	dh $@ --with python3,systemd --buildsystem=pybuild
-
-override_dh_installinit:
-	dh_installinit --noscripts
+	dh $@ --with python3 --buildsystem=pybuild
