@@ -9,7 +9,7 @@ RUN true \
     && python3 setup.py install \
     && pg_start \
     && wazo-provd-init-db --user postgres --pg_db_uri postgresql:///postgres --provd_db_uri postgresql:///wazo-provd --db wazo-provd --owner wazo-provd --password Secr7t \
-    && (cd /usr/src/wazo-provd && python3 -m alembic.config -c provd/database/alembic.ini upgrade head) \
+    && (cd /usr/src/wazo-provd && python3 -m alembic.config -c wazo_provd/database/alembic.ini upgrade head) \
     && pg_stop \
     && true
 USER postgres
