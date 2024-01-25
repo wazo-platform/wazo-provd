@@ -19,7 +19,7 @@ skip-string-normalization = true
 [tool.flake8]
 show-source = true
 max-line-length = 99
-application-import-names = "provd"
+application-import-names = "wazo_provd"
 ignore = [
   "E203", # whitespace before ':'
   "W503", # line break before binary operator
