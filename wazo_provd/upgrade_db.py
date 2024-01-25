@@ -8,8 +8,8 @@ import alembic.command
 import alembic.config
 from sqlalchemy import create_engine
 
-import provd.config
-from provd.database.helpers import wait_is_ready
+import wazo_provd.config
+from wazo_provd.database.helpers import wait_is_ready
 
 logger = logging.getLogger(__name__)
 
@@ -29,5 +29,5 @@ def upgrade(uri: str) -> None:
 
 
 def upgrade_db() -> None:
-    conf = provd.config.get_config(provd.config.Options())
+    conf = wazo_provd.config.get_config(wazo_provd.config.Options())
     upgrade(conf['database']['uri'])
