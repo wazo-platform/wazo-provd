@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2008-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2008-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from setuptools import find_packages, setup
@@ -14,7 +14,7 @@ setup(
     license='GPLv3',
     packages=find_packages(exclude=['*.tests']) + ['twisted', 'twisted.plugins'],
     package_data={
-        'provd': ['tzinform/tzdatax', 'rest/api/api.yml'],
+        'wazo_provd': ['tzinform/tzdatax', 'rest/api/api.yml'],
         'twisted': ['.noinit'],
         'twisted.plugins': ['provd_plugins.py', '.noinit'],
     },
