@@ -205,8 +205,13 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
             raise ValueError(f'Field `{name}_{field}` is required if {name} is enabled')
 
     custom_fields = set(values) - {field.alias for field in cls.__fields__.values()}
-    if any(not custom_field.startswith('X_') for custom_field in custom_fields):
-        raise ValueError('Custom fields must start with `X_`')
+    invalid_custom_fields = [
+        custom_field
+        for custom_field in custom_fields
+        if not custom_field.startswith('X_')
+    ]
+    if any(invalid_custom_fields):
+        raise ValueError('Custom fields must start with `X_`', invalid_custom_fields)
 
     return values
 
