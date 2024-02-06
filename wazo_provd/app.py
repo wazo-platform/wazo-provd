@@ -166,8 +166,7 @@ def _check_raw_config_validity(raw_config: RawConfigDict) -> None:
 def _set_defaults_raw_config(raw_config: RawConfigDict) -> None:
     if raw_config.get('syslog_enabled'):
         raw_config.setdefault('syslog_port', 514)
-        # Isn't this syslog_level?
-        raw_config.setdefault('level', 'warning')  # type: ignore[typeddict-item]
+        raw_config.setdefault('syslog_level', 'warning')  # type: ignore[typeddict-item]
     if 'sip_proxy_ip' in raw_config:
         raw_config.setdefault('sip_registrar_ip', raw_config['sip_proxy_ip'])
     raw_config.setdefault('sip_srtp_mode', 'disabled')  # type: ignore[typeddict-item]
