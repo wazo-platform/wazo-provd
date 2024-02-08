@@ -916,8 +916,7 @@ class DevicesResource(AuthResource):
 
         recurse = self._extract_recurse(request)
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
-        find_arguments['selector']['tenant_uuid'] = {'$in': tenant_uuids}
-        d = self._app.dev_find(**find_arguments)
+        d = self._app.dev_find(**find_arguments, tenant_uuids=tenant_uuids)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
@@ -970,9 +969,7 @@ class DeviceResource(AuthResource):
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
-        d = self._app.dev_find_one(
-            {'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}}
-        )
+        d = self._app.dev_get(self.device_id, tenant_uuids=tenant_uuids)
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
