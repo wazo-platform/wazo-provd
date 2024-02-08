@@ -575,11 +575,22 @@ class ProvisioningApplication:
         """
         return self._dev_collection.retrieve(device_id)
 
-    def dev_find(self, selector, *args, **kwargs):
+    def dev_find(
+        self, selector, tenant_uuids: list[str] | None = None, *args, **kwargs
+    ) -> Deferred:
+        if tenant_uuids is not None:
+            selector['tenant_uuid'] = {'$in': tenant_uuids}
         return self._dev_collection.find(selector, *args, **kwargs)
 
     def dev_find_one(self, selector, *args, **kwargs):
         return self._dev_collection.find_one(selector, *args, **kwargs)
+
+    def dev_get(
+        self, device_id: str, tenant_uuids: list[str] | None = None
+    ) -> Deferred:
+        return self._dev_collection.find_one(
+            {'id': device_id, 'tenant_uuid': {'$in': tenant_uuids}}
+        )
 
     @_wlock
     @defer.inlineCallbacks
