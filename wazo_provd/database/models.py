@@ -12,6 +12,8 @@ from typing import Any
 from psycopg2 import sql
 from twisted.enterprise import adbapi
 
+from .exceptions import CreationError
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +66,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
         for result in query_result:
             res = await self.get(result[model_pkey])
             return res
-        raise Exception('Could not create entry')  # XXX change this exception
+        raise CreationError('Could not create entry')
 
     def _prepare_get_query(self) -> sql.SQL:
         fields = self._get_model_fields()
