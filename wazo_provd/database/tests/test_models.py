@@ -107,3 +107,22 @@ class TestTenantDAO:
             ]
         )
         assert tenant_dao._prepare_delete_query() == expected_composed_query
+
+    def test_find_all_query(self):
+        tenant_dao = TenantDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('provisioning_key'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_tenant'),
+                sql.SQL(';'),
+            ]
+        )
+        assert tenant_dao._prepare_find_all_query() == expected_composed_query
