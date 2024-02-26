@@ -103,6 +103,14 @@ class ProvisioningService(Service):
         pool_size = self._config['database']['pool_size']
         return helpers.init_db(db_uri, pool_size=pool_size)
 
+    def _close_sql_database(self) -> None:
+        logger.info('Closing SQL database...')
+        try:
+            self._sql_database.close()
+        except Exception:
+            logger.error('Error while closing SQL database', exc_info=True)
+        logger.info('/SQL database closed')
+
     def startService(self) -> None:
         self._database = self._create_database()
         self._sql_database = self._create_sql_database()
@@ -131,6 +139,7 @@ class ProvisioningService(Service):
                 raise
             finally:
                 self._close_database()
+                self._close_sql_database()
         else:
             Service.startService(self)
 
@@ -143,6 +152,7 @@ class ProvisioningService(Service):
                 'An error occurred whilst stopping the application', exc_info=True
             )
         self._close_database()
+        self._close_sql_database()
 
 
 class ProcessService(Service):
