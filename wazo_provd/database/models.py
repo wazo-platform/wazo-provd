@@ -146,3 +146,20 @@ class Tenant(Model):
 class TenantDAO(BaseDAO):
     __tablename__ = 'provd_tenant'
     __model__ = Tenant
+
+    def _prepare_find_all_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL('SELECT {fields} FROM {table};').format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+        )
+
+        return sql_query
+
+    async def find_all(self) -> list[Tenant]:
+        query = self._prepare_find_all_query()
+        results = await self._db_connection.runQuery(query)
+        return [self.__model__(*result) for result in results]
