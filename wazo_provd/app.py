@@ -54,6 +54,9 @@ from .devices.schemas import (
 if TYPE_CHECKING:
     from typing import Concatenate, ParamSpec, TypeVar
 
+    from wazo_provd.database.models import Tenant as TenantModel
+    from wazo_provd.database.queries import TenantDAO
+
     from .config import ProvdConfigDict
 
     P = ParamSpec('P')
@@ -206,10 +209,12 @@ class ProvisioningApplication:
         self,
         cfg_collection: ConfigCollection,
         dev_collection: DeviceCollection,
+        tenant_dao: TenantDAO,
         config: ProvdConfigDict,
     ) -> None:
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
+        self._tenant_dao = tenant_dao
         self._split_config: ProvdConfigDict = config
         self._token: str | None = None
         self._tenant_uuid: str | None = None
@@ -219,7 +224,9 @@ class ProvisioningApplication:
 
         self.proxies = self._split_config.get('proxy', {})
         self.nat: int = 0
-        self.tenants: dict[str, dict] = self._split_config.get('tenants', {})
+        self.tenants: dict[str, dict] = {}
+        load_tenant_d = defer.ensureDeferred(self._tenant_dao.find_all())
+        load_tenant_d.addCallback(self._load_tenants)
         self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
             'general'
         ].get('http_auth_strategy')
@@ -277,6 +284,12 @@ class ProvisioningApplication:
         self, tenant_uuid: str, config: dict[str, Any]
     ) -> None:
         self.tenants[tenant_uuid] = config
+
+    def _load_tenants(self, tenants: list[TenantModel]) -> None:
+        for tenant in tenants:
+            tenant_conf = tenant.as_dict()
+            del tenant_conf[tenant._meta['primary_key']]
+            self.set_tenant_configuration(tenant.uuid, tenant_conf)
 
     # device methods
 
