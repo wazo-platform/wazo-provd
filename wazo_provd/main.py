@@ -29,7 +29,7 @@ import wazo_provd.synchronize
 from wazo_provd import security, status
 from wazo_provd.app import ProvisioningApplication
 from wazo_provd.config import Options
-from wazo_provd.database import helpers
+from wazo_provd.database import helpers, queries
 from wazo_provd.devices import ident, pgasso
 from wazo_provd.devices.config import ConfigCollection
 from wazo_provd.devices.device import DeviceCollection
@@ -117,6 +117,7 @@ class ProvisioningService(Service):
         try:
             cfg_collection = ConfigCollection(self._database.collection('configs'))
             dev_collection = DeviceCollection(self._database.collection('devices'))
+            tenant_dao = queries.TenantDAO(self._sql_database)
             if self._config['database']['ensure_common_indexes']:
                 logger.debug('Ensuring index existence on collections')
                 try:
@@ -128,7 +129,7 @@ class ProvisioningService(Service):
                         'This type of database doesn\'t seem to support index: %s', e
                     )
             self.app = ProvisioningApplication(
-                cfg_collection, dev_collection, self._config
+                cfg_collection, dev_collection, tenant_dao, self._config
             )
         except Exception as e:
             try:
