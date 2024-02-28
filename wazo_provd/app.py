@@ -7,6 +7,7 @@ import functools
 import logging
 import os.path
 import re
+import traceback
 from collections.abc import Callable, Generator
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal, Union
@@ -53,6 +54,8 @@ from .devices.schemas import (
 
 if TYPE_CHECKING:
     from typing import Concatenate, ParamSpec, TypeVar
+
+    from twisted.python import failure
 
     from wazo_provd.database.models import Tenant as TenantModel
     from wazo_provd.database.queries import TenantDAO
@@ -227,6 +230,8 @@ class ProvisioningApplication:
         self.tenants: dict[str, dict] = {}
         load_tenant_d = defer.ensureDeferred(self._tenant_dao.find_all())
         load_tenant_d.addCallback(self._load_tenants)
+        load_tenant_d.addErrback(self._handle_error)
+
         self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
             'general'
         ].get('http_auth_strategy')
@@ -286,10 +291,17 @@ class ProvisioningApplication:
         self.tenants[tenant_uuid] = config
 
     def _load_tenants(self, tenants: list[TenantModel]) -> None:
+        logger.debug('Loading tenants: %s', tenants)
         for tenant in tenants:
             tenant_conf = tenant.as_dict()
             del tenant_conf[tenant._meta['primary_key']]
             self.set_tenant_configuration(tenant.uuid, tenant_conf)
+
+    def _handle_error(self, fail: failure.Failure) -> failure.Failure:
+        tb = fail.getTracebackObject()
+        exc_formatted = ''.join(traceback.format_exception(None, fail.value, tb))
+        logger.error('Error while loading tenants:\n%s', exc_formatted)
+        return fail
 
     # device methods
 
