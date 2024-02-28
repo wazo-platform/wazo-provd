@@ -4,19 +4,18 @@
 from __future__ import annotations
 
 import abc
+import dataclasses
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from psycopg2 import sql
 from twisted.enterprise import adbapi
 
 from .exceptions import CreationError
+from .models import Tenant
 
 if TYPE_CHECKING:
-    import dataclasses
-    from typing import Any
-
-    from .models import Model, Tenant
+    from .models import Model
 
 
 class BaseDAO(metaclass=abc.ABCMeta):
