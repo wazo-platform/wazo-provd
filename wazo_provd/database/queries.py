@@ -29,7 +29,6 @@ class BaseDAO(metaclass=abc.ABCMeta):
         self, exclude: list[str] | None = None
     ) -> list[dataclasses.Field]:
         exclude = exclude or []
-        exclude.append('_meta')
         fields = dataclasses.fields(self.__model__)
         return [field for field in fields if field.name not in exclude]
 
