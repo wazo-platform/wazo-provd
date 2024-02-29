@@ -6,7 +6,7 @@ from __future__ import annotations
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -16,11 +16,10 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class Model(metaclass=abc.ABCMeta):
-    _meta: dict[str, Any]
+    _meta: ClassVar[dict[str, Any]]
 
     def as_dict(self) -> dict[str, Any]:
         self_dict = dataclasses.asdict(self)
-        del self_dict['_meta']
         return self_dict
 
 
