@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING, Any
 
 import psycopg2.extras
 from psycopg2 import sql
-from twisted.enterprise import adbapi
 
 from .exceptions import CreationError
 from .models import Tenant
 
 if TYPE_CHECKING:
+    from twisted.enterprise import adbapi
+
     from .models import Model
 
 psycopg2.extras.register_uuid()
