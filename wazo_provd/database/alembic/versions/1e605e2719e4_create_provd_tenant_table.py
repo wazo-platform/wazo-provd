@@ -7,6 +7,7 @@ Create Date: 2024-02-20 16:25:32.377455
 """
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
 revision = '1e605e2719e4'
@@ -22,7 +23,7 @@ def upgrade():
         TABLE_NAME,
         sa.Column(
             'uuid',
-            sa.String(36),
+            UUID,
             server_default=sa.text('uuid_generate_v4()'),
             primary_key=True,
         ),
