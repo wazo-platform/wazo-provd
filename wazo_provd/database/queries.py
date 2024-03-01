@@ -1,11 +1,9 @@
 # Copyright 2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
-
 from __future__ import annotations
 
 import abc
 import dataclasses
-import uuid
 from typing import TYPE_CHECKING, Any
 
 from psycopg2 import sql
@@ -56,7 +54,6 @@ class BaseDAO(metaclass=abc.ABCMeta):
         model_pkey = self.__model__._meta['primary_key']
         create_query = self._prepare_create_query()
         model_dict = dataclasses.asdict(model)
-        model_dict[model_pkey] = uuid.uuid4()
         query_result = await self._db_connection.runQuery(create_query, {**model_dict})
         for result in query_result:
             res = await self.get(result[model_pkey])
