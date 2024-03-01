@@ -21,17 +21,8 @@ TABLE_NAME = 'provd_tenant'
 def upgrade():
     op.create_table(
         TABLE_NAME,
-        sa.Column(
-            'uuid',
-            UUID,
-            server_default=sa.text('uuid_generate_v4()'),
-            primary_key=True,
-        ),
-        sa.Column(
-            'provisioning_key',
-            sa.String,
-            nullable=True,
-        ),
+        sa.Column('uuid', UUID, primary_key=True),
+        sa.Column('provisioning_key', sa.Text, nullable=True),
     )
 
 
