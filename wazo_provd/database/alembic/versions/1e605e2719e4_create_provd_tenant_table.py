@@ -1,7 +1,7 @@
 """create provd_tenant table
 
 Revision ID: 1e605e2719e4
-Revises: 8763295f8c44
+Revises:
 Create Date: 2024-02-20 16:25:32.377455
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '1e605e2719e4'
-down_revision = '8763295f8c44'
+down_revision = None
 branch_labels = None
 depends_on = None
 
