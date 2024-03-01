@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import psycopg2.extras
 from psycopg2 import sql
 
-from .exceptions import CreationError
+from .exceptions import CreationError, ItemNotFoundException
 from .models import Tenant
 
 if TYPE_CHECKING:
@@ -82,7 +82,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
         query_results = await self._db_connection.runQuery(query, [pkey_value])
         for result in query_results:
             return self.__model__(*result)
-        raise Exception('Could not get item')  # XXX change this exception
+        raise ItemNotFoundException('Could not get item')
 
     def _prepare_update_query(self) -> sql.SQL:
         model_pkey = self.__model__._meta['primary_key']
