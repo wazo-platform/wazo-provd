@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import asyncio
+import inspect
 import os
 
 from wazo_provd_client import Client as ProvdClient
@@ -12,6 +14,8 @@ from wazo_test_helpers.asset_launching_test_case import (
     NoSuchService,
     WrongClient,
 )
+
+from wazo_provd.database.queries import TenantDAO
 
 from .database import DatabaseClient
 from .wait_strategy import NoWaitStrategy, WaitStrategy
@@ -27,6 +31,15 @@ VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
 MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
 SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
 SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
+
+
+def asyncio_run(async_func):
+    def wrapper(*args, **kwargs):
+        return asyncio.run(async_func(*args, **kwargs))
+
+    # without this, fixtures are not injected
+    wrapper.__signature__ = inspect.signature(async_func)
+    return wrapper
 
 
 class _BaseIntegrationTest(AssetLaunchingTestCase):
@@ -95,3 +108,7 @@ class DBIntegrationTest(_BaseIntegrationTest):
     asset = 'database'
     service = 'postgres'
     wait_strategy: WaitStrategy = NoWaitStrategy()
+
+    def setUp(self):
+        self.db = self.make_db()
+        self.tenant_dao = TenantDAO(self.db)
