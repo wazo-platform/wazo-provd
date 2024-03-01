@@ -26,6 +26,6 @@ class Model(metaclass=abc.ABCMeta):
 @dataclasses.dataclass
 class Tenant(Model):
     uuid: UUID
-    provisioning_key: str
+    provisioning_key: str | None
 
     _meta = {'primary_key': 'uuid'}
