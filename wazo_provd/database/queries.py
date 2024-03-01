@@ -6,6 +6,7 @@ import abc
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
+import psycopg2.extras
 from psycopg2 import sql
 from twisted.enterprise import adbapi
 
@@ -14,6 +15,8 @@ from .models import Tenant
 
 if TYPE_CHECKING:
     from .models import Model
+
+psycopg2.extras.register_uuid()
 
 
 class BaseDAO(metaclass=abc.ABCMeta):
