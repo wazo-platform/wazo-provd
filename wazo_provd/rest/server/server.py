@@ -21,6 +21,7 @@ from binascii import a2b_base64
 from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from twisted.internet import defer
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
@@ -51,6 +52,8 @@ from wazo_provd.util import decode_bytes, decode_value, norm_ip, norm_mac
 from .auth import get_auth_verifier, required_acl
 
 if TYPE_CHECKING:
+    from twisted.python.failure import Failure
+
     from wazo_provd.devices.ident import DHCPRequest, DHCPRequestProcessingService
 
 R = TypeVar('R')
@@ -449,21 +452,32 @@ class ConfigureServiceResource(AuthResource):
 
     @required_acl('provd.configure.read')
     @json_response_entity
-    def render_GET(self, request: Request):
+    def render_GET(self, request: Request) -> NOT_DONE_YET:
         description_list = self._get_localized_description_list()
-        params = []
-        for key, description in description_list:
-            value = self._cfg_srv.get(key, tenant_uuid=self.tenant_uuid)
-            href = uri_append_path(request.path, key)
-            params.append(
-                {
-                    'id': key,
-                    'description': description,
-                    'value': value,
-                    'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}],
-                }
-            )
-        return json_response({'params': params})
+        all_deferreds = []
+
+        for key, _ in description_list:
+            all_deferreds.append(self._cfg_srv.get(key, tenant_uuid=self.tenant_uuid))
+
+        def set_and_return_results(values):
+            params = []
+            key_values = zip(description_list, values)
+            for (key, description), value in key_values:
+                href = uri_append_path(request.path, key)
+                params.append(
+                    {
+                        'id': key,
+                        'description': description,
+                        'value': value,
+                        'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}],
+                    }
+                )
+            data = json_dumps({'params': params})
+            deferred_respond_ok(request, data)
+
+        deferred_results = defer.gatherResults(all_deferreds, consumeErrors=True)
+        deferred_results.addCallback(set_and_return_results)
+        return NOT_DONE_YET
 
 
 class PluginConfigureServiceResource(ConfigureServiceResource):
@@ -486,31 +500,44 @@ class ConfigureParameterResource(AuthResource):
 
     @required_acl('provd.configure.{tenant_uuid}.{param_id}.read')
     @json_response_entity
-    def render_GET(self, request: Request):
-        try:
-            value = self._cfg_srv.get(self.param_id, tenant_uuid=self.tenant_uuid)
-        except KeyError:
-            logger.info('Invalid/unknown key: %s', self.param_id)
-            return respond_no_resource(request)
-        return json_response({'param': {'value': value}})
+    def render_GET(self, request: Request) -> NOT_DONE_YET:
+        def on_callback(value):
+            data = json_dumps({'param': {'value': value}})
+            deferred_respond_ok(request, data)
+
+        def on_errback(failure: Failure):
+            if failure.check(KeyError):
+                logger.info('Invalid/unknown key: %s', self.param_id)
+                deferred_respond_no_resource(request)
+
+        d = self._cfg_srv.get(self.param_id, tenant_uuid=self.tenant_uuid)
+        d.addCallbacks(on_callback, on_errback)
+        return NOT_DONE_YET
 
     @required_acl('provd.configure.{tenant_uuid}.{param_id}.update')
     @json_request_entity
-    def render_PUT(self, request: Request, content: dict[str, Any]):
+    def render_PUT(self, request: Request, content: dict[str, Any]) -> NOT_DONE_YET:
         try:
             value = content['param']['value']
+            logger.debug('Trying to set %s to %s', self.param_id, value)
         except KeyError:
-            return respond_error(request, 'Wrong information in entity')
+            deferred_respond_error(request, 'Wrong information in entity')
 
-        try:
-            self._cfg_srv.set(self.param_id, value, tenant_uuid=self.tenant_uuid)
-        except InvalidParameterError as e:
-            logger.info('Invalid value for key %s: %r', self.param_id, value)
-            return respond_error(request, e)
-        except KeyError:
-            logger.info('Invalid/unknown key: %s', self.param_id)
-            return respond_no_resource(request)
-        return respond_no_content(request)
+        def on_callback(_):
+            deferred_respond_no_content(request)
+
+        def on_errback(failure: Failure):
+            if failure.check(InvalidParameterError):
+                e = failure.value
+                logger.info('Invalid value for key %s: %r', self.param_id, value)
+                deferred_respond_error(request, e)
+            if failure.check(KeyError):
+                logger.info('Invalid/unknown key: %s', self.param_id)
+                deferred_respond_no_resource(request)
+
+        d = self._cfg_srv.set(self.param_id, value, tenant_uuid=self.tenant_uuid)
+        d.addCallbacks(on_callback, on_errback)
+        return NOT_DONE_YET
 
 
 class PluginInstallServiceResource(IntermediaryResource):

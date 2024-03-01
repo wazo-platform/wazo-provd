@@ -35,11 +35,7 @@ from wazo_provd.persist.common import NonDeletableError as PersistNonDeletableEr
 from wazo_provd.plugins import PluginManager, PluginNotLoadedError
 from wazo_provd.rest.server import auth
 from wazo_provd.rest.server.helpers.tenants import Tenant, Tokens
-from wazo_provd.services import (
-    InvalidParameterError,
-    JsonConfigPersister,
-    PersistentConfigurationServiceDecorator,
-)
+from wazo_provd.services import InvalidParameterError
 from wazo_provd.synchro import DeferredRWLock
 from wazo_provd.util import decode_bytes
 
@@ -227,9 +223,7 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat: int = 0
         self.tenants: dict[str, dict] = {}
-        load_tenant_d = defer.ensureDeferred(self._tenant_dao.find_all())
-        load_tenant_d.addCallback(self._load_tenants)
-        load_tenant_d.addErrback(self._handle_error)
+        self.reload_tenants()
 
         self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
             'general'
@@ -248,10 +242,8 @@ class ProvisioningApplication:
             self.pg_mgr.server = config['general']['plugin_server']
 
         # Do not move this line up unless you know what you are doing...
-        cfg_service = ApplicationConfigureService(self.pg_mgr, self.proxies, self)
-        persister = JsonConfigPersister(os.path.join(base_storage_dir, 'app.json'))
-        self.configure_service = PersistentConfigurationServiceDecorator(
-            cfg_service, persister
+        self.configure_service = ApplicationConfigureService(
+            self.pg_mgr, self.proxies, self
         )
 
         self._base_raw_config = config['general']['base_raw_config']
@@ -288,6 +280,11 @@ class ProvisioningApplication:
         self, tenant_uuid: str, config: dict[str, Any]
     ) -> None:
         self.tenants[tenant_uuid] = config
+
+    def reload_tenants(self) -> None:
+        load_tenant_d = defer.ensureDeferred(self._tenant_dao.find_all())
+        load_tenant_d.addCallback(self._load_tenants)
+        load_tenant_d.addErrback(self._handle_error)
 
     def _load_tenants(self, tenants: list[TenantModel]) -> None:
         logger.debug('Loading tenants: %s', tenants)
@@ -1209,6 +1206,7 @@ class ApplicationConfigureService:
         self._pg_mgr = pg_mgr
         self._proxies = proxies
         self._app = app
+        self._tenant_dao = app._tenant_dao
 
     def _get_param_locale(self, *args: Any, **kwargs: Any) -> str | None:
         l10n_service = get_localization_service()
@@ -1273,10 +1271,10 @@ class ApplicationConfigureService:
         _check_is_server_url(value)
         self._pg_mgr.server = value
 
-    def _get_param_NAT(self, *args, **kwargs):
+    def _get_param_NAT(self, *args, **kwargs) -> int:
         return self._app.nat
 
-    def _set_param_NAT(self, value, *args, **kwargs):
+    def _set_param_NAT(self, value, *args, **kwargs) -> Deferred:
         if value is None or value == '0':
             value = 0
         elif value == '1':
@@ -1288,19 +1286,45 @@ class ApplicationConfigureService:
     def _get_tenant_config(self, tenant_uuid: str) -> dict[str, Any] | None:
         return self._app.tenants.get(tenant_uuid)
 
-    def _create_empty_tenant_config(self, tenant_uuid: str) -> dict[str, Any]:
-        self._app.tenants[tenant_uuid] = {}
-        return self._get_tenant_config(tenant_uuid)  # type: ignore
+    def _create_tenant_config(
+        self, tenant_uuid: str, config: dict[str, Any] = None
+    ) -> Deferred:
+        tenant_config = {}
+        if config is not None:
+            tenant_config.update(config)
+        new_tenant = TenantModel(uuid=tenant_uuid, **tenant_config)
+        self._app.tenants[tenant_uuid] = tenant_config
 
-    def _get_param_provisioning_key(self, tenant_uuid: str) -> str | None:
+        def return_tenant(_):
+            return self._get_tenant_config(tenant_uuid)
+
+        def errback(fail: failure.Failure):
+            logger.error('Error creating new tenant: %s', fail.value)
+
+        d = defer.ensureDeferred(self._tenant_dao.create(new_tenant))
+        d.addCallbacks(return_tenant, errback)
+        return d
+
+    def _get_param_provisioning_key(self, tenant_uuid: str) -> Deferred:
         tenant_config = self._get_tenant_config(tenant_uuid)
         if tenant_config is None:
-            tenant_config = self._create_empty_tenant_config(tenant_uuid)
-        return tenant_config.get('provisioning_key')
+
+            def on_callback(value):
+                return value.get('provisioning_key')
+
+            def on_errback(fail: failure.Failure):
+                logger.error(
+                    'Cannot create empty tenant configuration: %s', failure.value
+                )
+
+            tenant_config_deferred = self._create_tenant_config(tenant_uuid)
+            tenant_config_deferred.addCallbacks(on_callback, on_errback)
+            return tenant_config_deferred
+        return defer.succeed(tenant_config.get('provisioning_key'))
 
     def _set_param_provisioning_key(
         self, provisioning_key: str, tenant_uuid: str
-    ) -> None:
+    ) -> Deferred:
         if provisioning_key:
             if len(provisioning_key) < 8 or len(provisioning_key) > 256:
                 raise InvalidParameterError(
@@ -1322,9 +1346,16 @@ class ApplicationConfigureService:
                 )
 
         tenant_config = self._get_tenant_config(tenant_uuid)
+
         if tenant_config is None:
-            tenant_config = self._create_empty_tenant_config(tenant_uuid)
+            new_config = {'provisioning_key': provisioning_key}
+            tenant_config_deferred = self._create_tenant_config(tenant_uuid, new_config)
+            return tenant_config_deferred
+
+        logger.debug('Tenant config already exists, updating: %s', tenant_config)
         tenant_config['provisioning_key'] = provisioning_key
+        tenant_model = TenantModel(uuid=tenant_uuid, **tenant_config)
+        return defer.ensureDeferred(self._tenant_dao.update(tenant_model))
 
     def get_tenant_from_provisioning_key(self, provisioning_key: str) -> str | None:
         for tenant, config in self._app.tenants.items():
@@ -1342,22 +1373,22 @@ class ApplicationConfigureService:
     ) -> dict[str, dict[str, Any]]:
         return self._app.tenants
 
-    def get(self, name: str, *args: Any, **kwargs: Any) -> Any:
+    def get(self, name: str, *args: Any, **kwargs: Any) -> Deferred:
         get_fun_name = f'_get_param_{name}'
         try:
             get_fun = getattr(self, get_fun_name)
         except AttributeError:
-            raise KeyError(name)
-        return get_fun(*args, **kwargs)
+            return defer.fail(KeyError(name))
+        return defer.maybeDeferred(get_fun, *args, **kwargs)
 
-    def set(self, name: str, value: Any, *args: Any, **kwargs: Any) -> None:
+    def set(self, name: str, value: Any, *args: Any, **kwargs: Any) -> Deferred:
         set_fun_name = f'_set_param_{name}'
         try:
             set_fun = getattr(self, set_fun_name)
         except AttributeError:
-            raise KeyError(name)
+            return defer.fail(KeyError(name))
         else:
-            set_fun(value, *args, **kwargs)
+            return defer.maybeDeferred(set_fun, value, *args, **kwargs)
 
     description = [
         ('plugin_server', 'The plugins repository URL'),
