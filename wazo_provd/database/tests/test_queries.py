@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 from psycopg2 import sql
 
-from ..models import TenantDAO
+from ..queries import TenantDAO
 
 
 class MockDBConnection:
