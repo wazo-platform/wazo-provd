@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, NoReturn
 if TYPE_CHECKING:
     from twisted.internet.defer import Deferred
 
-    from wazo_provd.database.queries import TenantDAO
     from wazo_provd.operation import OperationInProgress
 
 logger = logging.getLogger(__name__)
