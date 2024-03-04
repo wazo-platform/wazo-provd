@@ -112,7 +112,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
         pkey_value = getattr(model, pkey)
         model_dict = dataclasses.asdict(model)
         del model_dict[pkey]
-        await self._db_connection.runQuery(
+        await self._db_connection.runOperation(
             update_query, {'pkey': pkey_value, **model_dict}
         )
 
