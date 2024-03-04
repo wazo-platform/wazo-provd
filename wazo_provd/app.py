@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
+from wazo_provd.database.models import Tenant as TenantModel
 from wazo_provd.devices.config import (
     ConfigCollection,
     RawConfigError,
@@ -52,7 +53,6 @@ if TYPE_CHECKING:
 
     from twisted.python import failure
 
-    from wazo_provd.database.models import Tenant as TenantModel
     from wazo_provd.database.queries import TenantDAO
 
     from .config import ProvdConfigDict
