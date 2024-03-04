@@ -127,7 +127,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
         delete_query = self._prepare_delete_query()
         pkey = self.__model__._meta['primary_key']
         pkey_value = getattr(model, pkey)
-        await self._db_connection.runQuery(delete_query, [pkey_value])
+        await self._db_connection.runOperation(delete_query, [pkey_value])
 
 
 class TenantDAO(BaseDAO):
