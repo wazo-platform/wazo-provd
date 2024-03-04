@@ -49,3 +49,6 @@ class DatabaseClient(MagicMock):
 
     async def runQuery(self, *args, **kwargs) -> list[tuple] | None:
         return self.execute(*args, **kwargs)
+
+    async def runOperation(self, *args, **kwargs) -> None:
+        self.execute(*args, **kwargs)
