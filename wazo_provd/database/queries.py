@@ -13,16 +13,20 @@ from .exceptions import CreationError, ItemNotFoundException
 from .models import Tenant
 
 if TYPE_CHECKING:
+    from typing import Generic, TypeVar
+
     from twisted.enterprise import adbapi
 
     from .models import Model
 
 psycopg2.extras.register_uuid()
 
+M = TypeVar('M', bound=Model)
 
-class BaseDAO(metaclass=abc.ABCMeta):
+
+class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
     __tablename__: str
-    __model__: type[Model]
+    __model__: type[M]
 
     def __init__(self, db_connection: adbapi.ConnectionPool) -> None:
         self._db_connection = db_connection
@@ -54,7 +58,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
 
         return sql_query
 
-    async def create(self, model: Model) -> Model:
+    async def create(self, model: M) -> M:
         create_query = self._prepare_create_query()
         model_dict = dataclasses.asdict(model)
         query_result = await self._db_connection.runQuery(create_query, {**model_dict})
@@ -76,7 +80,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
 
         return sql_query
 
-    async def get(self, pkey_value: Any) -> Model:
+    async def get(self, pkey_value: Any) -> M:
         query = self._prepare_get_query()
         query_results = await self._db_connection.runQuery(query, [pkey_value])
         for result in query_results:
@@ -106,7 +110,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
 
         return sql_query
 
-    async def update(self, model: Model) -> None:
+    async def update(self, model: M) -> None:
         update_query = self._prepare_update_query()
         pkey = self.__model__._meta['primary_key']
         pkey_value = getattr(model, pkey)
@@ -123,7 +127,7 @@ class BaseDAO(metaclass=abc.ABCMeta):
             pkey_column=sql.Identifier(model_pkey),
         )
 
-    async def delete(self, model: Model) -> None:
+    async def delete(self, model: M) -> None:
         delete_query = self._prepare_delete_query()
         pkey = self.__model__._meta['primary_key']
         pkey_value = getattr(model, pkey)

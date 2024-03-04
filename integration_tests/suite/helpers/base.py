@@ -38,7 +38,7 @@ def asyncio_run(async_func):
         return asyncio.run(async_func(*args, **kwargs))
 
     # without this, fixtures are not injected
-    wrapper.__signature__ = inspect.signature(async_func)
+    wrapper.__signature__ = inspect.signature(async_func)  # type: ignore
     return wrapper
 
 
