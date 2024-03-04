@@ -55,12 +55,11 @@ class BaseDAO(metaclass=abc.ABCMeta):
         return sql_query
 
     async def create(self, model: Model) -> Model:
-        model_pkey = self.__model__._meta['primary_key']
         create_query = self._prepare_create_query()
         model_dict = dataclasses.asdict(model)
         query_result = await self._db_connection.runQuery(create_query, {**model_dict})
         for result in query_result:
-            res = await self.get(result[model_pkey])
+            res = await self.get(result[0])
             return res
         raise CreationError('Could not create entry')
 
