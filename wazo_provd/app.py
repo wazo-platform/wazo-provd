@@ -11,6 +11,7 @@ from collections.abc import Callable, Generator
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal, Union
 from urllib.parse import urlparse
+from uuid import UUID
 
 from pydantic import ValidationError
 from twisted.internet import defer
@@ -291,7 +292,7 @@ class ProvisioningApplication:
         for tenant in tenants:
             tenant_conf = tenant.as_dict()
             del tenant_conf[tenant._meta['primary_key']]
-            self.set_tenant_configuration(tenant.uuid, tenant_conf)
+            self.set_tenant_configuration(str(tenant.uuid), tenant_conf)
 
     def _handle_error(self, fail: failure.Failure) -> failure.Failure:
         tb = fail.getTracebackObject()
@@ -1287,12 +1288,12 @@ class ApplicationConfigureService:
         return self._app.tenants.get(tenant_uuid)
 
     def _create_tenant_config(
-        self, tenant_uuid: str, config: dict[str, Any] = None
+        self, tenant_uuid: str, config: dict[str, Any] | None = None
     ) -> Deferred:
         tenant_config = {}
         if config is not None:
             tenant_config.update(config)
-        new_tenant = TenantModel(uuid=tenant_uuid, **tenant_config)
+        new_tenant = TenantModel(uuid=UUID(tenant_uuid), **tenant_config)
         self._app.tenants[tenant_uuid] = tenant_config
 
         def return_tenant(_):
@@ -1354,7 +1355,7 @@ class ApplicationConfigureService:
 
         logger.debug('Tenant config already exists, updating: %s', tenant_config)
         tenant_config['provisioning_key'] = provisioning_key
-        tenant_model = TenantModel(uuid=tenant_uuid, **tenant_config)
+        tenant_model = TenantModel(uuid=UUID(tenant_uuid), **tenant_config)
         return defer.ensureDeferred(self._tenant_dao.update(tenant_model))
 
     def get_tenant_from_provisioning_key(self, provisioning_key: str) -> str | None:
