@@ -1315,9 +1315,7 @@ class ApplicationConfigureService:
                 return value.get('provisioning_key')
 
             def on_errback(fail: failure.Failure):
-                logger.error(
-                    'Cannot create empty tenant configuration: %s', failure.value
-                )
+                logger.error('Cannot create empty tenant configuration: %s', fail.value)
 
             tenant_config_deferred = self._create_tenant_config(tenant_uuid)
             tenant_config_deferred.addCallbacks(on_callback, on_errback)
