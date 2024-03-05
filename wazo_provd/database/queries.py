@@ -60,7 +60,7 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
 
     async def create(self, model: M) -> M:
         create_query = self._prepare_create_query()
-        model_dict = dataclasses.asdict(model)
+        model_dict = model.as_dict()
         query_result = await self._db_connection.runQuery(create_query, {**model_dict})
         for result in query_result:
             res = await self.get(result[0])
@@ -114,7 +114,7 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         update_query = self._prepare_update_query()
         pkey = self.__model__._meta['primary_key']
         pkey_value = getattr(model, pkey)
-        model_dict = dataclasses.asdict(model)
+        model_dict = model.as_dict()
         del model_dict[pkey]
         await self._db_connection.runOperation(
             update_query, {'pkey': pkey_value, **model_dict}
