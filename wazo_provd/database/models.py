@@ -29,3 +29,16 @@ class Tenant(Model):
     provisioning_key: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'uuid'}
+
+
+@dataclasses.dataclass
+class ServiceConfiguration(Model):
+    uuid: UUID
+    plugin_server: str | None
+    http_proxy: str | None
+    https_proxy: str | None
+    ftp_proxy: str | None
+    locale: str | None
+    nat_enabled: bool | None = dataclasses.field(default=False)
+
+    _meta = {'primary_key': 'uuid'}
