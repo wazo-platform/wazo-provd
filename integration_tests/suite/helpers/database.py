@@ -31,24 +31,21 @@ class DatabaseClient(MagicMock):
             connection.rollback()
             raise
 
-    def execute(
+    async def runQuery(
         self,
         query: sql.Composed,
         variables: dict | None = None,
-    ) -> list[tuple] | None:
+    ) -> list[tuple]:
         with self.connection() as conn:
             with self.transaction(conn) as cursor:
                 cursor.execute(query, vars=variables)
-                composables_returning_value = [
-                    sql.SQL('SELECT '),
-                    sql.SQL(') RETURNING '),
-                ]
-                if any(c in query.seq for c in composables_returning_value):
-                    return cursor.fetchall()
-        return None
+                return cursor.fetchall()
 
-    async def runQuery(self, *args, **kwargs) -> list[tuple] | None:
-        return self.execute(*args, **kwargs)
-
-    async def runOperation(self, *args, **kwargs) -> None:
-        self.execute(*args, **kwargs)
+    async def runOperation(
+        self,
+        query: sql.Composed,
+        variables: dict | None = None,
+    ) -> None:
+        with self.connection() as conn:
+            with self.transaction(conn) as cursor:
+                cursor.execute(query, vars=variables)
