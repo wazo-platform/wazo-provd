@@ -118,6 +118,7 @@ class ProvisioningService(Service):
             cfg_collection = ConfigCollection(self._database.collection('configs'))
             dev_collection = DeviceCollection(self._database.collection('devices'))
             tenant_dao = queries.TenantDAO(self._sql_database)
+            configuration_dao = queries.ServiceConfigurationDAO(self._sql_database)
             if self._config['database']['ensure_common_indexes']:
                 logger.debug('Ensuring index existence on collections')
                 try:
@@ -129,7 +130,11 @@ class ProvisioningService(Service):
                         'This type of database doesn\'t seem to support index: %s', e
                     )
             self.app = ProvisioningApplication(
-                cfg_collection, dev_collection, tenant_dao, self._config
+                cfg_collection,
+                dev_collection,
+                tenant_dao,
+                configuration_dao,
+                self._config,
             )
         except Exception as e:
             try:

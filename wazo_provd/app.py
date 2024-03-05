@@ -11,12 +11,13 @@ from collections.abc import Callable, Generator
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal, Union
 from urllib.parse import urlparse
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
+from wazo_provd.database.models import ServiceConfiguration
 from wazo_provd.database.models import Tenant as TenantModel
 from wazo_provd.devices.config import (
     ConfigCollection,
@@ -54,7 +55,7 @@ if TYPE_CHECKING:
 
     from twisted.python import failure
 
-    from wazo_provd.database.queries import TenantDAO
+    from wazo_provd.database.queries import ServiceConfigurationDAO, TenantDAO
 
     from .config import ProvdConfigDict
 
@@ -209,6 +210,7 @@ class ProvisioningApplication:
         cfg_collection: ConfigCollection,
         dev_collection: DeviceCollection,
         tenant_dao: TenantDAO,
+        configuration_dao: ServiceConfigurationDAO,
         config: ProvdConfigDict,
     ) -> None:
         self._cfg_collection = cfg_collection
@@ -218,6 +220,7 @@ class ProvisioningApplication:
         self._tenant_uuid: str | None = None
 
         self.tenant_dao = tenant_dao
+        self.configuration_dao = configuration_dao
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -226,6 +229,7 @@ class ProvisioningApplication:
         self.nat: int = 0
         self.tenants: dict[str, dict] = {}
         self.reload_tenants()
+        self.reload_service_configuration()  # XXX maybe change the name of this
 
         self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
             'general'
@@ -298,8 +302,45 @@ class ProvisioningApplication:
     def _handle_error(self, fail: failure.Failure) -> failure.Failure:
         tb = fail.getTracebackObject()
         exc_formatted = ''.join(traceback.format_exception(None, fail.value, tb))
-        logger.error('Error while loading tenants:\n%s', exc_formatted)
+        logger.error('Error in Deferred:\n%s', exc_formatted)
         return fail
+
+    def reload_service_configuration(self) -> None:
+        reload_conf_d = defer.ensureDeferred(self.configuration_dao.find_one())
+        reload_conf_d.addCallback(self._add_service_configuration_if_missing)
+        reload_conf_d.addCallback(self._load_service_configuration)
+        reload_conf_d.addErrback(self._handle_error)
+
+    def _add_service_configuration_if_missing(
+        self, service_config: ServiceConfiguration | None
+    ) -> Deferred:
+        if service_config is not None:
+            return defer.succeed(service_config)
+
+        service_configuration = ServiceConfiguration(
+            uuid=uuid4(),
+            plugin_server=self.pg_mgr.server,
+            http_proxy=self.proxies.get('http'),
+            https_proxy=self.proxies.get('https'),
+            ftp_proxy=self.proxies.get('ftp'),
+            locale=None,
+            nat_enabled=self.nat == 1,
+        )
+        return defer.ensureDeferred(
+            self.configuration_dao.create(service_configuration)
+        )
+
+    def _load_service_configuration(self, service_config: ServiceConfiguration) -> None:
+        logger.debug('Loading service configuration from database: %s', service_config)
+        self.nat = int(service_config.nat_enabled)
+        if service_config.plugin_server:
+            self.pg_mgr.server = service_config.plugin_server
+        if service_config.http_proxy:
+            self.proxies['http'] = service_config.http_proxy
+        if service_config.https_proxy:
+            self.proxies['https'] = service_config.https_proxy
+        if service_config.ftp_proxy:
+            self.proxies['ftp'] = service_config.ftp_proxy
 
     # device methods
 
@@ -1209,6 +1250,7 @@ class ApplicationConfigureService:
         self._proxies = proxies
         self._app = app
         self._tenant_dao = app.tenant_dao
+        self._configuration_dao = app.configuration_dao
 
     def _get_param_locale(self, *args: Any, **kwargs: Any) -> str | None:
         l10n_service = get_localization_service()
@@ -1269,9 +1311,23 @@ class ApplicationConfigureService:
 
     def _set_param_plugin_server(
         self, value: str | None, *args: Any, **kwargs: Any
-    ) -> None:
+    ) -> Deferred:
         _check_is_server_url(value)
-        self._pg_mgr.server = value
+
+        def on_callback(config: ServiceConfiguration):
+            config.plugin_server = value
+            return self._configuration_dao.update(config)
+
+        def on_errback(fail: failure.Failure):
+            logger.error('Cannot update plugin server configuration: %s', fail.value)
+
+        def set_param_plugin(_):
+            self._pg_mgr.server = value
+
+        current_config_d = defer.ensureDeferred(self._configuration_dao.find_one())
+        current_config_d.addCallbacks(on_callback, on_errback)
+        current_config_d.addCallbacks(set_param_plugin, on_errback)
+        return current_config_d
 
     def _get_param_NAT(self, *args, **kwargs) -> int:
         return self._app.nat
