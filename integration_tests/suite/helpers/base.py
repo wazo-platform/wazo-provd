@@ -86,7 +86,7 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
 
         def db_is_up() -> bool:
             try:
-                cls.db.execute('SELECT 1')
+                cls.db.runOperation('SELECT 1')
             except Exception:
                 return False
             return True
