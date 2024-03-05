@@ -213,10 +213,11 @@ class ProvisioningApplication:
     ) -> None:
         self._cfg_collection = cfg_collection
         self._dev_collection = dev_collection
-        self._tenant_dao = tenant_dao
         self._split_config: ProvdConfigDict = config
         self._token: str | None = None
         self._tenant_uuid: str | None = None
+
+        self.tenant_dao = tenant_dao
 
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
@@ -283,7 +284,7 @@ class ProvisioningApplication:
         self.tenants[tenant_uuid] = config
 
     def reload_tenants(self) -> None:
-        load_tenant_d = defer.ensureDeferred(self._tenant_dao.find_all())
+        load_tenant_d = defer.ensureDeferred(self.tenant_dao.find_all())
         load_tenant_d.addCallback(self._load_tenants)
         load_tenant_d.addErrback(self._handle_error)
 
@@ -1207,7 +1208,7 @@ class ApplicationConfigureService:
         self._pg_mgr = pg_mgr
         self._proxies = proxies
         self._app = app
-        self._tenant_dao = app._tenant_dao
+        self._tenant_dao = app.tenant_dao
 
     def _get_param_locale(self, *args: Any, **kwargs: Any) -> str | None:
         l10n_service = get_localization_service()
