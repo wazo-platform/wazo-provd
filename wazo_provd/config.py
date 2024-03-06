@@ -167,6 +167,7 @@ class ProvdConfigDict(TypedDict):
     bus: BusConfigDict
     plugin_config: dict[str, Any]
     tenants: dict[str, dict]
+    proxy: dict[str, str]
 
 
 logger = logging.getLogger(__name__)
@@ -240,6 +241,7 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
         'exchange_type': 'headers',
     },
     'plugin_config': {},
+    'proxy': {},
     'tenants': {},
 }
 
