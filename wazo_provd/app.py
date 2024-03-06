@@ -333,7 +333,7 @@ class ProvisioningApplication:
 
     def _load_service_configuration(self, service_config: ServiceConfiguration) -> None:
         logger.debug('Loading service configuration from database: %s', service_config)
-        self.nat = int(service_config.nat_enabled)
+        self.nat = 1 if service_config.nat_enabled else 0
         if service_config.plugin_server:
             self.pg_mgr.server = service_config.plugin_server
         if service_config.http_proxy:

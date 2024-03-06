@@ -173,3 +173,4 @@ class ServiceConfigurationDAO(BaseDAO):
         results = await self._db_connection.runQuery(query)
         for result in results:
             return self.__model__(*result)
+        raise ItemNotFoundException('Could not get item')
