@@ -230,7 +230,6 @@ class ProvisioningApplication:
         self.nat: int = 0
         self.tenants: dict[str, dict] = {}
         self.reload_tenants()
-        self.reload_service_configuration()  # XXX maybe change the name of this
 
         self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
             'general'
@@ -247,6 +246,8 @@ class ProvisioningApplication:
         )
         if 'plugin_server' in config['general']:
             self.pg_mgr.server = config['general']['plugin_server']
+
+        self.reload_service_configuration()  # XXX maybe change the name of this
 
         # Do not move this line up unless you know what you are doing...
         self.configure_service = ApplicationConfigureService(
