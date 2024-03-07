@@ -206,3 +206,22 @@ class TestServiceConfigurationDAO:
             ]
         )
         assert configuration_dao._prepare_find_one_query() == expected_composed_query
+
+    def test_update_key_query(self):
+        configuration_dao = ServiceConfigurationDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('UPDATE '),
+                sql.Identifier('provd_configuration'),
+                sql.SQL(' SET '),
+                sql.Identifier('nat_enabled'),
+                sql.SQL(' = %s;'),
+            ]
+        )
+        assert (
+            configuration_dao._prepare_update_key_query('nat_enabled')
+            == expected_composed_query
+        )
+
+        with pytest.raises(KeyError, match=r'invalid_key'):
+            configuration_dao._prepare_update_key_query('invalid_key')
