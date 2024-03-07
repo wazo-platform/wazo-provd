@@ -1287,25 +1287,30 @@ class ApplicationConfigureService:
 
     def _set_param_http_proxy(
         self, value: str | None, *args: Any, **kwargs: Any
-    ) -> None:
+    ) -> Deferred:
         _check_is_proxy(value)
         self._generic_set_proxy('http', value)
+        return defer.ensureDeferred(
+            self._configuration_dao.update_key('http_proxy', value)
+        )
 
     def _get_param_ftp_proxy(self, *args: Any, **kwargs: Any) -> str | None:
         return self._proxies.get('ftp')
 
-    def _set_param_ftp_proxy(self, value, *args, **kwargs) -> None:
+    def _set_param_ftp_proxy(self, value, *args, **kwargs) -> Deferred:
         _check_is_proxy(value)
         self._generic_set_proxy('ftp', value)
+        return defer.ensureDeferred(self._configuration_dao.update_key('ftp', value))
 
     def _get_param_https_proxy(self, *args, **kwargs) -> str | None:
         return self._proxies.get('https')
 
     def _set_param_https_proxy(
         self, value: str | None, *args: Any, **kwargs: Any
-    ) -> None:
+    ) -> Deferred:
         _check_is_https_proxy(value)
         self._generic_set_proxy('https', value)
+        return defer.ensureDeferred(self._configuration_dao.update_key('https', value))
 
     def _get_param_plugin_server(self, *args: Any, **kwargs: Any):
         return self._pg_mgr.server
@@ -1314,33 +1319,26 @@ class ApplicationConfigureService:
         self, value: str | None, *args: Any, **kwargs: Any
     ) -> Deferred:
         _check_is_server_url(value)
-
-        def on_callback(config: ServiceConfiguration):
-            config.plugin_server = value
-            return self._configuration_dao.update(config)
-
-        def on_errback(fail: failure.Failure):
-            logger.error('Cannot update plugin server configuration: %s', fail.value)
-
-        def set_param_plugin(_):
-            self._pg_mgr.server = value
-
-        current_config_d = defer.ensureDeferred(self._configuration_dao.find_one())
-        current_config_d.addCallbacks(on_callback, on_errback)
-        current_config_d.addCallbacks(set_param_plugin, on_errback)
-        return current_config_d
+        self._pg_mgr.server = value
+        return defer.ensureDeferred(
+            self._configuration_dao.update_key('plugin_server', value)
+        )
 
     def _get_param_NAT(self, *args, **kwargs) -> int:
         return self._app.nat
 
     def _set_param_NAT(self, value, *args, **kwargs) -> Deferred:
         if value is None or value == '0':
-            value = 0
+            value = False
         elif value == '1':
-            value = 1
+            value = True
         else:
             raise InvalidParameterError(value)
-        self._app.nat = value
+
+        self._app.nat = 1 if value else 0
+        return defer.ensureDeferred(
+            self._configuration_dao.update_key('nat_enabled', value)
+        )
 
     def _get_tenant_config(self, tenant_uuid: str) -> dict[str, Any] | None:
         return self._app.tenants.get(tenant_uuid)
