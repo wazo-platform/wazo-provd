@@ -16,7 +16,7 @@ from wazo_test_helpers.asset_launching_test_case import (
     WrongClient,
 )
 
-from wazo_provd.database.queries import TenantDAO
+from wazo_provd.database.queries import ServiceConfigurationDAO, TenantDAO
 
 from .database import DatabaseClient
 from .wait_strategy import NoWaitStrategy, WaitStrategy
@@ -32,6 +32,7 @@ VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
 MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
 SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
 SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
+INVALID_RESOURCE_UUID = '88888888-0000-4000-8000-999999999999'
 
 
 def asyncio_run(async_func):
@@ -113,3 +114,4 @@ class DBIntegrationTest(_BaseIntegrationTest):
     def setUp(self):
         self.db = self.make_db()
         self.tenant_dao = TenantDAO(self.db)
+        self.service_configuration_dao = ServiceConfigurationDAO(self.db)
