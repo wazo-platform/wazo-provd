@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from wazo_provd.database.exceptions import ItemNotFoundException
+from wazo_provd.database.exceptions import EntryNotFoundException
 from wazo_provd.database.models import Tenant
 
 from .helpers import fixtures
@@ -37,7 +37,7 @@ class TestTenant(DBIntegrationTest):
         result = await self.tenant_dao.get(tenant.uuid)
         assert result.uuid == tenant.uuid
 
-        with self.assertRaises(ItemNotFoundException):
+        with self.assertRaises(EntryNotFoundException):
             await self.tenant_dao.get(INVALID_TENANT)
 
     @asyncio_run
@@ -55,5 +55,5 @@ class TestTenant(DBIntegrationTest):
     async def test_delete(self, tenant):
         await self.tenant_dao.delete(tenant)
 
-        with self.assertRaises(ItemNotFoundException):
+        with self.assertRaises(EntryNotFoundException):
             await self.tenant_dao.get(tenant.uuid)
