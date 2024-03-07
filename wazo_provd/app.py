@@ -1297,7 +1297,9 @@ class ApplicationConfigureService:
     def _set_param_ftp_proxy(self, value, *args, **kwargs) -> Deferred:
         _check_is_proxy(value)
         self._generic_set_proxy('ftp', value)
-        return defer.ensureDeferred(self._configuration_dao.update_key('ftp', value))
+        return defer.ensureDeferred(
+            self._configuration_dao.update_key('ftp_proxy', value)
+        )
 
     def _get_param_https_proxy(self, *args, **kwargs) -> str | None:
         return self._proxies.get('https')
@@ -1307,7 +1309,9 @@ class ApplicationConfigureService:
     ) -> Deferred:
         _check_is_https_proxy(value)
         self._generic_set_proxy('https', value)
-        return defer.ensureDeferred(self._configuration_dao.update_key('https', value))
+        return defer.ensureDeferred(
+            self._configuration_dao.update_key('https_proxy', value)
+        )
 
     def _get_param_plugin_server(self, *args: Any, **kwargs: Any):
         return self._pg_mgr.server
