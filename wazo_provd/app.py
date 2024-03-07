@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
+from wazo_provd.database.exceptions import EntryNotFoundException
 from wazo_provd.database.models import ServiceConfiguration
 from wazo_provd.database.models import Tenant as TenantModel
 from wazo_provd.devices.config import (
@@ -308,16 +309,12 @@ class ProvisioningApplication:
 
     def reload_service_configuration(self) -> None:
         reload_conf_d = defer.ensureDeferred(self.configuration_dao.find_one())
-        reload_conf_d.addCallback(self._add_service_configuration_if_missing)
-        reload_conf_d.addCallback(self._load_service_configuration)
+        reload_conf_d.addErrback(self._add_service_configuration_if_missing)
+        reload_conf_d.addCallbacks(self._load_service_configuration, self._handle_error)
         reload_conf_d.addErrback(self._handle_error)
 
-    def _add_service_configuration_if_missing(
-        self, service_config: ServiceConfiguration | None
-    ) -> Deferred:
-        if service_config is not None:
-            return defer.succeed(service_config)
-
+    def _add_service_configuration_if_missing(self, fail: failure.Failure) -> Deferred:
+        fail.trap(EntryNotFoundException)
         service_configuration = ServiceConfiguration(
             uuid=uuid4(),
             plugin_server=self.pg_mgr.server,
