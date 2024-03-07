@@ -174,3 +174,18 @@ class ServiceConfigurationDAO(BaseDAO):
         for result in results:
             return self.__model__(*result)
         raise ItemNotFoundException('Could not get item')
+
+    def _prepare_update_key_query(self, key: str) -> sql.SQL:
+        field_names = [field.name for field in self._get_model_fields()]
+        if key not in field_names:
+            raise KeyError('Invalid key "%s"', key)
+
+        sql_query = sql.SQL('UPDATE {table} SET {key_field} = %s;').format(
+            table=sql.Identifier(self.__tablename__),
+            key_field=sql.Identifier(key),
+        )
+        return sql_query
+
+    async def update_key(self, key: str, value: Any) -> None:
+        query = self._prepare_update_key_query(key)
+        await self._db_connection.runOperation(query, [value])
