@@ -34,11 +34,11 @@ class Tenant(Model):
 @dataclasses.dataclass
 class ServiceConfiguration(Model):
     uuid: UUID
-    plugin_server: str | None
-    http_proxy: str | None
-    https_proxy: str | None
-    ftp_proxy: str | None
-    locale: str | None
+    plugin_server: str | None = dataclasses.field(default=None)
+    http_proxy: str | None = dataclasses.field(default=None)
+    https_proxy: str | None = dataclasses.field(default=None)
+    ftp_proxy: str | None = dataclasses.field(default=None)
+    locale: str | None = dataclasses.field(default=None)
     nat_enabled: bool | None = dataclasses.field(default=False)
 
     _meta = {'primary_key': 'uuid'}
