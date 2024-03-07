@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 import psycopg2.extras
 from psycopg2 import sql
 
-from .exceptions import CreationError, ItemNotFoundException
+from .exceptions import CreationError, EntryNotFoundException
 from .models import Model, ServiceConfiguration, Tenant
 
 if TYPE_CHECKING:
@@ -81,7 +81,7 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         query_results = await self._db_connection.runQuery(query, [pkey_value])
         for result in query_results:
             return self.__model__(*result)
-        raise ItemNotFoundException('Could not get item')
+        raise EntryNotFoundException('Could not get entry')
 
     def _prepare_update_query(self) -> sql.SQL:
         model_pkey = self.__model__._meta['primary_key']
@@ -173,7 +173,7 @@ class ServiceConfigurationDAO(BaseDAO):
         results = await self._db_connection.runQuery(query)
         for result in results:
             return self.__model__(*result)
-        raise ItemNotFoundException('Could not get item')
+        raise EntryNotFoundException('Could not get entry')
 
     def _prepare_update_key_query(self, key: str) -> sql.SQL:
         field_names = [field.name for field in self._get_model_fields()]
