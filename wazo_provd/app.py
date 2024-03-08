@@ -247,7 +247,7 @@ class ProvisioningApplication:
         if 'plugin_server' in config['general']:
             self.pg_mgr.server = config['general']['plugin_server']
 
-        self.reload_service_configuration()  # XXX maybe change the name of this
+        self.create_or_load_service_configuration()
 
         # Do not move this line up unless you know what you are doing...
         self.configure_service = ApplicationConfigureService(
@@ -307,7 +307,7 @@ class ProvisioningApplication:
         logger.error('Error in Deferred:\n%s', exc_formatted)
         return fail
 
-    def reload_service_configuration(self) -> None:
+    def create_or_load_service_configuration(self) -> None:
         reload_conf_d = defer.ensureDeferred(self.configuration_dao.find_one())
         reload_conf_d.addErrback(self._add_service_configuration_if_missing)
         reload_conf_d.addCallbacks(self._load_service_configuration, self._handle_error)
