@@ -226,7 +226,7 @@ class ProvisioningApplication:
         base_storage_dir = config['general']['base_storage_dir']
         plugins_dir = os.path.join(base_storage_dir, 'plugins')
 
-        self.proxies = self._split_config.get('proxy', {})
+        self.proxies: dict[str, str] = {}
         self.nat: int = 0
         self.tenants: dict[str, dict] = {}
         self.reload_tenants()
