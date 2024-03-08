@@ -245,8 +245,6 @@ class ProvisioningApplication:
             config['general']['check_compat_min'],
             config['general']['check_compat_max'],
         )
-        if 'plugin_server' in config['general']:
-            self.pg_mgr.server = config['general']['plugin_server']
 
         self.create_or_load_service_configuration()
 

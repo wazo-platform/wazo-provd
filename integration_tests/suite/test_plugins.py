@@ -7,7 +7,7 @@ from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
 
 from .helpers import fixtures
-from .helpers.base import INVALID_TOKEN, BaseIntegrationTest
+from .helpers.base import INVALID_TOKEN, PLUGIN_SERVER, BaseIntegrationTest
 from .helpers.fixtures.http import LEGACY_PLUGIN_TO_INSTALL, PLUGIN_TO_INSTALL
 from .helpers.operation import operation_successful
 from .helpers.wait_strategy import NoWaitStrategy
@@ -16,6 +16,9 @@ from .helpers.wait_strategy import NoWaitStrategy
 class TestPlugins(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
+
+    def setUp(self) -> None:
+        self._client.params.update('plugin_server', PLUGIN_SERVER)
 
     def test_install(self) -> None:
         with self._client.plugins.update() as operation_progress:
@@ -184,6 +187,9 @@ class TestPlugins(BaseIntegrationTest):
 class TestPluginsLegacy(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
+
+    def setUp(self) -> None:
+        self._client.params.update('plugin_server', PLUGIN_SERVER)
 
     def test_install_with_legacy_import(self) -> None:
         # Legacy plugin use module "provd" instead of "wazo_provd"

@@ -23,6 +23,7 @@ from .wait_strategy import NoWaitStrategy, WaitStrategy
 
 API_VERSION = '0.2'
 
+PLUGIN_SERVER = 'http://pluginserver:8080/'
 DB_URI = 'postgresql://wazo-provd:Secr7t@127.0.0.1:{port}'
 
 VALID_TOKEN = 'valid-token'

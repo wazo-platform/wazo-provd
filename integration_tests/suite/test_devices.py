@@ -29,6 +29,7 @@ from .helpers import fixtures
 from .helpers.base import (
     INVALID_TOKEN,
     MAIN_TENANT,
+    PLUGIN_SERVER,
     SUB_TENANT_1,
     SUB_TENANT_2,
     VALID_TOKEN,
@@ -85,6 +86,7 @@ class TestDevices(BaseIntegrationTest):
         cls.setup_token()
         setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
         cls.filesystem = cls.make_filesystem()
+        cls._client.params.update('plugin_server', PLUGIN_SERVER)
 
     @classmethod
     def setup_token(cls) -> None:
