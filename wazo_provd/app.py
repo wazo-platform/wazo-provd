@@ -317,12 +317,12 @@ class ProvisioningApplication:
         fail.trap(EntryNotFoundException)
         service_configuration = ServiceConfiguration(
             uuid=uuid4(),
-            plugin_server=self.pg_mgr.server,
-            http_proxy=self.proxies.get('http'),
-            https_proxy=self.proxies.get('https'),
-            ftp_proxy=self.proxies.get('ftp'),
+            plugin_server='http://provd.wazo.community/plugins/2/stable/',
+            http_proxy=None,
+            https_proxy=None,
+            ftp_proxy=None,
             locale=None,
-            nat_enabled=self.nat == 1,
+            nat_enabled=False,
         )
         return defer.ensureDeferred(
             self.configuration_dao.create(service_configuration)
