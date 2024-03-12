@@ -17,6 +17,7 @@ from wazo_test_helpers.asset_launching_test_case import (
 
 from wazo_provd.database.queries import ServiceConfigurationDAO, TenantDAO
 
+from .bus import BusClient
 from .database import DatabaseClient
 from .wait_strategy import NoWaitStrategy, WaitStrategy
 
@@ -54,6 +55,12 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
         super().setUpClass()
         cls.set_client()
         cls.wait_strategy.wait(cls)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        # FIXME: Refactor this global client to be used like others clients (i.e. by class)
+        BusClient._reset_bus()
 
     @classmethod
     def set_client(cls):
