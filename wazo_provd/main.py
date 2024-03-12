@@ -443,7 +443,7 @@ class ProvdBusConsumer(BusConsumer):
 
 
 class ResourcesDeletionService(Service):
-    def __init__(self, prov_service, config):
+    def __init__(self, prov_service: ProvisioningService, config):
         self._prov_service = prov_service
         self._config = config
 
@@ -455,12 +455,17 @@ class ResourcesDeletionService(Service):
         for device in devices:
             yield app.dev_delete(device['id'])
 
+    @defer.inlineCallbacks
     def delete_tenant_configuration(self, tenant_uuid):
         configure_service = self._prov_service.app.configure_service
-        all_tenants = configure_service.get('tenants')
+        all_tenants = yield configure_service.get('tenants')
         try:
             del all_tenants[tenant_uuid]
             configure_service.set('tenants', all_tenants)
+            tenant = yield defer.ensureDeferred(
+                self._prov_service.app.tenant_dao.get(tenant_uuid)
+            )
+            yield defer.ensureDeferred(self._prov_service.app.tenant_dao.delete(tenant))
         except KeyError:
             pass
 
@@ -475,7 +480,7 @@ class BusEventConsumerService(ResourcesDeletionService):
         logger.info("auth_tenant_deleted event consumed: %s", event)
         tenant_uuid = event['uuid']
         yield self.delete_devices(tenant_uuid)
-        self.delete_tenant_configuration(tenant_uuid)
+        yield self.delete_tenant_configuration(tenant_uuid)
 
     def startService(self) -> None:
         self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
