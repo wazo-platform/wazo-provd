@@ -1349,9 +1349,9 @@ class ApplicationConfigureService:
         if config is not None:
             tenant_config.update(config)
         new_tenant = TenantModel(uuid=UUID(tenant_uuid), **tenant_config)
-        self._app.tenants[tenant_uuid] = tenant_config
 
         def return_tenant(_):
+            self._app.tenants[tenant_uuid] = tenant_config
             return self._get_tenant_config(tenant_uuid)
 
         def errback(fail: failure.Failure):
