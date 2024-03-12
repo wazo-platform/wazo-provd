@@ -116,7 +116,7 @@ class TestParams(BaseIntegrationTest):
 
     def test_provisioning_key_for_invalid_tenant(self) -> None:
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(INVALID_TENANT)
+        provd.tenant_uuid = INVALID_TENANT
         assert_that(
             calling(provd.params.update).with_args('provisioning_key', 'not-working'),
             raises(ProvdError).matching(has_properties('status_code', 401)),
@@ -159,7 +159,7 @@ class TestParams(BaseIntegrationTest):
     def test_provisioning_key_for_unconfigured_tenant(self) -> None:
         # Do not use SUB_TENANT_1 in another provisioning key test
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_1)
+        provd.tenant_uuid = SUB_TENANT_1
         assert_that(
             provd.params.get('provisioning_key'),
             has_entry('value', None),
@@ -171,7 +171,7 @@ class TestParams(BaseIntegrationTest):
         self._client.params.update('provisioning_key', 'secure-key')
 
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_2)
+        provd.tenant_uuid = SUB_TENANT_2
         assert_that(
             calling(provd.params.update).with_args('provisioning_key', 'secure-key'),
             raises(ProvdError).matching(has_properties('status_code', 400)),
@@ -183,13 +183,13 @@ class TestParams(BaseIntegrationTest):
         self._client.params.update('provisioning_key', None)
 
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_2)
+        provd.tenant_uuid = SUB_TENANT_2
         # Should not raise an error since multiple tenants can have a null provisioning key
         provd.params.update('provisioning_key', None)
 
     def test_provisioning_key_deleted_tenant(self) -> None:
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_2)
+        provd.tenant_uuid = SUB_TENANT_2
         provd.params.update('provisioning_key', '123testingkey')
         BusClient.send_tenant_deleted(SUB_TENANT_2, 'slug')
 
