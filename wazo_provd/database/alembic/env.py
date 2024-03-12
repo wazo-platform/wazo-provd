@@ -33,7 +33,7 @@ URI = os.getenv('ALEMBIC_DB_URI', None)
 
 
 def get_url() -> str | None:
-    from provd.config import Options, get_config
+    from wazo_provd.config import Options, get_config
 
     provd_config = get_config(Options())
     return provd_config.get('database', {}).get('uri')

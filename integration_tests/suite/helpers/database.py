@@ -1,14 +1,18 @@
 # Copyright 2023-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 from contextlib import contextmanager
+from unittest.mock import MagicMock
 
 import psycopg2
+from psycopg2 import sql
 from psycopg2.extras import DictCursor
 
 
-class DatabaseClient:
+class DatabaseClient(MagicMock):
     def __init__(self, db_uri: str):
+        super().__init__()
         self._db_uri = db_uri
 
     @contextmanager
@@ -27,8 +31,21 @@ class DatabaseClient:
             connection.rollback()
             raise
 
-    def execute(self, query: str) -> list[tuple]:
+    async def runQuery(
+        self,
+        query: sql.Composed,
+        variables: dict | None = None,
+    ) -> list[tuple]:
         with self.connection() as conn:
             with self.transaction(conn) as cursor:
-                cursor.execute(query)
+                cursor.execute(query, vars=variables)
                 return cursor.fetchall()
+
+    async def runOperation(
+        self,
+        query: sql.Composed,
+        variables: dict | None = None,
+    ) -> None:
+        with self.connection() as conn:
+            with self.transaction(conn) as cursor:
+                cursor.execute(query, vars=variables)
