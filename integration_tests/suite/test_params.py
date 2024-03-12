@@ -1,4 +1,4 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import assert_that, calling, has_entry, has_key, has_properties
@@ -26,7 +26,6 @@ class TestParams(BaseIntegrationTest):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.wait_strategy.wait(cls)
         setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
 
     def test_get(self) -> None:

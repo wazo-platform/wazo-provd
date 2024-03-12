@@ -53,6 +53,7 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.set_client()
+        cls.wait_strategy.wait(cls)
 
     @classmethod
     def set_client(cls):
