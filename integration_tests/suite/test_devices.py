@@ -82,7 +82,6 @@ class TestDevices(BaseIntegrationTest):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.wait_strategy.wait(cls)
         cls.setup_token()
         setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
         cls.filesystem = cls.make_filesystem()
