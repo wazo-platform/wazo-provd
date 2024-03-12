@@ -14,6 +14,7 @@ from .helpers.base import (
     VALID_TOKEN_MULTITENANT,
     BaseIntegrationTest,
 )
+from .helpers.bus import BusClient, setup_bus
 from .helpers.operation import operation_fail, operation_successful
 from .helpers.wait_strategy import NoWaitStrategy
 
@@ -21,6 +22,11 @@ from .helpers.wait_strategy import NoWaitStrategy
 class TestParams(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
 
     def test_get(self) -> None:
         result = self._client.params.get('locale')
@@ -180,3 +186,13 @@ class TestParams(BaseIntegrationTest):
         provd.set_tenant(SUB_TENANT_2)
         # Should not raise an error since multiple tenants can have a null provisioning key
         provd.params.update('provisioning_key', None)
+
+    def test_provisioning_key_deleted_tenant(self) -> None:
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(SUB_TENANT_2)
+        provd.params.update('provisioning_key', '123testingkey')
+        BusClient.send_tenant_deleted(SUB_TENANT_2, 'slug')
+        assert_that(
+            provd.params.get('provisioning_key'),
+            has_entry('value', None),
+        )
