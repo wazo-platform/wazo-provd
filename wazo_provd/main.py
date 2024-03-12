@@ -30,7 +30,7 @@ import wazo_provd.synchronize
 from wazo_provd import security, status
 from wazo_provd.app import ProvisioningApplication
 from wazo_provd.config import Options
-from wazo_provd.database import helpers
+from wazo_provd.database import helpers, queries
 from wazo_provd.devices import ident, pgasso
 from wazo_provd.devices.config import ConfigCollection
 from wazo_provd.devices.device import DeviceCollection
@@ -103,6 +103,14 @@ class ProvisioningService(Service):
         pool_size = self._config['database']['pool_size']
         return helpers.init_db(db_uri, pool_size=pool_size)
 
+    def _close_sql_database(self) -> None:
+        logger.info('Closing SQL database...')
+        try:
+            self._sql_database.close()
+        except Exception:
+            logger.error('Error while closing SQL database', exc_info=True)
+        logger.info('/SQL database closed')
+
     def startService(self) -> None:
         self._database = self._create_database()
         self._sql_database = self._create_sql_database()
@@ -110,6 +118,8 @@ class ProvisioningService(Service):
         try:
             cfg_collection = ConfigCollection(self._database.collection('configs'))
             dev_collection = DeviceCollection(self._database.collection('devices'))
+            tenant_dao = queries.TenantDAO(self._sql_database)
+            configuration_dao = queries.ServiceConfigurationDAO(self._sql_database)
             if self._config['database']['ensure_common_indexes']:
                 logger.debug('Ensuring index existence on collections')
                 try:
@@ -121,7 +131,11 @@ class ProvisioningService(Service):
                         'This type of database doesn\'t seem to support index: %s', e
                     )
             self.app = ProvisioningApplication(
-                cfg_collection, dev_collection, self._config
+                cfg_collection,
+                dev_collection,
+                tenant_dao,
+                configuration_dao,
+                self._config,
             )
         except Exception as e:
             try:
@@ -131,6 +145,7 @@ class ProvisioningService(Service):
                 raise
             finally:
                 self._close_database()
+                self._close_sql_database()
         else:
             Service.startService(self)
 
@@ -143,6 +158,7 @@ class ProvisioningService(Service):
                 'An error occurred whilst stopping the application', exc_info=True
             )
         self._close_database()
+        self._close_sql_database()
 
 
 class ProcessService(Service):
@@ -428,24 +444,28 @@ class ProvdBusConsumer(BusConsumer):
 
 
 class ResourcesDeletionService(Service):
-    def __init__(self, prov_service, config):
+    def __init__(self, prov_service: ProvisioningService, config):
         self._prov_service = prov_service
         self._config = config
 
     @defer.inlineCallbacks
     def delete_devices(self, tenant_uuid):
         app = self._prov_service.app
-        find_arguments = {'selector': {'tenant_uuid': tenant_uuid}}
-        devices = yield app.dev_find(**find_arguments)
+        devices = yield app.dev_find(selector={'tenant_uuid': tenant_uuid})
         for device in devices:
             yield app.dev_delete(device['id'])
 
+    @defer.inlineCallbacks
     def delete_tenant_configuration(self, tenant_uuid):
         configure_service = self._prov_service.app.configure_service
-        all_tenants = configure_service.get('tenants')
+        all_tenants = yield configure_service.get('tenants')
         try:
             del all_tenants[tenant_uuid]
             configure_service.set('tenants', all_tenants)
+            tenant = yield defer.ensureDeferred(
+                self._prov_service.app.tenant_dao.get(tenant_uuid)
+            )
+            yield defer.ensureDeferred(self._prov_service.app.tenant_dao.delete(tenant))
         except KeyError:
             pass
 
@@ -460,7 +480,7 @@ class BusEventConsumerService(ResourcesDeletionService):
         logger.info("auth_tenant_deleted event consumed: %s", event)
         tenant_uuid = event['uuid']
         yield self.delete_devices(tenant_uuid)
-        self.delete_tenant_configuration(tenant_uuid)
+        yield self.delete_tenant_configuration(tenant_uuid)
 
     def startService(self) -> None:
         self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
@@ -513,9 +533,9 @@ class SyncdbService(ResourcesDeletionService):
     @defer.inlineCallbacks
     def remove_devices_for_deleted_tenants(self, auth_tenants) -> Deferred:
         app = self._prov_service.app
-
-        find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
-        devices = yield app.dev_find(**find_arguments)
+        devices = yield app.dev_find(
+            selector={'tenant_uuid': {'$nin': list(auth_tenants)}}
+        )
         provd_tenants = {device['tenant_uuid'] for device in devices}
         removed_tenants = provd_tenants - auth_tenants
 

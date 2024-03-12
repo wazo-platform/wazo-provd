@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import os
 
 from wazo_provd_client import Client as ProvdClient
@@ -14,11 +16,15 @@ from wazo_test_helpers.asset_launching_test_case import (
     WrongClient,
 )
 
+from wazo_provd.database.queries import ServiceConfigurationDAO, TenantDAO
+
+from .bus import BusClient
 from .database import DatabaseClient
 from .wait_strategy import NoWaitStrategy, WaitStrategy
 
 API_VERSION = '0.2'
 
+PLUGIN_SERVER = 'http://pluginserver:8080/'
 DB_URI = 'postgresql://wazo-provd:Secr7t@127.0.0.1:{port}'
 
 VALID_TOKEN = 'valid-token'
@@ -28,6 +34,16 @@ VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
 MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
 SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
 SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
+INVALID_RESOURCE_UUID = '88888888-0000-4000-8000-999999999999'
+
+
+def asyncio_run(async_func):
+    def wrapper(*args, **kwargs):
+        return asyncio.run(async_func(*args, **kwargs))
+
+    # without this, fixtures are not injected
+    wrapper.__signature__ = inspect.signature(async_func)  # type: ignore
+    return wrapper
 
 
 class _BaseIntegrationTest(AssetLaunchingTestCase):
@@ -39,6 +55,13 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.set_client()
+        cls.wait_strategy.wait(cls)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        # FIXME: Refactor this global client to be used like others clients (i.e. by class)
+        BusClient._reset_bus()
 
     @classmethod
     def set_client(cls):
@@ -74,7 +97,7 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
 
         def db_is_up() -> bool:
             try:
-                cls.db.execute('SELECT 1')
+                cls.db.runOperation('SELECT 1')
             except Exception:
                 return False
             return True
@@ -96,3 +119,8 @@ class DBIntegrationTest(_BaseIntegrationTest):
     asset = 'database'
     service = 'postgres'
     wait_strategy: WaitStrategy = NoWaitStrategy()
+
+    def setUp(self):
+        self.db = self.make_db()
+        self.tenant_dao = TenantDAO(self.db)
+        self.service_configuration_dao = ServiceConfigurationDAO(self.db)
