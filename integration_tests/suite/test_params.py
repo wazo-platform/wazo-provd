@@ -16,16 +16,17 @@ from .helpers.base import (
 )
 from .helpers.bus import BusClient, setup_bus
 from .helpers.operation import operation_fail, operation_successful
-from .helpers.wait_strategy import NoWaitStrategy
+from .helpers.wait_strategy import EverythingOkWaitStrategy
 
 
 class TestParams(BaseIntegrationTest):
     asset = 'base'
-    wait_strategy = NoWaitStrategy()
+    wait_strategy = EverythingOkWaitStrategy()
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
+        cls.wait_strategy.wait(cls)
         setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
 
     def test_get(self) -> None:
@@ -192,7 +193,11 @@ class TestParams(BaseIntegrationTest):
         provd.set_tenant(SUB_TENANT_2)
         provd.params.update('provisioning_key', '123testingkey')
         BusClient.send_tenant_deleted(SUB_TENANT_2, 'slug')
-        assert_that(
-            provd.params.get('provisioning_key'),
-            has_entry('value', None),
-        )
+
+        def _empty_provisioning_key():
+            assert_that(
+                provd.params.get('provisioning_key'),
+                has_entry('value', None),
+            )
+
+        until.assert_(_empty_provisioning_key, tries=10, interval=5)
