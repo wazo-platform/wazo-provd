@@ -450,8 +450,7 @@ class ResourcesDeletionService(Service):
     @defer.inlineCallbacks
     def delete_devices(self, tenant_uuid):
         app = self._prov_service.app
-        find_arguments = {'selector': {'tenant_uuid': tenant_uuid}}
-        devices = yield app.dev_find(**find_arguments)
+        devices = yield app.dev_find(selector={'tenant_uuid': tenant_uuid})
         for device in devices:
             yield app.dev_delete(device['id'])
 
@@ -533,9 +532,9 @@ class SyncdbService(ResourcesDeletionService):
     @defer.inlineCallbacks
     def remove_devices_for_deleted_tenants(self, auth_tenants) -> Deferred:
         app = self._prov_service.app
-
-        find_arguments = {'selector': {'tenant_uuid': {'$nin': list(auth_tenants)}}}
-        devices = yield app.dev_find(**find_arguments)
+        devices = yield app.dev_find(
+            selector={'tenant_uuid': {'$nin': list(auth_tenants)}}
+        )
         provd_tenants = {device['tenant_uuid'] for device in devices}
         removed_tenants = provd_tenants - auth_tenants
 
