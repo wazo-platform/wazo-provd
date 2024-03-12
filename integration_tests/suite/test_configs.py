@@ -34,7 +34,7 @@ class TestConfigs(BaseIntegrationTest):
         )
 
     def test_get(self) -> None:
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             result = self._client.configs.get(config['id'])
             assert_that(result, has_key('id'))
 
@@ -46,7 +46,7 @@ class TestConfigs(BaseIntegrationTest):
 
     def test_get_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.get).with_args(config['id']),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
@@ -57,7 +57,7 @@ class TestConfigs(BaseIntegrationTest):
         )
 
     def test_get_raw(self) -> None:
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             result = self._client.configs.get_raw(config['id'])
             assert_that(result, has_key('ip'))
 
@@ -69,7 +69,7 @@ class TestConfigs(BaseIntegrationTest):
 
     def test_get_raw_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.get_raw).with_args(config['id']),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
@@ -136,14 +136,14 @@ class TestConfigs(BaseIntegrationTest):
         )
 
     def test_update(self) -> None:
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             config['raw_config']['ntp_ip'] = '127.0.0.1'
             self._client.configs.update(config)
             result = self._client.configs.get(config['id'])
             assert_that(result['raw_config'], has_entry('ntp_ip', '127.0.0.1'))
 
     def test_update_errors(self) -> None:
-        with fixtures.Configuration(self._client):
+        with fixtures.http.Configuration(self._client):
             invalid_config = {'id': None}
             assert_that(
                 calling(self._client.configs.update).with_args(invalid_config),
@@ -152,14 +152,14 @@ class TestConfigs(BaseIntegrationTest):
 
     def test_update_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.update).with_args({'id': config['id']}),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
             )
 
     def test_delete(self) -> None:
-        with fixtures.Configuration(self._client, delete_on_exit=False) as config:
+        with fixtures.http.Configuration(self._client, delete_on_exit=False) as config:
             self._client.configs.delete(config['id'])
 
     def test_delete_nonexistant_error(self) -> None:
@@ -195,7 +195,7 @@ class TestConfigs(BaseIntegrationTest):
 
     def test_delete_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Configuration(self._client) as config:
+        with fixtures.http.Configuration(self._client) as config:
             assert_that(
                 calling(provd.configs.delete).with_args(config['id']),
                 raises(ProvdError).matching(has_properties('status_code', 401)),

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from wazo_provd_client import Client as ProvdClient
 from wazo_test_helpers import until
 
-from .operation import operation_successful
+from ..operation import operation_successful
 
 if TYPE_CHECKING:
     from wazo_provd.devices.schemas import BaseDeviceDict, ConfigDict
