@@ -22,12 +22,12 @@ def upgrade():
     op.create_table(
         TABLE_NAME,
         sa.Column('uuid', UUID, primary_key=True),
-        sa.Column('nat_enabled', sa.Boolean, server_default=sa.sql.text('False')),
-        sa.Column('plugin_server', sa.Text, nullable=True),
-        sa.Column('http_proxy', sa.Text, nullable=True),
-        sa.Column('https_proxy', sa.Text, nullable=True),
-        sa.Column('ftp_proxy', sa.Text, nullable=True),
-        sa.Column('locale', sa.Text, nullable=True),
+        sa.Column('nat_enabled', sa.Boolean, server_default=sa.sql.text('false')),
+        sa.Column('plugin_server', sa.Text),
+        sa.Column('http_proxy', sa.Text),
+        sa.Column('https_proxy', sa.Text),
+        sa.Column('ftp_proxy', sa.Text),
+        sa.Column('locale', sa.Text),
     )
 
 
