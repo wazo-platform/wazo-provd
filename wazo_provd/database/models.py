@@ -61,55 +61,59 @@ class DeviceConfig(Model):
 class DeviceRawConfig(Model):
     config_id: str
     ip: str
-    http_port: int
-    http_base_url: str
-    tftp_port: int
-    dns_enabled: bool
-    dns_ip: str
-    ntp_enabled: bool
-    ntp_ip: str
-    vlan_enabled: bool
-    vlan_id: int
-    vlan_priority: int
-    vlan_pc_port_id: int
-    syslog_enabled: bool
-    syslog_ip: str
-    syslog_port: int
-    syslog_level: int
-    admin_username: str
-    admin_password: str
-    user_username: str
-    user_password: str
-    timezone: str
-    locale: str
-    protocol: str  # ENUM sip,sccp
-    sip_proxy_ip: str
-    sip_proxy_port: int
-    sip_backup_proxy_ip: str
-    sip_backup_proxy_port: int
-    sip_registrar_ip: str
-    sip_registrar_port: int
-    sip_backup_registrar_ip: str
-    sip_backup_registrar_port: int
-    sip_outbound_proxy_ip: str
-    sip_outbound_proxy_port: int
-    sip_dtmf_mode: str
-    sip_srtp_mode: str
-    sip_transport: str
-    sip_servers_root_and_intermediate_certificates: str
-    sip_local_root_and_intermediate_certificates: str
-    sip_local_certificate: str
-    sip_local_key: str
-    sip_subscribe_mwi: str
-    exten_dnd: str
-    exten_fwd_unconditional: str
-    exten_fwd_no_answer: str
-    exten_fwd_busy: str
-    exten_fwd_disable_all: str
-    exten_park: str
-    exten_pickup_group: str
-    exten_pickup_call: str
-    exten_voicemail: str
+    http_port: int | None = dataclasses.field(default=None)
+    http_base_url: str | None = dataclasses.field(default=None)
+    tftp_port: int | None = dataclasses.field(default=None)
+    dns_enabled: bool | None = dataclasses.field(default=None)
+    dns_ip: str | None = dataclasses.field(default=None)
+    ntp_enabled: bool | None = dataclasses.field(default=None)
+    ntp_ip: str | None = dataclasses.field(default=None)
+    vlan_enabled: bool | None = dataclasses.field(default=None)
+    vlan_id: int | None = dataclasses.field(default=None)
+    vlan_priority: int | None = dataclasses.field(default=None)
+    vlan_pc_port_id: int | None = dataclasses.field(default=None)
+    syslog_enabled: bool | None = dataclasses.field(default=None)
+    syslog_ip: str | None = dataclasses.field(default=None)
+    syslog_port: int | None = dataclasses.field(default=None)
+    syslog_level: int | None = dataclasses.field(default=None)
+    admin_username: str | None = dataclasses.field(default=None)
+    admin_password: str | None = dataclasses.field(default=None)
+    user_username: str | None = dataclasses.field(default=None)
+    user_password: str | None = dataclasses.field(default=None)
+    timezone: str | None = dataclasses.field(default=None)
+    locale: str | None = dataclasses.field(default=None)
+    protocol: str | None = dataclasses.field(default=None)  # ENUM sip,sccp
+    sip_proxy_ip: str | None = dataclasses.field(default=None)
+    sip_proxy_port: int | None = dataclasses.field(default=None)
+    sip_backup_proxy_ip: str | None = dataclasses.field(default=None)
+    sip_backup_proxy_port: int | None = dataclasses.field(default=None)
+    sip_registrar_ip: str | None = dataclasses.field(default=None)
+    sip_registrar_port: int | None = dataclasses.field(default=None)
+    sip_backup_registrar_ip: str | None = dataclasses.field(default=None)
+    sip_backup_registrar_port: int | None = dataclasses.field(default=None)
+    sip_outbound_proxy_ip: str | None = dataclasses.field(default=None)
+    sip_outbound_proxy_port: int | None = dataclasses.field(default=None)
+    sip_dtmf_mode: str | None = dataclasses.field(default=None)
+    sip_srtp_mode: str | None = dataclasses.field(default=None)
+    sip_transport: str | None = dataclasses.field(default=None)
+    sip_servers_root_and_intermediate_certificates: str | None = dataclasses.field(
+        default=None
+    )
+    sip_local_root_and_intermediate_certificates: str | None = dataclasses.field(
+        default=None
+    )
+    sip_local_certificate: str | None = dataclasses.field(default=None)
+    sip_local_key: str | None = dataclasses.field(default=None)
+    sip_subscribe_mwi: str | None = dataclasses.field(default=None)
+    exten_dnd: str | None = dataclasses.field(default=None)
+    exten_fwd_unconditional: str | None = dataclasses.field(default=None)
+    exten_fwd_no_answer: str | None = dataclasses.field(default=None)
+    exten_fwd_busy: str | None = dataclasses.field(default=None)
+    exten_fwd_disable_all: str | None = dataclasses.field(default=None)
+    exten_park: str | None = dataclasses.field(default=None)
+    exten_pickup_group: str | None = dataclasses.field(default=None)
+    exten_pickup_call: str | None = dataclasses.field(default=None)
+    exten_voicemail: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'config_id'}
 
