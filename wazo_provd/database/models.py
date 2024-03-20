@@ -47,12 +47,12 @@ class ServiceConfiguration(Model):
 @dataclasses.dataclass
 class DeviceConfig(Model):
     id: str
-    parent_id: str
-    deletable: bool
-    type: str
-    roles: str
-    configdevice: str
-    transient: bool
+    parent_id: str | None = dataclasses.field(default=None)
+    deletable: bool = dataclasses.field(default=True)
+    type: str | None = dataclasses.field(default=None)
+    roles: str | None = dataclasses.field(default=None)
+    configdevice: str | None = dataclasses.field(default=None)
+    transient: bool = dataclasses.field(default=False)
 
     _meta = {'primary_key': 'id'}
 
