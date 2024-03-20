@@ -174,15 +174,15 @@ class FunctionKey(Model):
 class Device(Model):
     id: str
     tenant_uuid: UUID
-    config_id: str
-    mac: str
-    ip: str
-    vendor: str
-    model: str
-    version: str
-    plugin: str
-    configured: bool
-    auto_added: bool
-    is_new: bool
+    config_id: str | None = dataclasses.field(default=None)
+    mac: str | None = dataclasses.field(default=None)
+    ip: str | None = dataclasses.field(default=None)
+    vendor: str | None = dataclasses.field(default=None)
+    model: str | None = dataclasses.field(default=None)
+    version: str | None = dataclasses.field(default=None)
+    plugin: str | None = dataclasses.field(default=None)
+    configured: bool = dataclasses.field(default=False)
+    auto_added: bool = dataclasses.field(default=False)
+    is_new: bool = dataclasses.field(default=False)
 
     _meta = {'primary_key': 'id'}
