@@ -162,10 +162,10 @@ class SCCPLine(Model):
 class FunctionKey(Model):
     uuid: UUID
     config_id: str
-    type: str  # enum "speeddial, blf, park"
-    value: str
-    label: str
-    line: str
+    type: str | None = dataclasses.field(default=None)  # enum "speeddial, blf, park"
+    value: str | None = dataclasses.field(default=None)
+    label: str | None = dataclasses.field(default=None)
+    line: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'uuid'}
 
