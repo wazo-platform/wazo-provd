@@ -122,24 +122,28 @@ class DeviceRawConfig(Model):
 class SIPLine(Model):
     uuid: UUID
     config_id: str
-    proxy_ip: str
-    proxy_port: int
-    backup_proxy_ip: str
-    backup_proxy_port: int
-    registrar_ip: str
-    registrar_port: int
-    backup_registrar_ip: str
-    backup_registrar_port: int
-    outbound_proxy_ip: str
-    outbound_proxy_port: int
-    username: str
-    password: str
-    auth_username: str
-    display_name: str
-    number: str
-    dtmf_mode: str  # "RTP-in-band, RTP-out-of-band, SIP-INFO": enum
-    srtp_mode: str  # "disabled, preferred, required": enum
-    voicemail: str
+    proxy_ip: str | None = dataclasses.field(default=None)
+    proxy_port: int | None = dataclasses.field(default=None)
+    backup_proxy_ip: str | None = dataclasses.field(default=None)
+    backup_proxy_port: int | None = dataclasses.field(default=None)
+    registrar_ip: str | None = dataclasses.field(default=None)
+    registrar_port: int | None = dataclasses.field(default=None)
+    backup_registrar_ip: str | None = dataclasses.field(default=None)
+    backup_registrar_port: int | None = dataclasses.field(default=None)
+    outbound_proxy_ip: str | None = dataclasses.field(default=None)
+    outbound_proxy_port: int | None = dataclasses.field(default=None)
+    username: str | None = dataclasses.field(default=None)
+    password: str | None = dataclasses.field(default=None)
+    auth_username: str | None = dataclasses.field(default=None)
+    display_name: str | None = dataclasses.field(default=None)
+    number: str | None = dataclasses.field(default=None)
+    dtmf_mode: str | None = dataclasses.field(
+        default=None
+    )  # "RTP-in-band, RTP-out-of-band, SIP-INFO": enum
+    srtp_mode: str | None = dataclasses.field(
+        default=None
+    )  # "disabled, preferred, required": enum
+    voicemail: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'uuid'}
 
