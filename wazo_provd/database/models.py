@@ -152,8 +152,8 @@ class SIPLine(Model):
 class SCCPLine(Model):
     uuid: UUID
     config_id: str
-    ip: str
-    port: int
+    ip: str | None = dataclasses.field(default=None)
+    port: int | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'uuid'}
 
