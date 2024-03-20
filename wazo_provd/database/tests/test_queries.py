@@ -6,7 +6,12 @@ from __future__ import annotations
 import pytest
 from psycopg2 import sql
 
-from ..queries import ServiceConfigurationDAO, TenantDAO
+from ..queries import (
+    DeviceConfigDAO,
+    DeviceDAO,
+    ServiceConfigurationDAO,
+    TenantDAO,
+)
 
 
 class MockDBConnection:
@@ -225,3 +230,118 @@ class TestServiceConfigurationDAO:
 
         with pytest.raises(KeyError, match=r'invalid_key'):
             configuration_dao._prepare_update_key_query('invalid_key')
+
+
+class TestDeviceDAO:
+    def test_find_from_configs(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('id'),
+                        sql.SQL(','),
+                        sql.Identifier('tenant_uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('mac'),
+                        sql.SQL(','),
+                        sql.Identifier('ip'),
+                        sql.SQL(','),
+                        sql.Identifier('vendor'),
+                        sql.SQL(','),
+                        sql.Identifier('model'),
+                        sql.SQL(','),
+                        sql.Identifier('version'),
+                        sql.SQL(','),
+                        sql.Identifier('plugin'),
+                        sql.SQL(','),
+                        sql.Identifier('configured'),
+                        sql.SQL(','),
+                        sql.Identifier('auto_added'),
+                        sql.SQL(','),
+                        sql.Identifier('is_new'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('config_id'),
+                sql.SQL(' = ANY(%s);'),
+            ]
+        )
+        assert device_dao._prepare_find_from_configs_query() == expected_composed_query
+
+
+class TestDeviceConfigDAO:
+    def test_get_descendants(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        fields = sql.Composed(
+            [
+                sql.Identifier('id'),
+                sql.SQL(','),
+                sql.Identifier('parent_id'),
+                sql.SQL(','),
+                sql.Identifier('deletable'),
+                sql.SQL(','),
+                sql.Identifier('type'),
+                sql.SQL(','),
+                sql.Identifier('roles'),
+                sql.SQL(','),
+                sql.Identifier('configdevice'),
+                sql.SQL(','),
+                sql.Identifier('transient'),
+            ]
+        )
+        prefixed_fields = sql.Composed(
+            [
+                sql.Identifier('provd_device_config', 'id'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'parent_id'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'deletable'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'type'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'roles'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'configdevice'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'transient'),
+            ]
+        )
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('WITH RECURSIVE '),
+                sql.Identifier('all_children'),
+                sql.SQL('('),
+                fields,
+                sql.SQL(') AS (\nSELECT '),
+                fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('parent_id'),
+                sql.SQL(' = %s\nUNION ALL\nSELECT '),
+                prefixed_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('all_children'),
+                sql.SQL(', '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL('\nWHERE '),
+                sql.Identifier('all_children', 'id'),
+                sql.SQL(' = '),
+                sql.Identifier('provd_device_config', 'parent_id'),
+                sql.SQL('\n)\nSELECT '),
+                fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('all_children'),
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_config_dao._prepare_get_descendants_query()
+            == expected_composed_query
+        )
