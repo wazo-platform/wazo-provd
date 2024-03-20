@@ -10,7 +10,7 @@ import psycopg2.extras
 from psycopg2 import sql
 
 from .exceptions import CreationError, EntryNotFoundException
-from .models import Model, ServiceConfiguration, Tenant
+from .models import Device, DeviceConfig, Model, ServiceConfiguration, Tenant
 
 if TYPE_CHECKING:
     from twisted.enterprise import adbapi
@@ -189,3 +189,13 @@ class ServiceConfigurationDAO(BaseDAO):
     async def update_key(self, key: str, value: Any) -> None:
         query = self._prepare_update_key_query(key)
         await self._db_connection.runOperation(query, [value])
+
+
+class DeviceDAO(BaseDAO):
+    __tablename__ = 'provd_device'
+    __model__ = Device
+
+
+class DeviceConfigDAO(BaseDAO):
+    __tablename__ = 'provd_device_config'
+    __model__ = DeviceConfig
