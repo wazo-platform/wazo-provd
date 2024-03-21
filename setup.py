@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'wazo-provd-init-db=wazo_provd.init_db:main',
             'wazo-provd-upgrade-db=wazo_provd.upgrade_db:upgrade_db',
+            'wazo-provd-migrate-db=wazo_provd.main_migrate_db:main',
         ],
     },
 )
