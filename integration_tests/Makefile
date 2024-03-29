@@ -1,4 +1,5 @@
 PROVD_DIR ?= ../
+DOCKER_DIR ?= docker
 
 test-setup: egg-info provd provd-test
 
@@ -7,6 +8,7 @@ provd:
 
 provd-test:
 	docker build --no-cache -t wazo-provd-tests -f Dockerfile $(PROVD_DIR)
+	docker build --no-cache -t wazo-provd-plugin-server -f $(DOCKER_DIR)/Dockerfile-http-server $(DOCKER_DIR)
 
 test:
 	pytest -x -vvv

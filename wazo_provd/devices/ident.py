@@ -873,28 +873,33 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
         logger.debug(
             'URL key verifying hook, path = "%s", request = "%s"', path, request
         )
+
         prov_key = path.decode('utf-8')
         logger.debug('Prov key = "%s"', prov_key)
+
         if not prov_key:
             logger.info('Empty provisioning key. Denying request.')
             return self.unauthorized_resource
+
         tenant_uuid = self._app.configure_service.get_tenant_from_provisioning_key(
             prov_key
         )
         if not tenant_uuid:
             logger.info('Invalid URL key. Denying request.')
             return self.unauthorized_resource
+
         # Inject tenant_uuid in request object
         request.tenant_uuid = tenant_uuid
 
-        request.postpath.insert(0, path)
-        request.prepath.pop()
+        logger.debug(
+            'Received request: path = %s, prepath = %s, postpath = %s',
+            path,
+            request.prepath,
+            request.postpath,
+        )
 
-        request.postpath = request.postpath[1:]
-        path = b'/' + b'/'.join(request.prepath + request.postpath)
+        path = self._strip_key_from_request(path, request)
 
-        path = request.postpath.pop(0)
-        request.prepath.append(path)
         logger.debug(
             'Rewritten request: path = %s, prepath = %s, postpath = %s',
             path,
@@ -902,6 +907,20 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
             request.postpath,
         )
         return self._next_service(path, request)
+
+    @staticmethod
+    def _strip_key_from_request(path, request):
+        # remove the processed key
+        request.prepath.pop()
+
+        # replace the key with the requested resource
+        try:
+            path = request.postpath.pop(0)
+        except IndexError:
+            path = ''
+        request.prepath.append(path)
+
+        return path
 
 
 # @implementer(ITFTPReadService)

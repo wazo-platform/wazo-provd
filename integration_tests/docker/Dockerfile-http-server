@@ -1,0 +1,6 @@
+FROM python:3.10
+
+WORKDIR /var/www
+EXPOSE 8080/tcp
+
+CMD [ "python", "-m", "http.server", "8080"]
