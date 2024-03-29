@@ -18,6 +18,7 @@ from wazo_test_helpers.asset_launching_test_case import (
 from wazo_provd.database.queries import (
     DeviceConfigDAO,
     DeviceDAO,
+    DeviceRawConfigDAO,
     ServiceConfigurationDAO,
     TenantDAO,
 )
@@ -130,3 +131,4 @@ class DBIntegrationTest(_BaseIntegrationTest):
         self.service_configuration_dao = ServiceConfigurationDAO(self.db)
         self.device_dao = DeviceDAO(self.db)
         self.device_config_dao = DeviceConfigDAO(self.db)
+        self.device_raw_config_dao = DeviceRawConfigDAO(self.db)
