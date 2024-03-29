@@ -8,6 +8,7 @@ from functools import wraps
 from wazo_provd.database.models import (
     Device,
     DeviceConfig,
+    DeviceRawConfig,
     ServiceConfiguration,
     Tenant,
 )
@@ -95,6 +96,26 @@ def device_config(**device_config_args):
                 result = await decorated(self, *args, **kwargs)
             finally:
                 await self.device_config_dao.delete(device_config)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def device_raw_config(**device_raw_config_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            model = DeviceRawConfig(**device_raw_config_args)
+
+            device_raw_config = await self.device_raw_config_dao.create(model)
+
+            args = tuple(list(args) + [device_raw_config])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.device_raw_config_dao.delete(device_raw_config)
             return result
 
         return wrapper
