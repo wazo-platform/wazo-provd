@@ -20,8 +20,12 @@ TABLE_NAME = 'provd_device_raw_config'
 def upgrade():
     op.create_table(
         TABLE_NAME,
-        sa.Column('id', sa.Text, primary_key=True),
-        sa.Column('config_id', sa.Text, sa.ForeignKey('provd_device_config.id')),
+        sa.Column(
+            'config_id',
+            sa.Text,
+            sa.ForeignKey('provd_device_config.id'),
+            primary_key=True,
+        ),
         sa.Column('ip', sa.Text),
         sa.Column('http_port', sa.Integer),
         sa.Column('http_base_url', sa.Text),
