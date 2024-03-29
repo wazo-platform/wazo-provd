@@ -11,7 +11,14 @@ import psycopg2.extras
 from psycopg2 import sql
 
 from .exceptions import CreationError, EntryNotFoundException
-from .models import Device, DeviceConfig, Model, ServiceConfiguration, Tenant
+from .models import (
+    Device,
+    DeviceConfig,
+    DeviceRawConfig,
+    Model,
+    ServiceConfiguration,
+    Tenant,
+)
 
 if TYPE_CHECKING:
     from twisted.enterprise import adbapi
@@ -232,6 +239,11 @@ class DeviceConfigDAO(BaseDAO):
         query = self._prepare_get_descendants_query()
         results = await self._db_connection.runQuery(query, [config_id])
         return [self.__model__(*result) for result in results]
+
+
+class DeviceRawConfigDAO(BaseDAO):
+    __tablename__ = 'provd_device_raw_config'
+    __model__ = DeviceRawConfig
 
 
 class DeviceDAO(BaseDAO):
