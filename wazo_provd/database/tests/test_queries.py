@@ -6,7 +6,13 @@ from __future__ import annotations
 import pytest
 from psycopg2 import sql
 
-from ..queries import DeviceConfigDAO, DeviceDAO, ServiceConfigurationDAO, TenantDAO
+from ..queries import (
+    DeviceConfigDAO,
+    DeviceDAO,
+    DeviceRawConfigDAO,
+    ServiceConfigurationDAO,
+    TenantDAO,
+)
 
 
 class MockDBConnection:
@@ -340,3 +346,126 @@ class TestDeviceConfigDAO:
             device_config_dao._prepare_get_descendants_query()
             == expected_composed_query
         )
+
+
+class TestDeviceRawConfigDAO:
+    def test_get(self):
+        device_raw_config_dao = DeviceRawConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('ip'),
+                        sql.SQL(','),
+                        sql.Identifier('http_port'),
+                        sql.SQL(','),
+                        sql.Identifier('http_base_url'),
+                        sql.SQL(','),
+                        sql.Identifier('tftp_port'),
+                        sql.SQL(','),
+                        sql.Identifier('dns_enabled'),
+                        sql.SQL(','),
+                        sql.Identifier('dns_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('ntp_enabled'),
+                        sql.SQL(','),
+                        sql.Identifier('ntp_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('vlan_enabled'),
+                        sql.SQL(','),
+                        sql.Identifier('vlan_id'),
+                        sql.SQL(','),
+                        sql.Identifier('vlan_priority'),
+                        sql.SQL(','),
+                        sql.Identifier('vlan_pc_port_id'),
+                        sql.SQL(','),
+                        sql.Identifier('syslog_enabled'),
+                        sql.SQL(','),
+                        sql.Identifier('syslog_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('syslog_port'),
+                        sql.SQL(','),
+                        sql.Identifier('syslog_level'),
+                        sql.SQL(','),
+                        sql.Identifier('admin_username'),
+                        sql.SQL(','),
+                        sql.Identifier('admin_password'),
+                        sql.SQL(','),
+                        sql.Identifier('user_username'),
+                        sql.SQL(','),
+                        sql.Identifier('user_password'),
+                        sql.SQL(','),
+                        sql.Identifier('timezone'),
+                        sql.SQL(','),
+                        sql.Identifier('locale'),
+                        sql.SQL(','),
+                        sql.Identifier('protocol'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_proxy_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_proxy_port'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_backup_proxy_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_backup_proxy_port'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_registrar_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_registrar_port'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_backup_registrar_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_backup_registrar_port'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_outbound_proxy_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_outbound_proxy_port'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_dtmf_mode'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_srtp_mode'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_transport'),
+                        sql.SQL(','),
+                        sql.Identifier(
+                            'sip_servers_root_and_intermediate_certificates'
+                        ),
+                        sql.SQL(','),
+                        sql.Identifier('sip_local_root_and_intermediate_certificates'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_local_certificate'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_local_key'),
+                        sql.SQL(','),
+                        sql.Identifier('sip_subscribe_mwi'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_dnd'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_fwd_unconditional'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_fwd_no_answer'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_fwd_busy'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_fwd_disable_all'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_park'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_pickup_group'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_pickup_call'),
+                        sql.SQL(','),
+                        sql.Identifier('exten_voicemail'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_raw_config'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('config_id'),
+                sql.SQL(' = %s;'),
+            ]
+        )
+        assert device_raw_config_dao._prepare_get_query() == expected_composed_query
