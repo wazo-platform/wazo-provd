@@ -35,7 +35,7 @@ services:
       - "69/udp"
 
   pluginserver:
-    image: trinitronx/python-simplehttpserver
+    image: wazo-provd-plugin-server
     volumes:
       - "./plugins/pkgs:/var/www"
     ports:
