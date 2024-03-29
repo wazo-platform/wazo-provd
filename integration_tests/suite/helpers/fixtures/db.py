@@ -5,7 +5,12 @@ from __future__ import annotations
 import uuid
 from functools import wraps
 
-from wazo_provd.database.models import ServiceConfiguration, Tenant
+from wazo_provd.database.models import (
+    Device,
+    DeviceConfig,
+    ServiceConfiguration,
+    Tenant,
+)
 
 
 def tenant(**tenant_args):
@@ -47,6 +52,49 @@ def service_configuration(**service_configuration_args):
                 result = await decorated(self, *args, **kwargs)
             finally:
                 await self.service_configuration_dao.delete(service_configuration)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def device(**device_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            device_args.setdefault('id', uuid.uuid4().hex)
+            device_args.setdefault('tenant_uuid', uuid.uuid4())
+            model = Device(**device_args)
+
+            device = await self.device_dao.create(model)
+
+            args = tuple(list(args) + [device])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.device_dao.delete(device)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def device_config(**device_config_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            device_config_args.setdefault('id', uuid.uuid4().hex)
+            model = DeviceConfig(**device_config_args)
+
+            device_config = await self.device_config_dao.create(model)
+
+            args = tuple(list(args) + [device_config])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.device_config_dao.delete(device_config)
             return result
 
         return wrapper
