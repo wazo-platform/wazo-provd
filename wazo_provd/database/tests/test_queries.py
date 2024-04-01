@@ -6,12 +6,7 @@ from __future__ import annotations
 import pytest
 from psycopg2 import sql
 
-from ..queries import (
-    DeviceConfigDAO,
-    DeviceDAO,
-    ServiceConfigurationDAO,
-    TenantDAO,
-)
+from ..queries import DeviceConfigDAO, DeviceDAO, ServiceConfigurationDAO, TenantDAO
 
 
 class MockDBConnection:
