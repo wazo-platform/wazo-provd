@@ -11,13 +11,7 @@ import psycopg2.extras
 from psycopg2 import sql
 
 from .exceptions import CreationError, EntryNotFoundException
-from .models import (
-    Device,
-    DeviceConfig,
-    Model,
-    ServiceConfiguration,
-    Tenant,
-)
+from .models import Device, DeviceConfig, Model, ServiceConfiguration, Tenant
 
 if TYPE_CHECKING:
     from twisted.enterprise import adbapi
