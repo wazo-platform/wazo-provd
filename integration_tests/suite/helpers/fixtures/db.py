@@ -9,6 +9,7 @@ from wazo_provd.database.models import (
     Device,
     DeviceConfig,
     DeviceRawConfig,
+    SCCPLine,
     ServiceConfiguration,
     SIPLine,
     Tenant,
@@ -138,6 +139,27 @@ def sip_line(**sip_line_args):
                 result = await decorated(self, *args, **kwargs)
             finally:
                 await self.sip_line_dao.delete(sip_line)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def sccp_line(**sccp_line_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            sccp_line_args.setdefault('uuid', uuid.uuid4())
+            model = SCCPLine(**sccp_line_args)
+
+            sccp_line = await self.sccp_line_dao.create(model)
+
+            args = tuple(list(args) + [sccp_line])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.sccp_line_dao.delete(sccp_line)
             return result
 
         return wrapper
