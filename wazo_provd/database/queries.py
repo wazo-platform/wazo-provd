@@ -16,6 +16,7 @@ from .models import (
     DeviceConfig,
     DeviceRawConfig,
     Model,
+    SCCPLine,
     ServiceConfiguration,
     SIPLine,
     Tenant,
@@ -275,3 +276,8 @@ class DeviceDAO(BaseDAO):
 class SIPLineDAO(BaseDAO):
     __tablename__ = 'provd_sip_line'
     __model__ = SIPLine
+
+
+class SCCPLineDAO(BaseDAO):
+    __tablename__ = 'provd_sccp_line'
+    __model__ = SCCPLine
