@@ -10,6 +10,7 @@ from ..queries import (
     DeviceConfigDAO,
     DeviceDAO,
     DeviceRawConfigDAO,
+    FunctionKeyDAO,
     SCCPLineDAO,
     ServiceConfigurationDAO,
     SIPLineDAO,
@@ -557,3 +558,34 @@ class TestSCCPLineDAO:
             ]
         )
         assert sccp_line_dao._prepare_get_query() == expected_composed_query
+
+
+class TestFunctionKeyDAO:
+    def test_get(self):
+        function_key_dao = FunctionKeyDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('type'),
+                        sql.SQL(','),
+                        sql.Identifier('value'),
+                        sql.SQL(','),
+                        sql.Identifier('label'),
+                        sql.SQL(','),
+                        sql.Identifier('line'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_function_key'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('uuid'),
+                sql.SQL(' = %s;'),
+            ]
+        )
+        assert function_key_dao._prepare_get_query() == expected_composed_query
