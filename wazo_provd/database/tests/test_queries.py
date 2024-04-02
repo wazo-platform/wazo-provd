@@ -11,6 +11,7 @@ from ..queries import (
     DeviceDAO,
     DeviceRawConfigDAO,
     ServiceConfigurationDAO,
+    SIPLineDAO,
     TenantDAO,
 )
 
@@ -469,3 +470,62 @@ class TestDeviceRawConfigDAO:
             ]
         )
         assert device_raw_config_dao._prepare_get_query() == expected_composed_query
+
+
+class TestSIPLineDAO:
+    def test_get(self):
+        sip_line_dao = SIPLineDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('proxy_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('proxy_port'),
+                        sql.SQL(','),
+                        sql.Identifier('backup_proxy_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('backup_proxy_port'),
+                        sql.SQL(','),
+                        sql.Identifier('registrar_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('registrar_port'),
+                        sql.SQL(','),
+                        sql.Identifier('backup_registrar_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('backup_registrar_port'),
+                        sql.SQL(','),
+                        sql.Identifier('outbound_proxy_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('outbound_proxy_port'),
+                        sql.SQL(','),
+                        sql.Identifier('username'),
+                        sql.SQL(','),
+                        sql.Identifier('password'),
+                        sql.SQL(','),
+                        sql.Identifier('auth_username'),
+                        sql.SQL(','),
+                        sql.Identifier('display_name'),
+                        sql.SQL(','),
+                        sql.Identifier('number'),
+                        sql.SQL(','),
+                        sql.Identifier('dtmf_mode'),
+                        sql.SQL(','),
+                        sql.Identifier('srtp_mode'),
+                        sql.SQL(','),
+                        sql.Identifier('voicemail'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_sip_line'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('uuid'),
+                sql.SQL(' = %s;'),
+            ]
+        )
+        assert sip_line_dao._prepare_get_query() == expected_composed_query

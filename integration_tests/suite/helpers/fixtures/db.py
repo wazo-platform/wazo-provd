@@ -10,6 +10,7 @@ from wazo_provd.database.models import (
     DeviceConfig,
     DeviceRawConfig,
     ServiceConfiguration,
+    SIPLine,
     Tenant,
 )
 
@@ -116,6 +117,27 @@ def device_raw_config(**device_raw_config_args):
                 result = await decorated(self, *args, **kwargs)
             finally:
                 await self.device_raw_config_dao.delete(device_raw_config)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def sip_line(**sip_line_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            sip_line_args.setdefault('uuid', uuid.uuid4())
+            model = SIPLine(**sip_line_args)
+
+            sip_line = await self.sip_line_dao.create(model)
+
+            args = tuple(list(args) + [sip_line])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.sip_line_dao.delete(sip_line)
             return result
 
         return wrapper
