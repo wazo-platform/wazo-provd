@@ -19,6 +19,7 @@ from wazo_provd.database.queries import (
     DeviceConfigDAO,
     DeviceDAO,
     DeviceRawConfigDAO,
+    FunctionKeyDAO,
     SCCPLineDAO,
     ServiceConfigurationDAO,
     SIPLineDAO,
@@ -136,3 +137,4 @@ class DBIntegrationTest(_BaseIntegrationTest):
         self.device_raw_config_dao = DeviceRawConfigDAO(self.db)
         self.sip_line_dao = SIPLineDAO(self.db)
         self.sccp_line_dao = SCCPLineDAO(self.db)
+        self.function_key_dao = FunctionKeyDAO(self.db)
