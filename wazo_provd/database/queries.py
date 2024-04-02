@@ -15,6 +15,7 @@ from .models import (
     Device,
     DeviceConfig,
     DeviceRawConfig,
+    FunctionKey,
     Model,
     SCCPLine,
     ServiceConfiguration,
@@ -281,3 +282,8 @@ class SIPLineDAO(BaseDAO):
 class SCCPLineDAO(BaseDAO):
     __tablename__ = 'provd_sccp_line'
     __model__ = SCCPLine
+
+
+class FunctionKeyDAO(BaseDAO):
+    __tablename__ = 'provd_function_key'
+    __model__ = FunctionKey
