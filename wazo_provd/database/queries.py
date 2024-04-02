@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import psycopg2.extras
 from psycopg2 import sql
 
 from .exceptions import CreationError, EntryNotFoundException
-from .models import Model, ServiceConfiguration, Tenant
+from .models import Device, DeviceConfig, Model, ServiceConfiguration, Tenant
 
 if TYPE_CHECKING:
     from twisted.enterprise import adbapi
@@ -189,3 +190,70 @@ class ServiceConfigurationDAO(BaseDAO):
     async def update_key(self, key: str, value: Any) -> None:
         query = self._prepare_update_key_query(key)
         await self._db_connection.runOperation(query, [value])
+
+
+class DeviceConfigDAO(BaseDAO):
+    __tablename__ = 'provd_device_config'
+    __model__ = DeviceConfig
+
+    def _prepare_get_descendants_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        prefixed_field_names = [
+            sql.Identifier(self.__tablename__, field.name) for field in fields
+        ]
+        query_fields = sql.SQL(',').join(field_names)
+        prefixed_query_fields = sql.SQL(',').join(prefixed_field_names)
+
+        sql_query = sql.SQL(
+            dedent(
+                '''\
+                WITH RECURSIVE {all_children}({fields}) AS (
+                SELECT {fields} FROM {table} WHERE {parent_key} = %s
+                UNION ALL
+                SELECT {prefixed_query_fields} FROM {all_children}, {table}
+                WHERE {all_children_id} = {prefixed_parent_key}
+                )
+                SELECT {fields} FROM {all_children};'''
+            )
+        ).format(
+            all_children=sql.Identifier('all_children'),
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+            parent_key=sql.Identifier('parent_id'),
+            prefixed_query_fields=prefixed_query_fields,
+            all_children_id=sql.Identifier('all_children', 'id'),
+            prefixed_parent_key=sql.Identifier(self.__tablename__, 'parent_id'),
+        )
+
+        return sql_query
+
+    async def get_descendants(self, config_id: str) -> list[DeviceConfig]:
+        query = self._prepare_get_descendants_query()
+        results = await self._db_connection.runQuery(query, [config_id])
+        return [self.__model__(*result) for result in results]
+
+
+class DeviceDAO(BaseDAO):
+    __tablename__ = 'provd_device'
+    __model__ = Device
+
+    def _prepare_find_from_configs_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL(
+            'SELECT {fields} FROM {table} WHERE {config_key} = ANY(%s);'
+        ).format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+            config_key=sql.Identifier('config_id'),
+        )
+
+        return sql_query
+
+    async def find_from_configs(self, config_ids: list[str]) -> list[Device]:
+        query = self._prepare_find_from_configs_query()
+        results = await self._db_connection.runQuery(query, [config_ids])
+        return [self.__model__(*result) for result in results]

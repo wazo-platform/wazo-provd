@@ -15,7 +15,12 @@ from wazo_test_helpers.asset_launching_test_case import (
     WrongClient,
 )
 
-from wazo_provd.database.queries import ServiceConfigurationDAO, TenantDAO
+from wazo_provd.database.queries import (
+    DeviceConfigDAO,
+    DeviceDAO,
+    ServiceConfigurationDAO,
+    TenantDAO,
+)
 
 from .bus import BusClient
 from .database import DatabaseClient
@@ -123,3 +128,5 @@ class DBIntegrationTest(_BaseIntegrationTest):
         self.db = self.make_db()
         self.tenant_dao = TenantDAO(self.db)
         self.service_configuration_dao = ServiceConfigurationDAO(self.db)
+        self.device_dao = DeviceDAO(self.db)
+        self.device_config_dao = DeviceConfigDAO(self.db)
