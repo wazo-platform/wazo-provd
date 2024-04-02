@@ -17,6 +17,7 @@ from .models import (
     DeviceRawConfig,
     Model,
     ServiceConfiguration,
+    SIPLine,
     Tenant,
 )
 
@@ -269,3 +270,8 @@ class DeviceDAO(BaseDAO):
         query = self._prepare_find_from_configs_query()
         results = await self._db_connection.runQuery(query, [config_ids])
         return [self.__model__(*result) for result in results]
+
+
+class SIPLineDAO(BaseDAO):
+    __tablename__ = 'provd_sip_line'
+    __model__ = SIPLine
