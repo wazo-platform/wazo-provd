@@ -10,6 +10,7 @@ from ..queries import (
     DeviceConfigDAO,
     DeviceDAO,
     DeviceRawConfigDAO,
+    SCCPLineDAO,
     ServiceConfigurationDAO,
     SIPLineDAO,
     TenantDAO,
@@ -529,3 +530,30 @@ class TestSIPLineDAO:
             ]
         )
         assert sip_line_dao._prepare_get_query() == expected_composed_query
+
+
+class TestSCCPLineDAO:
+    def test_get(self):
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('ip'),
+                        sql.SQL(','),
+                        sql.Identifier('port'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_sccp_line'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('uuid'),
+                sql.SQL(' = %s;'),
+            ]
+        )
+        assert sccp_line_dao._prepare_get_query() == expected_composed_query
