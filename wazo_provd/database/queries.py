@@ -243,6 +243,48 @@ class DeviceConfigDAO(BaseDAO):
         results = await self._db_connection.runQuery(query, [config_id])
         return [self.__model__(*result) for result in results]
 
+    def _prepare_get_parents_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        prefixed_field_names = [
+            sql.Identifier(self.__tablename__, field.name) for field in fields
+        ]
+        query_fields = sql.SQL(',').join(field_names)
+        prefixed_query_fields = sql.SQL(',').join(prefixed_field_names)
+
+        sql_query = sql.SQL(
+            dedent(
+                '''\
+                WITH RECURSIVE {all_parents}({fields}) AS (
+                SELECT {fields} FROM {table} WHERE {pkey} = %(pkey)s
+                UNION ALL
+                SELECT {prefixed_query_fields} FROM {all_parents}, {table}
+                WHERE {all_parents_parent_id} = {prefixed_pkey}
+                )
+                SELECT {fields} FROM {all_parents} WHERE {all_parents_id} != %(pkey)s;'''
+            )
+        ).format(
+            all_parents=sql.Identifier('all_parents'),
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+            pkey=sql.Identifier(self.__model__._meta['primary_key']),
+            all_parents_id=sql.Identifier(
+                'all_parents', self.__model__._meta['primary_key']
+            ),
+            prefixed_query_fields=prefixed_query_fields,
+            all_parents_parent_id=sql.Identifier('all_parents', 'parent_id'),
+            prefixed_pkey=sql.Identifier(
+                self.__tablename__, self.__model__._meta['primary_key']
+            ),
+        )
+
+        return sql_query
+
+    async def get_parents(self, config_id: str) -> list[DeviceConfig]:
+        query = self._prepare_get_parents_query()
+        results = await self._db_connection.runQuery(query, {'pkey': config_id})
+        return [self.__model__(*result) for result in results]
+
 
 class DeviceRawConfigDAO(BaseDAO):
     __tablename__ = 'provd_device_raw_config'
