@@ -350,6 +350,75 @@ class TestDeviceConfigDAO:
             == expected_composed_query
         )
 
+    def test_get_parents(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        fields = sql.Composed(
+            [
+                sql.Identifier('id'),
+                sql.SQL(','),
+                sql.Identifier('parent_id'),
+                sql.SQL(','),
+                sql.Identifier('deletable'),
+                sql.SQL(','),
+                sql.Identifier('type'),
+                sql.SQL(','),
+                sql.Identifier('roles'),
+                sql.SQL(','),
+                sql.Identifier('configdevice'),
+                sql.SQL(','),
+                sql.Identifier('transient'),
+            ]
+        )
+        prefixed_fields = sql.Composed(
+            [
+                sql.Identifier('provd_device_config', 'id'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'parent_id'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'deletable'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'type'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'roles'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'configdevice'),
+                sql.SQL(','),
+                sql.Identifier('provd_device_config', 'transient'),
+            ]
+        )
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('WITH RECURSIVE '),
+                sql.Identifier('all_parents'),
+                sql.SQL('('),
+                fields,
+                sql.SQL(') AS (\nSELECT '),
+                fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('id'),
+                sql.SQL(' = %(pkey)s\nUNION ALL\nSELECT '),
+                prefixed_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('all_parents'),
+                sql.SQL(', '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL('\nWHERE '),
+                sql.Identifier('all_parents', 'parent_id'),
+                sql.SQL(' = '),
+                sql.Identifier('provd_device_config', 'id'),
+                sql.SQL('\n)\nSELECT '),
+                fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('all_parents'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('all_parents', 'id'),
+                sql.SQL(' != %(pkey)s;'),
+            ]
+        )
+        assert device_config_dao._prepare_get_parents_query() == expected_composed_query
+
 
 class TestDeviceRawConfigDAO:
     def test_get(self):
