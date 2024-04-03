@@ -117,22 +117,17 @@ class ProvisioningService(Service):
 
         try:
             cfg_collection = ConfigCollection(self._database.collection('configs'))
-            dev_collection = DeviceCollection(self._database.collection('devices'))
+            device_dao = queries.DeviceDAO(self._sql_database)
+            device_config_dao = queries.DeviceConfigDAO(self._sql_database)
+            device_raw_config_dao = queries.DeviceRawConfigDAO(self._sql_database)
             tenant_dao = queries.TenantDAO(self._sql_database)
             configuration_dao = queries.ServiceConfigurationDAO(self._sql_database)
-            if self._config['database']['ensure_common_indexes']:
-                logger.debug('Ensuring index existence on collections')
-                try:
-                    dev_collection.ensure_index('mac')
-                    dev_collection.ensure_index('ip')
-                    dev_collection.ensure_index('sn')
-                except AttributeError as e:
-                    logger.warning(
-                        'This type of database doesn\'t seem to support index: %s', e
-                    )
+
             self.app = ProvisioningApplication(
                 cfg_collection,
-                dev_collection,
+                device_dao,
+                device_config_dao,
+                device_raw_config_dao,
                 tenant_dao,
                 configuration_dao,
                 self._config,
