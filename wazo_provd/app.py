@@ -691,16 +691,6 @@ class ProvisioningApplication:
             logger.error('Error while deleting device', exc_info=True)
             raise
 
-    def dev_retrieve(self, device_id: str):
-        """Return a deferred that fire with the device with the given ID, or
-        fire with None if there's no such document.
-
-        """
-        try:
-            return defer.ensureDeferred(self.device_dao.get(device_id))
-        except EntryNotFoundException:
-            return defer.fail(None)
-
     def dev_find(
         self, selector, tenant_uuids: list[str] | None = None, *args, **kwargs
     ) -> Deferred:
