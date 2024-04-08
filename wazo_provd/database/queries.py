@@ -315,6 +315,28 @@ class DeviceDAO(BaseDAO):
         results = await self._db_connection.runQuery(query, [config_ids])
         return [self.__model__(*result) for result in results]
 
+    def _prepare_find_one_from_config_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL(
+            'SELECT {fields} FROM {table} WHERE {config_key} = %s LIMIT 1;'
+        ).format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+            config_key=sql.Identifier('config_id'),
+        )
+
+        return sql_query
+
+    async def find_one_from_config(self, config_id: str) -> Device:
+        query = self._prepare_find_one_from_config_query()
+        results = await self._db_connection.runQuery(query, [config_id])
+        for result in results:
+            return self.__model__(*result)
+        raise EntryNotFoundException('Could not get entry')
+
 
 class SIPLineDAO(BaseDAO):
     __tablename__ = 'provd_sip_line'
