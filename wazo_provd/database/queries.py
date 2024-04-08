@@ -337,6 +337,38 @@ class DeviceDAO(BaseDAO):
             return self.__model__(*result)
         raise EntryNotFoundException('Could not get entry')
 
+    def _prepare_multitenant_get_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL(
+            'SELECT {fields} FROM {table} WHERE {pkey} = %s AND {tenant_field} = ANY(%s);'
+        ).format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+            pkey=sql.Identifier(self.__model__._meta['primary_key']),
+            tenant_field=sql.Identifier('tenant_uuid'),
+        )
+
+        return sql_query
+
+    async def get(
+        self, pkey_value: Any, tenant_uuids: list[str] | None = None
+    ) -> Device:
+        if tenant_uuids is None:
+            query = self._prepare_get_query()
+            query_results = await self._db_connection.runQuery(query, [pkey_value])
+        else:
+            query = self._prepare_multitenant_get_query()
+            query_results = await self._db_connection.runQuery(
+                query, [pkey_value, tenant_uuids]
+            )
+
+        for result in query_results:
+            return self.__model__(*result)
+        raise EntryNotFoundException('Could not get entry')
+
 
 class SIPLineDAO(BaseDAO):
     __tablename__ = 'provd_sip_line'
