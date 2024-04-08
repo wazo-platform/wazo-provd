@@ -38,6 +38,14 @@ class TestDevice(DBIntegrationTest):
 
     @asyncio_run
     @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
+    @fixtures.db.device_config(id='test4')
+    @fixtures.db.device(tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test4')
+    async def test_find_one_from_config(self, _, __, device):
+        device_from_db = await self.device_dao.find_one_from_config('test4')
+        assert device == device_from_db
+
+    @asyncio_run
+    @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
     async def test_create(self, _):
         device_id = uuid.uuid4().hex
         device = Device(id=device_id, tenant_uuid=uuid.UUID(MAIN_TENANT))
