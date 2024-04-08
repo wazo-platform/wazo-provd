@@ -321,6 +321,49 @@ class TestDeviceDAO:
             device_dao._prepare_find_one_from_config_query() == expected_composed_query
         )
 
+    def test_get_multitenant_query(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                sql.Composed(
+                    [
+                        sql.Identifier('id'),
+                        sql.SQL(','),
+                        sql.Identifier('tenant_uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('mac'),
+                        sql.SQL(','),
+                        sql.Identifier('ip'),
+                        sql.SQL(','),
+                        sql.Identifier('vendor'),
+                        sql.SQL(','),
+                        sql.Identifier('model'),
+                        sql.SQL(','),
+                        sql.Identifier('version'),
+                        sql.SQL(','),
+                        sql.Identifier('plugin'),
+                        sql.SQL(','),
+                        sql.Identifier('configured'),
+                        sql.SQL(','),
+                        sql.Identifier('auto_added'),
+                        sql.SQL(','),
+                        sql.Identifier('is_new'),
+                    ]
+                ),
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('id'),
+                sql.SQL(' = %s AND '),
+                sql.Identifier('tenant_uuid'),
+                sql.SQL(' = ANY(%s);'),
+            ]
+        )
+        assert device_dao._prepare_multitenant_get_query() == expected_composed_query
+
 
 class TestDeviceConfigDAO:
     def test_get_descendants(self):

@@ -11,6 +11,7 @@ from .helpers import fixtures
 from .helpers.base import (
     INVALID_RESOURCE_UUID,
     MAIN_TENANT,
+    SUB_TENANT_1,
     DBIntegrationTest,
     asyncio_run,
 )
@@ -53,6 +54,24 @@ class TestDevice(DBIntegrationTest):
         assert created_device == device
 
         await self.device_dao.delete(device)
+
+    @asyncio_run
+    @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
+    @fixtures.db.tenant(uuid=uuid.UUID(SUB_TENANT_1))
+    @fixtures.db.device(tenant_uuid=uuid.UUID(MAIN_TENANT))
+    async def test_get_multitenant(self, _, __, device):
+        result = await self.device_dao.get(
+            device.id, tenant_uuids=[uuid.UUID(MAIN_TENANT)]
+        )
+        assert result.id == device.id
+
+        result = await self.device_dao.get(
+            device.id, tenant_uuids=[uuid.UUID(SUB_TENANT_1), uuid.UUID(MAIN_TENANT)]
+        )
+        assert result.id == device.id
+
+        with self.assertRaises(EntryNotFoundException):
+            await self.device_dao.get(device.id, tenant_uuids=[uuid.UUID(SUB_TENANT_1)])
 
     @asyncio_run
     @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
