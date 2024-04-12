@@ -25,11 +25,7 @@ from wazo_provd.database.models import (
     ServiceConfiguration,
 )
 from wazo_provd.database.models import Tenant as TenantModel
-from wazo_provd.devices.config import (
-    ConfigCollection,
-    RawConfigError,
-    build_autocreate_config,
-)
+from wazo_provd.devices.config import RawConfigError, build_autocreate_config
 from wazo_provd.devices.device import needs_reconfiguration
 from wazo_provd.localization import get_localization_service
 from wazo_provd.operation import (
@@ -221,7 +217,6 @@ class ProvisioningApplication:
 
     def __init__(
         self,
-        cfg_collection: ConfigCollection,
         device_dao: DeviceDAO,
         device_config_dao: DeviceConfigDAO,
         device_raw_config_dao: DeviceRawConfigDAO,
@@ -229,7 +224,6 @@ class ProvisioningApplication:
         configuration_dao: ServiceConfigurationDAO,
         config: ProvdConfigDict,
     ) -> None:
-        self._cfg_collection = cfg_collection
         self._split_config: ProvdConfigDict = config
         self._token: str | None = None
         self._tenant_uuid: str | None = None
