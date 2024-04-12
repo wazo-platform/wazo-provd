@@ -24,7 +24,7 @@ def upgrade():
         sa.Column('parent_id', sa.Text, sa.ForeignKey(f'{TABLE_NAME}.id')),
         sa.Column('deletable', sa.Boolean, server_default=sa.sql.text('true')),
         sa.Column('type', sa.Text),
-        sa.Column('roles', sa.Text),
+        sa.Column('role', sa.Text),
         sa.Column('configdevice', sa.Text),
         sa.Column('transient', sa.Boolean, server_default=sa.sql.text('false')),
     )
