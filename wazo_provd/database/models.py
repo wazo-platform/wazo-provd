@@ -50,7 +50,7 @@ class DeviceConfig(Model):
     parent_id: str | None = dataclasses.field(default=None)
     deletable: bool = dataclasses.field(default=True)
     type: str | None = dataclasses.field(default=None)
-    roles: str | None = dataclasses.field(default=None)
+    role: str | None = dataclasses.field(default=None)
     configdevice: str | None = dataclasses.field(default=None)
     transient: bool = dataclasses.field(default=False)
 
