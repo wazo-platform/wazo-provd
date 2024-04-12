@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+import logging
+import uuid
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 import psycopg2.extras
 from psycopg2 import sql
@@ -25,6 +27,8 @@ from .models import (
 
 if TYPE_CHECKING:
     from twisted.enterprise import adbapi
+
+logger = logging.getLogger(__name__)
 
 psycopg2.extras.register_uuid()
 
@@ -354,7 +358,7 @@ class DeviceDAO(BaseDAO):
         return sql_query
 
     async def get(
-        self, pkey_value: Any, tenant_uuids: list[str] | None = None
+        self, pkey_value: Any, tenant_uuids: list[uuid.UUID] | None = None
     ) -> Device:
         if tenant_uuids is None:
             query = self._prepare_get_query()
@@ -368,6 +372,102 @@ class DeviceDAO(BaseDAO):
         for result in query_results:
             return self.__model__(*result)
         raise EntryNotFoundException('Could not get entry')
+
+    def _prepare_fields_find_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL('SELECT {fields} FROM {table} WHERE ').format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+        )
+        return sql_query
+
+    def _prepare_tenant_uuids_find_query(
+        self, tenant_uuids: list[uuid.UUID]
+    ) -> sql.SQL:
+        return sql.SQL('{tenant_uuid} = ANY({tenant_uuids}) AND ').format(
+            tenant_uuid=sql.Identifier('tenant_uuid'),
+            tenant_uuids=sql.Literal(tenant_uuids),
+        )
+
+    def _remove_invalid_selectors(self, selectors: dict[str, Any]) -> dict[str, Any]:
+        valid_fields = [field.name for field in self._get_model_fields()]
+        valid_selectors = selectors.copy()
+        for selector in selectors:
+            if selector not in valid_fields:
+                logger.warning('selector "%s" ignored: not a valid field', selector)
+                valid_selectors.pop(selector)
+        return valid_selectors
+
+    def _prepare_selector_find_query(self, selectors: dict[str, Any] | None) -> sql.SQL:
+        if not selectors:
+            return sql.SQL('true')
+
+        valid_selectors = self._remove_invalid_selectors(selectors)
+        like_selectors = sql.SQL(' AND ').join(
+            [
+                sql.SQL('{selector} LIKE {value}').format(
+                    selector=sql.Identifier(selector), value=sql.Literal(f'%{value}%')
+                )
+                for selector, value in valid_selectors.items()
+            ]
+        )
+
+        return like_selectors
+
+    def _prepare_sort_find_query(
+        self, sort: tuple[str, Literal['ASC', 'DESC']]
+    ) -> sql.SQL:
+        sort_field, sort_order = sort
+        return sql.SQL(' ORDER BY {sort_field} {sort_order}').format(
+            sort_field=sql.Identifier(sort_field),
+            sort_order=sql.SQL(sort_order),
+        )
+
+    def _prepare_pagination_find_query(self, skip: int, limit: int) -> sql.SQL:
+        return sql.SQL(' LIMIT {limit} OFFSET {offset}').format(
+            limit=sql.Literal(limit) if limit else sql.NULL,
+            offset=sql.Literal(skip) if skip else sql.NULL,
+        )
+
+    def _prepare_find_query(
+        self,
+        selectors: dict[str, Any] | None,
+        tenant_uuids: list[uuid.UUID] | None,
+        skip: int,
+        limit: int,
+        sort: tuple[str, Literal['ASC', 'DESC']] | None,
+    ) -> sql.SQL:
+        query = self._prepare_fields_find_query()
+
+        if tenant_uuids:
+            query += self._prepare_tenant_uuids_find_query(tenant_uuids)
+
+        query += self._prepare_selector_find_query(selectors)
+
+        if sort is not None:
+            query += self._prepare_sort_find_query(sort)
+
+        if skip or limit:
+            query += self._prepare_pagination_find_query(skip, limit)
+
+        query += sql.SQL(';')
+
+        return query
+
+    async def find(
+        self,
+        selectors: dict[str, Any] | None = None,
+        tenant_uuids: list[uuid.UUID] | None = None,
+        skip: int = 0,
+        limit: int = 0,
+        sort: tuple[str, Literal['ASC', 'DESC']] | None = None,
+    ) -> list[Device]:
+        query = self._prepare_find_query(selectors, tenant_uuids, skip, limit, sort)
+        results = await self._db_connection.runQuery(query)
+        return [self.__model__(*result) for result in results]
 
 
 class SIPLineDAO(BaseDAO):

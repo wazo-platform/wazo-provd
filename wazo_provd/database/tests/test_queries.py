@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from psycopg2 import sql
 
@@ -237,38 +239,40 @@ class TestServiceConfigurationDAO:
 
 
 class TestDeviceDAO:
+    all_fields = sql.Composed(
+        [
+            sql.Identifier('id'),
+            sql.SQL(','),
+            sql.Identifier('tenant_uuid'),
+            sql.SQL(','),
+            sql.Identifier('config_id'),
+            sql.SQL(','),
+            sql.Identifier('mac'),
+            sql.SQL(','),
+            sql.Identifier('ip'),
+            sql.SQL(','),
+            sql.Identifier('vendor'),
+            sql.SQL(','),
+            sql.Identifier('model'),
+            sql.SQL(','),
+            sql.Identifier('version'),
+            sql.SQL(','),
+            sql.Identifier('plugin'),
+            sql.SQL(','),
+            sql.Identifier('configured'),
+            sql.SQL(','),
+            sql.Identifier('auto_added'),
+            sql.SQL(','),
+            sql.Identifier('is_new'),
+        ]
+    )
+
     def test_find_from_configs(self):
         device_dao = DeviceDAO(db_connection)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
-                sql.Composed(
-                    [
-                        sql.Identifier('id'),
-                        sql.SQL(','),
-                        sql.Identifier('tenant_uuid'),
-                        sql.SQL(','),
-                        sql.Identifier('config_id'),
-                        sql.SQL(','),
-                        sql.Identifier('mac'),
-                        sql.SQL(','),
-                        sql.Identifier('ip'),
-                        sql.SQL(','),
-                        sql.Identifier('vendor'),
-                        sql.SQL(','),
-                        sql.Identifier('model'),
-                        sql.SQL(','),
-                        sql.Identifier('version'),
-                        sql.SQL(','),
-                        sql.Identifier('plugin'),
-                        sql.SQL(','),
-                        sql.Identifier('configured'),
-                        sql.SQL(','),
-                        sql.Identifier('auto_added'),
-                        sql.SQL(','),
-                        sql.Identifier('is_new'),
-                    ]
-                ),
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('provd_device'),
                 sql.SQL(' WHERE '),
@@ -283,33 +287,7 @@ class TestDeviceDAO:
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
-                sql.Composed(
-                    [
-                        sql.Identifier('id'),
-                        sql.SQL(','),
-                        sql.Identifier('tenant_uuid'),
-                        sql.SQL(','),
-                        sql.Identifier('config_id'),
-                        sql.SQL(','),
-                        sql.Identifier('mac'),
-                        sql.SQL(','),
-                        sql.Identifier('ip'),
-                        sql.SQL(','),
-                        sql.Identifier('vendor'),
-                        sql.SQL(','),
-                        sql.Identifier('model'),
-                        sql.SQL(','),
-                        sql.Identifier('version'),
-                        sql.SQL(','),
-                        sql.Identifier('plugin'),
-                        sql.SQL(','),
-                        sql.Identifier('configured'),
-                        sql.SQL(','),
-                        sql.Identifier('auto_added'),
-                        sql.SQL(','),
-                        sql.Identifier('is_new'),
-                    ]
-                ),
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('provd_device'),
                 sql.SQL(' WHERE '),
@@ -326,33 +304,7 @@ class TestDeviceDAO:
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
-                sql.Composed(
-                    [
-                        sql.Identifier('id'),
-                        sql.SQL(','),
-                        sql.Identifier('tenant_uuid'),
-                        sql.SQL(','),
-                        sql.Identifier('config_id'),
-                        sql.SQL(','),
-                        sql.Identifier('mac'),
-                        sql.SQL(','),
-                        sql.Identifier('ip'),
-                        sql.SQL(','),
-                        sql.Identifier('vendor'),
-                        sql.SQL(','),
-                        sql.Identifier('model'),
-                        sql.SQL(','),
-                        sql.Identifier('version'),
-                        sql.SQL(','),
-                        sql.Identifier('plugin'),
-                        sql.SQL(','),
-                        sql.Identifier('configured'),
-                        sql.SQL(','),
-                        sql.Identifier('auto_added'),
-                        sql.SQL(','),
-                        sql.Identifier('is_new'),
-                    ]
-                ),
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('provd_device'),
                 sql.SQL(' WHERE '),
@@ -363,6 +315,300 @@ class TestDeviceDAO:
             ]
         )
         assert device_dao._prepare_multitenant_get_query() == expected_composed_query
+
+    def test_find_query_no_selector(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query({}, None, 0, 0, None)
+            == expected_composed_query
+        )
+
+    def test_find_query_single_selector(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('mac'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%11:22:33%'),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query({'mac': '11:22:33'}, None, 0, 0, None)
+            == expected_composed_query
+        )
+
+    def test_find_query_multiple_selectors(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('mac'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%11:22:33%'),
+                    ]
+                ),
+                sql.SQL(' AND '),
+                sql.Composed(
+                    [
+                        sql.Identifier('ip'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%1.2%'),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query(
+                {'mac': '11:22:33', 'ip': '1.2'}, None, 0, 0, None
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_unknown_selector_is_ignored(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('mac'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%11:22:33%'),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query(
+                {'mac': '11:22:33', 'unknown': '123'}, None, 0, 0, None
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_multitenant_filter(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('tenant_uuid'),
+                sql.SQL(' = ANY('),
+                sql.Literal([UUID(int=12)]),
+                sql.SQL(') AND '),
+                sql.SQL('true'),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query({}, [UUID(int=12)], 0, 0, None)
+            == expected_composed_query
+        )
+
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('tenant_uuid'),
+                sql.SQL(' = ANY('),
+                sql.Literal([UUID(int=12), UUID(int=34)]),
+                sql.SQL(') AND '),
+                sql.Composed(
+                    [
+                        sql.Identifier('mac'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%11:22:33%'),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query(
+                {'mac': '11:22:33'}, [UUID(int=12), UUID(int=34)], 0, 0, None
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_sort(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('tenant_uuid'),
+                sql.SQL(' = ANY('),
+                sql.Literal([UUID(int=12)]),
+                sql.SQL(') AND '),
+                sql.Composed(
+                    [
+                        sql.Identifier('mac'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%11:22:33%'),
+                    ]
+                ),
+                sql.SQL(' ORDER BY '),
+                sql.Identifier('mac'),
+                sql.SQL(' '),
+                sql.SQL('DESC'),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query(
+                {'mac': '11:22:33'}, [UUID(int=12)], 0, 0, ('mac', 'DESC')
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_limit_skip(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(' LIMIT '),
+                sql.NULL,
+                sql.SQL(' OFFSET '),
+                sql.Literal(10),
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_dao._prepare_find_query({}, None, 10, 0, None)
+            == expected_composed_query
+        )
+
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(' LIMIT '),
+                sql.Literal(15),
+                sql.SQL(' OFFSET '),
+                sql.NULL,
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_dao._prepare_find_query({}, None, 0, 15, None)
+            == expected_composed_query
+        )
+
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(' LIMIT '),
+                sql.Literal(20),
+                sql.SQL(' OFFSET '),
+                sql.Literal(15),
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_dao._prepare_find_query({}, None, 15, 20, None)
+            == expected_composed_query
+        )
+
+    def test_find_query_all_filters(self):
+        device_dao = DeviceDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device'),
+                sql.SQL(' WHERE '),
+                sql.Identifier('tenant_uuid'),
+                sql.SQL(' = ANY('),
+                sql.Literal([UUID(int=12)]),
+                sql.SQL(') AND '),
+                sql.Composed(
+                    [
+                        sql.Identifier('mac'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%11:22:33%'),
+                    ]
+                ),
+                sql.SQL(' ORDER BY '),
+                sql.Identifier('mac'),
+                sql.SQL(' '),
+                sql.SQL('DESC'),
+                sql.SQL(' LIMIT '),
+                sql.Literal(20),
+                sql.SQL(' OFFSET '),
+                sql.Literal(10),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_dao._prepare_find_query(
+                {'mac': '11:22:33'}, [UUID(int=12)], 10, 20, ('mac', 'DESC')
+            )
+            == expected_composed_query
+        )
 
 
 class TestDeviceConfigDAO:
