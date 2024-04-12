@@ -47,6 +47,117 @@ class TestDevice(DBIntegrationTest):
 
     @asyncio_run
     @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
+    @fixtures.db.tenant(uuid=uuid.UUID(SUB_TENANT_1))
+    @fixtures.db.device_config(id='test5')
+    @fixtures.db.device_config(id='test6')
+    @fixtures.db.device_config(id='test7')
+    @fixtures.db.device(
+        mac='00:11:22:33:44:55', tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test5'
+    )
+    @fixtures.db.device(
+        mac='11:22:33:44:55:66', tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test6'
+    )
+    @fixtures.db.device(
+        mac='00:00:00:00:55:66',
+        ip='1.2.3.4',
+        tenant_uuid=uuid.UUID(SUB_TENANT_1),
+        config_id='test7',
+    )
+    async def test_find(self, _, __, ___, ____, _____, device1, device2, device3):
+        results = await self.device_dao.find({'mac': '22:33'})
+        assert results == [device1, device2]
+
+        results = await self.device_dao.find({'mac': '55:66'})
+        assert results == [device2, device3]
+
+        results = await self.device_dao.find({'ip': '1.2.3.4'})
+        assert results == [device3]
+
+        results = await self.device_dao.find({'ip': '1.2.3.4', 'mac': '55:66'})
+        assert results == [device3]
+
+        results = await self.device_dao.find()
+        assert results == [device1, device2, device3]
+
+        results = await self.device_dao.find({})
+        assert results == [device1, device2, device3]
+
+    @asyncio_run
+    @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
+    @fixtures.db.tenant(uuid=uuid.UUID(SUB_TENANT_1))
+    @fixtures.db.device_config(id='test5')
+    @fixtures.db.device_config(id='test6')
+    @fixtures.db.device_config(id='test7')
+    @fixtures.db.device(
+        mac='00:11:22:33:44:55', tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test5'
+    )
+    @fixtures.db.device(
+        mac='11:22:33:44:55:66', tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test6'
+    )
+    @fixtures.db.device(
+        mac='00:00:00:00:55:66',
+        ip='1.2.3.4',
+        tenant_uuid=uuid.UUID(SUB_TENANT_1),
+        config_id='test7',
+    )
+    async def test_find_multitenant(
+        self, _, __, ___, ____, _____, device1, device2, device3
+    ):
+        results = await self.device_dao.find(tenant_uuids=[uuid.UUID(MAIN_TENANT)])
+        assert results == [device1, device2]
+
+        results = await self.device_dao.find(tenant_uuids=[uuid.UUID(SUB_TENANT_1)])
+        assert results == [device3]
+
+        results = await self.device_dao.find(
+            tenant_uuids=[uuid.UUID(MAIN_TENANT), uuid.UUID(SUB_TENANT_1)]
+        )
+        assert results == [device1, device2, device3]
+
+    @asyncio_run
+    @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
+    @fixtures.db.tenant(uuid=uuid.UUID(SUB_TENANT_1))
+    @fixtures.db.device_config(id='test5')
+    @fixtures.db.device_config(id='test6')
+    @fixtures.db.device_config(id='test7')
+    @fixtures.db.device(
+        mac='00:11:22:33:44:55', tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test5'
+    )
+    @fixtures.db.device(
+        mac='11:22:33:44:55:66', tenant_uuid=uuid.UUID(MAIN_TENANT), config_id='test6'
+    )
+    @fixtures.db.device(
+        mac='00:00:00:00:55:66',
+        ip='1.2.3.4',
+        tenant_uuid=uuid.UUID(SUB_TENANT_1),
+        config_id='test7',
+    )
+    @fixtures.db.device(
+        mac='00:00:00:00:55:67', ip='1.2.3.5', tenant_uuid=uuid.UUID(SUB_TENANT_1)
+    )
+    async def test_find_pagination_sort(
+        self, _, __, ___, ____, _____, device1, device2, device3, device4
+    ):
+        results = await self.device_dao.find(limit=1, skip=2)
+        assert results == [device3]
+
+        results = await self.device_dao.find(limit=2, skip=2)
+        assert results == [device3, device4]
+
+        results = await self.device_dao.find(skip=1)
+        assert results == [device2, device3, device4]
+
+        results = await self.device_dao.find(limit=3)
+        assert results == [device1, device2, device3]
+
+        results = await self.device_dao.find(limit=3, sort=('config_id', 'DESC'))
+        assert results == [device4, device3, device2]
+
+        results = await self.device_dao.find(limit=3, sort=('mac', 'ASC'))
+        assert results == [device3, device4, device1]
+
+    @asyncio_run
+    @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
     async def test_create(self, _):
         device_id = uuid.uuid4().hex
         device = Device(id=device_id, tenant_uuid=uuid.UUID(MAIN_TENANT))
