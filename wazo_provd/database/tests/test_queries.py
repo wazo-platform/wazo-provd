@@ -612,56 +612,59 @@ class TestDeviceDAO:
 
 
 class TestDeviceConfigDAO:
+    all_fields = sql.Composed(
+        [
+            sql.Identifier('id'),
+            sql.SQL(','),
+            sql.Identifier('parent_id'),
+            sql.SQL(','),
+            sql.Identifier('deletable'),
+            sql.SQL(','),
+            sql.Identifier('type'),
+            sql.SQL(','),
+            sql.Identifier('roles'),
+            sql.SQL(','),
+            sql.Identifier('configdevice'),
+            sql.SQL(','),
+            sql.Identifier('transient'),
+        ]
+    )
+
+    prefixed_fields = sql.Composed(
+        [
+            sql.Identifier('provd_device_config', 'id'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'parent_id'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'deletable'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'type'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'roles'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'configdevice'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'transient'),
+        ]
+    )
+
     def test_get_descendants(self):
         device_config_dao = DeviceConfigDAO(db_connection)
-        fields = sql.Composed(
-            [
-                sql.Identifier('id'),
-                sql.SQL(','),
-                sql.Identifier('parent_id'),
-                sql.SQL(','),
-                sql.Identifier('deletable'),
-                sql.SQL(','),
-                sql.Identifier('type'),
-                sql.SQL(','),
-                sql.Identifier('roles'),
-                sql.SQL(','),
-                sql.Identifier('configdevice'),
-                sql.SQL(','),
-                sql.Identifier('transient'),
-            ]
-        )
-        prefixed_fields = sql.Composed(
-            [
-                sql.Identifier('provd_device_config', 'id'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'parent_id'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'deletable'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'type'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'roles'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'configdevice'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'transient'),
-            ]
-        )
+
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('WITH RECURSIVE '),
                 sql.Identifier('all_children'),
                 sql.SQL('('),
-                fields,
+                self.all_fields,
                 sql.SQL(') AS (\nSELECT '),
-                fields,
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('provd_device_config'),
                 sql.SQL(' WHERE '),
                 sql.Identifier('parent_id'),
                 sql.SQL(' = %s\nUNION ALL\nSELECT '),
-                prefixed_fields,
+                self.prefixed_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('all_children'),
                 sql.SQL(', '),
@@ -671,7 +674,7 @@ class TestDeviceConfigDAO:
                 sql.SQL(' = '),
                 sql.Identifier('provd_device_config', 'parent_id'),
                 sql.SQL('\n)\nSELECT '),
-                fields,
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('all_children'),
                 sql.SQL(';'),
@@ -684,54 +687,21 @@ class TestDeviceConfigDAO:
 
     def test_get_parents(self):
         device_config_dao = DeviceConfigDAO(db_connection)
-        fields = sql.Composed(
-            [
-                sql.Identifier('id'),
-                sql.SQL(','),
-                sql.Identifier('parent_id'),
-                sql.SQL(','),
-                sql.Identifier('deletable'),
-                sql.SQL(','),
-                sql.Identifier('type'),
-                sql.SQL(','),
-                sql.Identifier('roles'),
-                sql.SQL(','),
-                sql.Identifier('configdevice'),
-                sql.SQL(','),
-                sql.Identifier('transient'),
-            ]
-        )
-        prefixed_fields = sql.Composed(
-            [
-                sql.Identifier('provd_device_config', 'id'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'parent_id'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'deletable'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'type'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'roles'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'configdevice'),
-                sql.SQL(','),
-                sql.Identifier('provd_device_config', 'transient'),
-            ]
-        )
+
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('WITH RECURSIVE '),
                 sql.Identifier('all_parents'),
                 sql.SQL('('),
-                fields,
+                self.all_fields,
                 sql.SQL(') AS (\nSELECT '),
-                fields,
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('provd_device_config'),
                 sql.SQL(' WHERE '),
                 sql.Identifier('id'),
                 sql.SQL(' = %(pkey)s\nUNION ALL\nSELECT '),
-                prefixed_fields,
+                self.prefixed_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('all_parents'),
                 sql.SQL(', '),
@@ -741,7 +711,7 @@ class TestDeviceConfigDAO:
                 sql.SQL(' = '),
                 sql.Identifier('provd_device_config', 'id'),
                 sql.SQL('\n)\nSELECT '),
-                fields,
+                self.all_fields,
                 sql.SQL(' FROM '),
                 sql.Identifier('all_parents'),
                 sql.SQL(' WHERE '),
