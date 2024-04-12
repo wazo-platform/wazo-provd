@@ -116,7 +116,6 @@ class ProvisioningService(Service):
         self._sql_database = self._create_sql_database()
 
         try:
-            cfg_collection = ConfigCollection(self._database.collection('configs'))
             device_dao = queries.DeviceDAO(self._sql_database)
             device_config_dao = queries.DeviceConfigDAO(self._sql_database)
             device_raw_config_dao = queries.DeviceRawConfigDAO(self._sql_database)
@@ -124,7 +123,6 @@ class ProvisioningService(Service):
             configuration_dao = queries.ServiceConfigurationDAO(self._sql_database)
 
             self.app = ProvisioningApplication(
-                cfg_collection,
                 device_dao,
                 device_config_dao,
                 device_raw_config_dao,
