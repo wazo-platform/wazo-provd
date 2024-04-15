@@ -291,5 +291,6 @@ DeviceSchema = create_model_from_typeddict(
     DeviceDict,
     {
         "mac": Field(regex=_NORMED_MAC.pattern),
+        "config": Field(alias="config_id"),
     },
 )
