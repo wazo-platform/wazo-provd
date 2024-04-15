@@ -379,9 +379,9 @@ class TestDeviceDAO:
                 sql.SQL(' AND '),
                 sql.Composed(
                     [
-                        sql.Identifier('ip'),
-                        sql.SQL(' LIKE '),
-                        sql.Literal('%1.2%'),
+                        sql.Identifier('is_new'),
+                        sql.SQL(' = '),
+                        sql.Literal(True),
                     ]
                 ),
                 sql.SQL(';'),
@@ -390,7 +390,7 @@ class TestDeviceDAO:
 
         assert (
             device_dao._prepare_find_query(
-                {'mac': '11:22:33', 'ip': '1.2'}, None, 0, 0, None
+                {'mac': '11:22:33', 'is_new': True}, None, 0, 0, None
             )
             == expected_composed_query
         )
