@@ -49,6 +49,13 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         fields = dataclasses.fields(self.__model__)
         return [field for field in fields if field.name not in exclude]
 
+    def _get_model_fields_by_name(
+        self, exclude: list[str] | None = None
+    ) -> dict[str, dataclasses.Field]:
+        exclude = exclude or []
+        fields = dataclasses.fields(self.__model__)
+        return {field.name: field for field in fields if field.name not in exclude}
+
     def _prepare_create_query(self) -> sql.SQL:
         model_pkey = self.__model__._meta['primary_key']
         fields = self._get_model_fields()
@@ -143,6 +150,64 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         pkey = self.__model__._meta['primary_key']
         pkey_value = getattr(model, pkey)
         await self._db_connection.runOperation(delete_query, [pkey_value])
+
+    def _prepare_fields_find_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL('SELECT {fields} FROM {table} WHERE ').format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+        )
+        return sql_query
+
+    def _remove_invalid_selectors(self, selectors: dict[str, Any]) -> dict[str, Any]:
+        valid_selectors = selectors.copy()
+        for selector in selectors:
+            if selector not in self._get_model_fields_by_name():
+                logger.warning('selector "%s" ignored: not a valid field', selector)
+                valid_selectors.pop(selector)
+        return valid_selectors
+
+    def _prepare_selector_find_query(self, selectors: dict[str, Any] | None) -> sql.SQL:
+        if not selectors:
+            return sql.SQL('true')
+
+        valid_selectors = self._remove_invalid_selectors(selectors)
+        fields_by_name = self._get_model_fields_by_name()
+
+        all_selectors = []
+        for selector, value in valid_selectors.items():
+            field = fields_by_name[selector]
+            operator = ' = '
+
+            # NOTE(afournier): this is necessary since using __future__ annotations
+            # converts all annotations to strings at runtime
+            if str(field.type).startswith('str') or field.type is str:
+                operator = ' LIKE '
+                value = f'%{value}%'
+
+            all_selectors.append(
+                sql.Identifier(selector) + sql.SQL(operator) + sql.Literal(value)
+            )
+
+        return sql.SQL(' AND ').join(all_selectors)
+
+    def _prepare_sort_find_query(
+        self, sort: tuple[str, Literal['ASC', 'DESC']]
+    ) -> sql.SQL:
+        sort_field, sort_order = sort
+        return sql.SQL(' ORDER BY {sort_field} {sort_order}').format(
+            sort_field=sql.Identifier(sort_field),
+            sort_order=sql.SQL(sort_order),
+        )
+
+    def _prepare_pagination_find_query(self, skip: int, limit: int) -> sql.SQL:
+        return sql.SQL(' LIMIT {limit} OFFSET {offset}').format(
+            limit=sql.Literal(limit) if limit else sql.NULL,
+            offset=sql.Literal(skip) if skip else sql.NULL,
+        )
 
 
 class TenantDAO(BaseDAO):
@@ -373,63 +438,12 @@ class DeviceDAO(BaseDAO):
             return self.__model__(*result)
         raise EntryNotFoundException('Could not get entry')
 
-    def _prepare_fields_find_query(self) -> sql.SQL:
-        fields = self._get_model_fields()
-        field_names = [sql.Identifier(field.name) for field in fields]
-        query_fields = sql.SQL(',').join(field_names)
-
-        sql_query = sql.SQL('SELECT {fields} FROM {table} WHERE ').format(
-            fields=query_fields,
-            table=sql.Identifier(self.__tablename__),
-        )
-        return sql_query
-
     def _prepare_tenant_uuids_find_query(
         self, tenant_uuids: list[uuid.UUID]
     ) -> sql.SQL:
         return sql.SQL('{tenant_uuid} = ANY({tenant_uuids}) AND ').format(
             tenant_uuid=sql.Identifier('tenant_uuid'),
             tenant_uuids=sql.Literal(tenant_uuids),
-        )
-
-    def _remove_invalid_selectors(self, selectors: dict[str, Any]) -> dict[str, Any]:
-        valid_fields = [field.name for field in self._get_model_fields()]
-        valid_selectors = selectors.copy()
-        for selector in selectors:
-            if selector not in valid_fields:
-                logger.warning('selector "%s" ignored: not a valid field', selector)
-                valid_selectors.pop(selector)
-        return valid_selectors
-
-    def _prepare_selector_find_query(self, selectors: dict[str, Any] | None) -> sql.SQL:
-        if not selectors:
-            return sql.SQL('true')
-
-        valid_selectors = self._remove_invalid_selectors(selectors)
-        like_selectors = sql.SQL(' AND ').join(
-            [
-                sql.SQL('{selector} LIKE {value}').format(
-                    selector=sql.Identifier(selector), value=sql.Literal(f'%{value}%')
-                )
-                for selector, value in valid_selectors.items()
-            ]
-        )
-
-        return like_selectors
-
-    def _prepare_sort_find_query(
-        self, sort: tuple[str, Literal['ASC', 'DESC']]
-    ) -> sql.SQL:
-        sort_field, sort_order = sort
-        return sql.SQL(' ORDER BY {sort_field} {sort_order}').format(
-            sort_field=sql.Identifier(sort_field),
-            sort_order=sql.SQL(sort_order),
-        )
-
-    def _prepare_pagination_find_query(self, skip: int, limit: int) -> sql.SQL:
-        return sql.SQL(' LIMIT {limit} OFFSET {offset}').format(
-            limit=sql.Literal(limit) if limit else sql.NULL,
-            offset=sql.Literal(skip) if skip else sql.NULL,
         )
 
     def _prepare_find_query(

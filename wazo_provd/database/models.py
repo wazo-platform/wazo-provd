@@ -6,10 +6,8 @@ from __future__ import annotations
 import abc
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    from uuid import UUID
+from typing import Any, ClassVar
+from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
