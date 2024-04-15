@@ -354,6 +354,37 @@ class DeviceConfigDAO(BaseDAO):
         results = await self._db_connection.runQuery(query, {'pkey': config_id})
         return [self.__model__(*result) for result in results]
 
+    def _prepare_find_query(
+        self,
+        selectors: dict[str, Any] | None,
+        skip: int,
+        limit: int,
+        sort: tuple[str, Literal['ASC', 'DESC']] | None,
+    ) -> sql.SQL:
+        query = self._prepare_fields_find_query()
+        query += self._prepare_selector_find_query(selectors)
+
+        if sort is not None:
+            query += self._prepare_sort_find_query(sort)
+
+        if skip or limit:
+            query += self._prepare_pagination_find_query(skip, limit)
+
+        query += sql.SQL(';')
+
+        return query
+
+    async def find(
+        self,
+        selectors: dict[str, Any] | None = None,
+        skip: int = 0,
+        limit: int = 0,
+        sort: tuple[str, Literal['ASC', 'DESC']] | None = None,
+    ) -> list[DeviceConfig]:
+        query = self._prepare_find_query(selectors, skip, limit, sort)
+        results = await self._db_connection.runQuery(query)
+        return [self.__model__(*result) for result in results]
+
 
 class DeviceRawConfigDAO(BaseDAO):
     __tablename__ = 'provd_device_raw_config'
