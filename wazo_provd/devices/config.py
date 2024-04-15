@@ -483,15 +483,11 @@ def _rec_update_dict(base_dict, overlay_dict):
 
 
 def _check_config_validity(config: ConfigDict) -> None:
-    if 'parent_ids' not in config:
-        raise ValueError('missing "parent_ids" field in config')
-    if not isinstance(config['parent_ids'], list):
-        raise ValueError(
-            f'"parent_ids" field must be a list; is {type(config["parent_ids"])}'
-        )
-    for parent_id in config['parent_ids']:
-        if not isinstance(parent_id, str):
-            raise ValueError(f'parent id must be a string; is {type(parent_id)}')
+    if 'parent_id' not in config:
+        raise ValueError('missing "parent_id" field in config')
+
+    if not isinstance(config['parent_id'], str):
+        raise ValueError(f'parent id must be a string; is {type(config["parent_id"])}')
 
     if 'raw_config' not in config:
         raise ValueError('missing "raw_config" field in config')
@@ -728,7 +724,7 @@ def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
     new_suffix = str(uuid.uuid4())
     full_config: ConfigDict = {
         'id': config_id + new_suffix,
-        'parent_ids': [config_id],
+        'parent_id': config_id,
         'raw_config': config['raw_config'],
         'transient': True,
     }
