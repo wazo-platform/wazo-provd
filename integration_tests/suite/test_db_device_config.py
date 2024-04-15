@@ -73,6 +73,58 @@ class TestDeviceConfig(DBIntegrationTest):
             await self.device_config_dao.get(INVALID_RESOURCE_UUID)
 
     @asyncio_run
+    @fixtures.db.device_config(id='test5', role='test')
+    @fixtures.db.device_config(id='test6', role='autocreate')
+    @fixtures.db.device_config(id='test7', role='autocreate', deletable=False)
+    @fixtures.db.device_config(id='test8', deletable=False)
+    async def test_find(self, config1, config2, config3, config4):
+        results = await self.device_config_dao.find({'role': 'test'})
+        assert results == [config1]
+
+        results = await self.device_config_dao.find({'deletable': False})
+        assert results == [config3, config4]
+
+        results = await self.device_config_dao.find(
+            {'role': 'autocreate', 'deletable': False}
+        )
+        assert results == [config3]
+
+        results = await self.device_config_dao.find(
+            {'role': 'autocreate', 'deletable': True}
+        )
+        assert results == [config2]
+
+        results = await self.device_config_dao.find()
+        assert results == [config1, config2, config3, config4]
+
+        results = await self.device_config_dao.find({})
+        assert results == [config1, config2, config3, config4]
+
+    @asyncio_run
+    @fixtures.db.device_config(id='test5', role='test')
+    @fixtures.db.device_config(id='test6', role='autocreate')
+    @fixtures.db.device_config(id='test7', role='autocreate', deletable=False)
+    @fixtures.db.device_config(id='test8', deletable=False)
+    async def test_find_pagination_sort(self, config1, config2, config3, config4):
+        results = await self.device_config_dao.find(limit=1, skip=2)
+        assert results == [config3]
+
+        results = await self.device_config_dao.find(limit=2, skip=2)
+        assert results == [config3, config4]
+
+        results = await self.device_config_dao.find(skip=1)
+        assert results == [config2, config3, config4]
+
+        results = await self.device_config_dao.find(limit=3)
+        assert results == [config1, config2, config3]
+
+        results = await self.device_config_dao.find(limit=3, sort=('id', 'DESC'))
+        assert results == [config4, config3, config2]
+
+        results = await self.device_config_dao.find(limit=3, skip=1, sort=('id', 'ASC'))
+        assert results == [config2, config3, config4]
+
+    @asyncio_run
     @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
     @fixtures.db.device(tenant_uuid=uuid.UUID(MAIN_TENANT))
     async def test_update(self, _, device):

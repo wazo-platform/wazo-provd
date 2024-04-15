@@ -721,6 +721,240 @@ class TestDeviceConfigDAO:
         )
         assert device_config_dao._prepare_get_parents_query() == expected_composed_query
 
+    def test_find_query_no_selector(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_config_dao._prepare_find_query({}, 0, 0, None)
+            == expected_composed_query
+        )
+
+    def test_find_query_single_selector(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('role'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%autocreate%'),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_config_dao._prepare_find_query({'role': 'autocreate'}, 0, 0, None)
+            == expected_composed_query
+        )
+
+    def test_find_query_multiple_selectors(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('role'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%autocreate%'),
+                    ]
+                ),
+                sql.SQL(' AND '),
+                sql.Composed(
+                    [
+                        sql.Identifier('deletable'),
+                        sql.SQL(' = '),
+                        sql.Literal(False),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_config_dao._prepare_find_query(
+                {'role': 'autocreate', 'deletable': False}, 0, 0, None
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_unknown_selector_is_ignored(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('role'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%autocreate%'),
+                    ]
+                ),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_config_dao._prepare_find_query(
+                {'role': 'autocreate', 'unknown': '123'}, 0, 0, None
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_sort(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('role'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%autocreate%'),
+                    ]
+                ),
+                sql.SQL(' ORDER BY '),
+                sql.Identifier('type'),
+                sql.SQL(' '),
+                sql.SQL('DESC'),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_config_dao._prepare_find_query(
+                {'role': 'autocreate'}, 0, 0, ('type', 'DESC')
+            )
+            == expected_composed_query
+        )
+
+    def test_find_query_limit_skip(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(' LIMIT '),
+                sql.NULL,
+                sql.SQL(' OFFSET '),
+                sql.Literal(10),
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_config_dao._prepare_find_query({}, 10, 0, None)
+            == expected_composed_query
+        )
+
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(' LIMIT '),
+                sql.Literal(15),
+                sql.SQL(' OFFSET '),
+                sql.NULL,
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_config_dao._prepare_find_query({}, 0, 15, None)
+            == expected_composed_query
+        )
+
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.SQL('true'),
+                sql.SQL(' LIMIT '),
+                sql.Literal(20),
+                sql.SQL(' OFFSET '),
+                sql.Literal(15),
+                sql.SQL(';'),
+            ]
+        )
+        assert (
+            device_config_dao._prepare_find_query({}, 15, 20, None)
+            == expected_composed_query
+        )
+
+    def test_find_query_all_filters(self):
+        device_config_dao = DeviceConfigDAO(db_connection)
+        expected_composed_query = sql.Composed(
+            [
+                sql.SQL('SELECT '),
+                self.all_fields,
+                sql.SQL(' FROM '),
+                sql.Identifier('provd_device_config'),
+                sql.SQL(' WHERE '),
+                sql.Composed(
+                    [
+                        sql.Identifier('role'),
+                        sql.SQL(' LIKE '),
+                        sql.Literal('%autocreate%'),
+                    ]
+                ),
+                sql.SQL(' ORDER BY '),
+                sql.Identifier('type'),
+                sql.SQL(' '),
+                sql.SQL('DESC'),
+                sql.SQL(' LIMIT '),
+                sql.Literal(20),
+                sql.SQL(' OFFSET '),
+                sql.Literal(10),
+                sql.SQL(';'),
+            ]
+        )
+
+        assert (
+            device_config_dao._prepare_find_query(
+                {'role': 'autocreate'}, 10, 20, ('type', 'DESC')
+            )
+            == expected_composed_query
+        )
+
 
 class TestDeviceRawConfigDAO:
     def test_get(self):
