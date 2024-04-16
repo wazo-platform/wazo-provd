@@ -105,6 +105,39 @@ class TestDeviceConfig(DBIntegrationTest):
     @fixtures.db.device_config(id='test6', role='autocreate')
     @fixtures.db.device_config(id='test7', role='autocreate', deletable=False)
     @fixtures.db.device_config(id='test8', deletable=False)
+    async def test_find_one(self, config1, config2, config3, config4):
+        result = await self.device_config_dao.find_one({'role': 'test'})
+        assert result == config1
+
+        result = await self.device_config_dao.find_one({'deletable': False})
+        assert result == config3
+
+        result = await self.device_config_dao.find_one(
+            {'role': 'autocreate', 'deletable': False}
+        )
+        assert result == config3
+
+        result = await self.device_config_dao.find_one(
+            {'role': 'autocreate', 'deletable': True}
+        )
+        assert result == config2
+
+        result = await self.device_config_dao.find_one()
+        assert result == config1
+
+        result = await self.device_config_dao.find_one({})
+        assert result == config1
+
+        result = await self.device_config_dao.find_one(
+            {'deletable': False, 'role': 'test'}
+        )
+        assert result is None
+
+    @asyncio_run
+    @fixtures.db.device_config(id='test5', role='test')
+    @fixtures.db.device_config(id='test6', role='autocreate')
+    @fixtures.db.device_config(id='test7', role='autocreate', deletable=False)
+    @fixtures.db.device_config(id='test8', deletable=False)
     async def test_find_pagination_sort(self, config1, config2, config3, config4):
         results = await self.device_config_dao.find(limit=1, skip=2)
         assert results == [config3]
