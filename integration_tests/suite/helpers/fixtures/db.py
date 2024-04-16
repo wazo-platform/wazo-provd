@@ -8,7 +8,11 @@ from functools import wraps
 from wazo_provd.database.models import (
     Device,
     DeviceConfig,
+    DeviceRawConfig,
+    FunctionKey,
+    SCCPLine,
     ServiceConfiguration,
+    SIPLine,
     Tenant,
 )
 
@@ -95,6 +99,89 @@ def device_config(**device_config_args):
                 result = await decorated(self, *args, **kwargs)
             finally:
                 await self.device_config_dao.delete(device_config)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def device_raw_config(**device_raw_config_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            model = DeviceRawConfig(**device_raw_config_args)
+
+            device_raw_config = await self.device_raw_config_dao.create(model)
+
+            args = tuple(list(args) + [device_raw_config])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.device_raw_config_dao.delete(device_raw_config)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def sip_line(**sip_line_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            sip_line_args.setdefault('uuid', uuid.uuid4())
+            model = SIPLine(**sip_line_args)
+
+            sip_line = await self.sip_line_dao.create(model)
+
+            args = tuple(list(args) + [sip_line])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.sip_line_dao.delete(sip_line)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def sccp_line(**sccp_line_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            sccp_line_args.setdefault('uuid', uuid.uuid4())
+            model = SCCPLine(**sccp_line_args)
+
+            sccp_line = await self.sccp_line_dao.create(model)
+
+            args = tuple(list(args) + [sccp_line])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.sccp_line_dao.delete(sccp_line)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def function_key(**function_key_args):
+    def decorator(decorated):
+        @wraps(decorated)
+        async def wrapper(self, *args, **kwargs):
+            function_key_args.setdefault('uuid', uuid.uuid4())
+            model = FunctionKey(**function_key_args)
+
+            function_key = await self.function_key_dao.create(model)
+
+            args = tuple(list(args) + [function_key])
+            try:
+                result = await decorated(self, *args, **kwargs)
+            finally:
+                await self.function_key_dao.delete(function_key)
             return result
 
         return wrapper
