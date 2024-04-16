@@ -60,7 +60,7 @@ class DeviceConfig(Model):
 @dataclasses.dataclass
 class DeviceRawConfig(Model):
     config_id: str
-    ip: str
+    ip: str | None = dataclasses.field(default=None)
     http_port: int | None = dataclasses.field(default=None)
     http_base_url: str | None = dataclasses.field(default=None)
     tftp_port: int | None = dataclasses.field(default=None)
