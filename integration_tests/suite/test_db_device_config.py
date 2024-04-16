@@ -41,6 +41,21 @@ class TestDeviceConfig(DBIntegrationTest):
         assert descendants_grandchild_config_id == []
 
     @asyncio_run
+    @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
+    @fixtures.db.device_config(id='test1')
+    @fixtures.db.device_config(id='test2', parent_id='test1')
+    @fixtures.db.device_config(id='test3', parent_id='test2')
+    async def test_get_parents(self, _, config1, config2, __):
+        parents_root_config_id = await self.device_config_dao.get_parents('test1')
+        assert parents_root_config_id == []
+
+        parents_child_config_id = await self.device_config_dao.get_parents('test2')
+        assert parents_child_config_id == [config1]
+
+        parents_grandchild_config_id = await self.device_config_dao.get_parents('test3')
+        assert parents_grandchild_config_id == [config2, config1]
+
+    @asyncio_run
     async def test_create(self):
         device_config = DeviceConfig(id=uuid.uuid4().hex)
         created_device_config = await self.device_config_dao.create(device_config)
