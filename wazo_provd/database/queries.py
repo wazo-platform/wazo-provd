@@ -385,6 +385,12 @@ class DeviceConfigDAO(BaseDAO):
         results = await self._db_connection.runQuery(query)
         return [self.__model__(*result) for result in results]
 
+    async def find_one(self, selectors: dict[str, Any] | None = None) -> DeviceConfig:
+        query = self._prepare_find_query(selectors, 0, 0, None)
+        results = await self._db_connection.runQuery(query)
+        for result in results:
+            return self.__model__(*result)
+
 
 class DeviceRawConfigDAO(BaseDAO):
     __tablename__ = 'provd_device_raw_config'
