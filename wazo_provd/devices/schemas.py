@@ -231,6 +231,7 @@ RawConfigSchema = create_model_from_typeddict(
         "vlan_id": Field(gte=0, lte=4094),
         "vlan_priority": Field(gte=0, lte=7),
         "vlan_pc_port_id": Field(gte=0, lte=4094),
+        "X_xivo_phonebook_ip": Field(alias="phonebook_ip"),
     },
     {
         "validate_timezone": validate_timezone,
@@ -255,6 +256,8 @@ class BaseConfigDict(TypedDict):
 class ConfigDict(BaseConfigDict, total=False):
     transient: bool
     deletable: bool
+    type: str
+    label: str
     role: str
 
 
@@ -262,8 +265,9 @@ ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
         "id": Field(),
-        "parent_ids": Field(...),
+        "parent_id": Field(...),
         "raw_config": Field(...),
+        "X_type": Field(alias="type"),
     },
     type_overrides={'raw_config': RawConfigSchema},  # type: ignore[valid-type]
 )
@@ -285,6 +289,7 @@ class BaseDeviceDict(TypedDict, total=False):
 
 class DeviceDict(BaseDeviceDict, total=False):
     tenant_uuid: str
+    added: str
 
 
 DeviceSchema = create_model_from_typeddict(
