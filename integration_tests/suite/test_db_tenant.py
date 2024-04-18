@@ -41,6 +41,16 @@ class TestTenant(DBIntegrationTest):
             await self.tenant_dao.get(INVALID_TENANT)
 
     @asyncio_run
+    @fixtures.db.tenant(provisioning_key='test123')
+    async def test_get_or_create(self, tenant):
+        result = await self.tenant_dao.get_or_create(tenant.uuid)
+        assert result.provisioning_key == tenant.provisioning_key
+
+        expected_uuid = uuid.uuid4()
+        result = await self.tenant_dao.get_or_create(expected_uuid)
+        assert result.uuid == expected_uuid
+
+    @asyncio_run
     @fixtures.db.tenant(provisioning_key='MyKey')
     async def test_update(self, tenant):
         provisioning_key = 'UpdatedKey'

@@ -231,6 +231,13 @@ class TenantDAO(BaseDAO):
         results = await self._db_connection.runQuery(query)
         return [self.__model__(*result) for result in results]
 
+    async def get_or_create(self, tenant_uuid: uuid.UUID) -> Tenant:
+        try:
+            return await self.get(tenant_uuid)
+        except EntryNotFoundException:
+            new_tenant = Tenant(uuid=tenant_uuid)
+            return await self.create(new_tenant)
+
 
 class ServiceConfigurationDAO(BaseDAO):
     __tablename__ = 'provd_configuration'
