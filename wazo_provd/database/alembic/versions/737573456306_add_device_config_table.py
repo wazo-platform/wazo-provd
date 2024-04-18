@@ -22,6 +22,7 @@ def upgrade():
         TABLE_NAME,
         sa.Column('id', sa.Text, primary_key=True),
         sa.Column('parent_id', sa.Text, sa.ForeignKey(f'{TABLE_NAME}.id')),
+        sa.Column('label', sa.Text),
         sa.Column('deletable', sa.Boolean, server_default=sa.sql.text('true')),
         sa.Column('type', sa.Text),
         sa.Column('role', sa.Text),
