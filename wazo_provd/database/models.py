@@ -46,6 +46,7 @@ class ServiceConfiguration(Model):
 class DeviceConfig(Model):
     id: str
     parent_id: str | None = dataclasses.field(default=None)
+    label: str | None = dataclasses.field(default=None)
     deletable: bool = dataclasses.field(default=True)
     type: str | None = dataclasses.field(default=None)
     role: str | None = dataclasses.field(default=None)
@@ -112,6 +113,7 @@ class DeviceRawConfig(Model):
     exten_pickup_group: str | None = dataclasses.field(default=None)
     exten_pickup_call: str | None = dataclasses.field(default=None)
     exten_voicemail: str | None = dataclasses.field(default=None)
+    phonebook_ip: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'config_id'}
 
