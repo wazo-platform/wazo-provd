@@ -162,6 +162,7 @@ class SCCPLine(Model):
 class FunctionKey(Model):
     uuid: UUID
     config_id: str
+    position: int
     type: str | None = dataclasses.field(default=None)  # enum "speeddial, blf, park"
     value: str | None = dataclasses.field(default=None)
     label: str | None = dataclasses.field(default=None)

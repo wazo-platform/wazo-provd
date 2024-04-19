@@ -23,6 +23,7 @@ def upgrade():
         TABLE_NAME,
         sa.Column('uuid', UUID, primary_key=True),
         sa.Column('config_id', sa.Text, sa.ForeignKey('provd_device_config.id')),
+        sa.Column('position', sa.Integer),
         sa.Column('type', sa.Text),
         sa.Column('value', sa.Text),
         sa.Column('label', sa.Text),
