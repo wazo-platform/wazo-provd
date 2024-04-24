@@ -171,6 +171,8 @@ class RawConfigDict(TypedDict):
     exten_voicemail: Union[str, None]
     funckeys: FuncKeyDict
     X_xivo_phonebook_ip: Union[str, None]
+    X_xivo_phonebook_profile: Union[str, None]
+    X_xivo_user_uuid: Union[str, None]
     config_version: Union[
         int, None
     ]  # NOTE(afournier): this variable is unused. See WAZO-3619
@@ -232,6 +234,8 @@ RawConfigSchema = create_model_from_typeddict(
         "vlan_priority": Field(gte=0, lte=7),
         "vlan_pc_port_id": Field(gte=0, lte=4094),
         "X_xivo_phonebook_ip": Field(alias="phonebook_ip"),
+        "X_xivo_phonebook_profile": Field(alias="phonebook_profile"),
+        "X_xivo_user_uuid": Field(alias="user_uuid"),
     },
     {
         "validate_timezone": validate_timezone,
@@ -256,9 +260,19 @@ class BaseConfigDict(TypedDict):
 class ConfigDict(BaseConfigDict, total=False):
     transient: bool
     deletable: bool
-    type: str
-    label: str
-    role: str
+    X_type: Union[str, None]
+    label: Union[str, None]
+    role: Union[str, None]
+    registrar_main: Union[str, None]
+    registrar_main_port: Union[int, None]
+    proxy_main: Union[str, None]
+    proxy_main_port: Union[int, None]
+    proxy_outbound: Union[str, None]
+    proxy_outbound_port: Union[int, None]
+    registrar_backup: Union[str, None]
+    registrar_backup_port: Union[int, None]
+    proxy_backup: Union[str, None]
+    proxy_backup_port: Union[int, None]
 
 
 ConfigSchema = create_model_from_typeddict(
