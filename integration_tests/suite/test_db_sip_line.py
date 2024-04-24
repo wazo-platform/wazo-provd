@@ -18,7 +18,7 @@ class TestSIPLine(DBIntegrationTest):
     @fixtures.db.device_config()
     async def test_create(self, device_config):
         sip_line_uuid = uuid.uuid4()
-        sip_line = SIPLine(sip_line_uuid, device_config.id)
+        sip_line = SIPLine(sip_line_uuid, device_config.id, 1)
         created_sip_line = await self.sip_line_dao.create(sip_line)
         assert created_sip_line == sip_line
 

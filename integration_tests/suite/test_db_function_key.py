@@ -18,7 +18,7 @@ class TestFunctionKey(DBIntegrationTest):
     @fixtures.db.device_config()
     async def test_create(self, device_config):
         function_key_uuid = uuid.uuid4()
-        function_key = FunctionKey(function_key_uuid, device_config.id)
+        function_key = FunctionKey(function_key_uuid, device_config.id, 1)
         created_function_key = await self.function_key_dao.create(function_key)
         assert created_function_key == function_key
 

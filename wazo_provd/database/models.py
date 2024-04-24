@@ -57,6 +57,61 @@ class DeviceConfig(Model):
 
 
 @dataclasses.dataclass
+class SIPLine(Model):
+    uuid: UUID
+    config_id: str
+    position: int
+    proxy_ip: str | None = dataclasses.field(default=None)
+    proxy_port: int | None = dataclasses.field(default=None)
+    backup_proxy_ip: str | None = dataclasses.field(default=None)
+    backup_proxy_port: int | None = dataclasses.field(default=None)
+    registrar_ip: str | None = dataclasses.field(default=None)
+    registrar_port: int | None = dataclasses.field(default=None)
+    backup_registrar_ip: str | None = dataclasses.field(default=None)
+    backup_registrar_port: int | None = dataclasses.field(default=None)
+    outbound_proxy_ip: str | None = dataclasses.field(default=None)
+    outbound_proxy_port: int | None = dataclasses.field(default=None)
+    username: str | None = dataclasses.field(default=None)
+    password: str | None = dataclasses.field(default=None)
+    auth_username: str | None = dataclasses.field(default=None)
+    display_name: str | None = dataclasses.field(default=None)
+    number: str | None = dataclasses.field(default=None)
+    dtmf_mode: str | None = dataclasses.field(
+        default=None
+    )  # "RTP-in-band, RTP-out-of-band, SIP-INFO": enum
+    srtp_mode: str | None = dataclasses.field(
+        default=None
+    )  # "disabled, preferred, required": enum
+    voicemail: str | None = dataclasses.field(default=None)
+
+    _meta = {'primary_key': 'uuid'}
+
+
+@dataclasses.dataclass
+class SCCPLine(Model):
+    uuid: UUID
+    config_id: str
+    position: int
+    ip: str | None = dataclasses.field(default=None)
+    port: int | None = dataclasses.field(default=None)
+
+    _meta = {'primary_key': 'uuid'}
+
+
+@dataclasses.dataclass
+class FunctionKey(Model):
+    uuid: UUID
+    config_id: str
+    position: int
+    type: str | None = dataclasses.field(default=None)  # enum "speeddial, blf, park"
+    value: str | None = dataclasses.field(default=None)
+    label: str | None = dataclasses.field(default=None)
+    line: str | None = dataclasses.field(default=None)
+
+    _meta = {'primary_key': 'uuid'}
+
+
+@dataclasses.dataclass
 class DeviceRawConfig(Model):
     config_id: str
     ip: str | None = dataclasses.field(default=None)
@@ -116,59 +171,6 @@ class DeviceRawConfig(Model):
     phonebook_ip: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'config_id'}
-
-
-@dataclasses.dataclass
-class SIPLine(Model):
-    uuid: UUID
-    config_id: str
-    proxy_ip: str | None = dataclasses.field(default=None)
-    proxy_port: int | None = dataclasses.field(default=None)
-    backup_proxy_ip: str | None = dataclasses.field(default=None)
-    backup_proxy_port: int | None = dataclasses.field(default=None)
-    registrar_ip: str | None = dataclasses.field(default=None)
-    registrar_port: int | None = dataclasses.field(default=None)
-    backup_registrar_ip: str | None = dataclasses.field(default=None)
-    backup_registrar_port: int | None = dataclasses.field(default=None)
-    outbound_proxy_ip: str | None = dataclasses.field(default=None)
-    outbound_proxy_port: int | None = dataclasses.field(default=None)
-    username: str | None = dataclasses.field(default=None)
-    password: str | None = dataclasses.field(default=None)
-    auth_username: str | None = dataclasses.field(default=None)
-    display_name: str | None = dataclasses.field(default=None)
-    number: str | None = dataclasses.field(default=None)
-    dtmf_mode: str | None = dataclasses.field(
-        default=None
-    )  # "RTP-in-band, RTP-out-of-band, SIP-INFO": enum
-    srtp_mode: str | None = dataclasses.field(
-        default=None
-    )  # "disabled, preferred, required": enum
-    voicemail: str | None = dataclasses.field(default=None)
-
-    _meta = {'primary_key': 'uuid'}
-
-
-@dataclasses.dataclass
-class SCCPLine(Model):
-    uuid: UUID
-    config_id: str
-    ip: str | None = dataclasses.field(default=None)
-    port: int | None = dataclasses.field(default=None)
-
-    _meta = {'primary_key': 'uuid'}
-
-
-@dataclasses.dataclass
-class FunctionKey(Model):
-    uuid: UUID
-    config_id: str
-    position: int
-    type: str | None = dataclasses.field(default=None)  # enum "speeddial, blf, park"
-    value: str | None = dataclasses.field(default=None)
-    label: str | None = dataclasses.field(default=None)
-    line: str | None = dataclasses.field(default=None)
-
-    _meta = {'primary_key': 'uuid'}
 
 
 @dataclasses.dataclass

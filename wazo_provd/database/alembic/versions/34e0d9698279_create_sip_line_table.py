@@ -28,6 +28,7 @@ def upgrade():
             sa.ForeignKey('provd_device_config.id'),
             nullable=False,
         ),
+        sa.Column('position', sa.Integer),
         sa.Column('proxy_ip', sa.Text),
         sa.Column('proxy_port', sa.Integer),
         sa.Column('backup_proxy_ip', sa.Text),
