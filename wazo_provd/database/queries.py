@@ -528,16 +528,38 @@ class DeviceDAO(BaseDAO):
         return [self.__model__(*result) for result in results]
 
 
-class SIPLineDAO(BaseDAO):
+class _ConfigRelationDAO(BaseDAO):
+    def _prepare_find_from_config_query(self) -> sql.SQL:
+        fields = self._get_model_fields()
+        field_names = [sql.Identifier(field.name) for field in fields]
+        query_fields = sql.SQL(',').join(field_names)
+
+        sql_query = sql.SQL(
+            'SELECT {fields} FROM {table} WHERE {config_key} = %s;'
+        ).format(
+            fields=query_fields,
+            table=sql.Identifier(self.__tablename__),
+            config_key=sql.Identifier('config_id'),
+        )
+
+        return sql_query
+
+    async def find_from_config(self, config_id: str) -> list[M]:
+        query = self._prepare_find_from_config_query()
+        results = await self._db_connection.runQuery(query, [config_id])
+        return [self.__model__(*result) for result in results]
+
+
+class SIPLineDAO(_ConfigRelationDAO):
     __tablename__ = 'provd_sip_line'
     __model__ = SIPLine
 
 
-class SCCPLineDAO(BaseDAO):
+class SCCPLineDAO(_ConfigRelationDAO):
     __tablename__ = 'provd_sccp_line'
     __model__ = SCCPLine
 
 
-class FunctionKeyDAO(BaseDAO):
+class FunctionKeyDAO(_ConfigRelationDAO):
     __tablename__ = 'provd_function_key'
     __model__ = FunctionKey
