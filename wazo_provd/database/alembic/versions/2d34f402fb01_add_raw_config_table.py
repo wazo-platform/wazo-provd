@@ -77,6 +77,8 @@ def upgrade():
         sa.Column('exten_pickup_call', sa.Text),
         sa.Column('exten_voicemail', sa.Text),
         sa.Column('phonebook_ip', sa.Text),
+        sa.Column('phonebook_profile', sa.Text),
+        sa.Column('user_uuid', sa.Text),
     )
     op.create_check_constraint(
         'ck_protocol',

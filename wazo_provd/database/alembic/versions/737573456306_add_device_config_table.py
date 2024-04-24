@@ -28,6 +28,16 @@ def upgrade():
         sa.Column('role', sa.Text),
         sa.Column('configdevice', sa.Text),
         sa.Column('transient', sa.Boolean, server_default=sa.sql.text('false')),
+        sa.Column('registrar_main', sa.Text),
+        sa.Column('registrar_main_port', sa.Integer),
+        sa.Column('proxy_main', sa.Text),
+        sa.Column('proxy_main_port', sa.Integer),
+        sa.Column('proxy_outbound', sa.Text),
+        sa.Column('proxy_outbound_port', sa.Integer),
+        sa.Column('registrar_backup', sa.Text),
+        sa.Column('registrar_backup_port', sa.Integer),
+        sa.Column('proxy_backup', sa.Text),
+        sa.Column('proxy_backup_port', sa.Integer),
     )
 
 
