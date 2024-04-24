@@ -25,20 +25,14 @@ class TestDeviceConfig(DBIntegrationTest):
     @fixtures.db.device_config(id='test2', parent_id='test1')
     @fixtures.db.device_config(id='test3', parent_id='test2')
     async def test_get_descendants(self, _, __, config2, config3):
-        descendants_root_config_id = await self.device_config_dao.get_descendants(
-            'test1'
-        )
-        assert descendants_root_config_id == [config2, config3]
+        result = await self.device_config_dao.get_descendants('test1')
+        assert result == [config2, config3]
 
-        descendants_child_config_id = await self.device_config_dao.get_descendants(
-            'test2'
-        )
-        assert descendants_child_config_id == [config3]
+        result = await self.device_config_dao.get_descendants('test2')
+        assert result == [config3]
 
-        descendants_grandchild_config_id = await self.device_config_dao.get_descendants(
-            'test3'
-        )
-        assert descendants_grandchild_config_id == []
+        result = await self.device_config_dao.get_descendants('test3')
+        assert result == []
 
     @asyncio_run
     @fixtures.db.tenant(uuid=uuid.UUID(MAIN_TENANT))
@@ -46,14 +40,14 @@ class TestDeviceConfig(DBIntegrationTest):
     @fixtures.db.device_config(id='test2', parent_id='test1')
     @fixtures.db.device_config(id='test3', parent_id='test2')
     async def test_get_parents(self, _, config1, config2, __):
-        parents_root_config_id = await self.device_config_dao.get_parents('test1')
-        assert parents_root_config_id == []
+        result = await self.device_config_dao.get_parents('test1')
+        assert result == []
 
-        parents_child_config_id = await self.device_config_dao.get_parents('test2')
-        assert parents_child_config_id == [config1]
+        result = await self.device_config_dao.get_parents('test2')
+        assert result == [config1]
 
-        parents_grandchild_config_id = await self.device_config_dao.get_parents('test3')
-        assert parents_grandchild_config_id == [config2, config1]
+        result = await self.device_config_dao.get_parents('test3')
+        assert result == [config2, config1]
 
     @asyncio_run
     async def test_create(self):
