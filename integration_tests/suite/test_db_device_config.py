@@ -94,6 +94,9 @@ class TestDeviceConfig(DBIntegrationTest):
         results = await self.device_config_dao.find({})
         assert results == [config1, config2, config3, config4]
 
+        results = await self.device_config_dao.find({'role': 'unknown'})
+        assert results == []
+
     @asyncio_run
     @fixtures.db.device_config(id='test5', role='test')
     @fixtures.db.device_config(id='test6', role='autocreate')

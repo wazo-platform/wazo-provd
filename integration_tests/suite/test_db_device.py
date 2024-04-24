@@ -32,13 +32,14 @@ class TestDevice(DBIntegrationTest):
     @fixtures.db.device(tenant_uuid=MAIN_TENANT_UUID, config_id='test2')
     @fixtures.db.device(tenant_uuid=MAIN_TENANT_UUID, config_id='test3')
     async def test_find_from_configs(self, _, __, ___, ____, device1, device2, device3):
-        device_one_config_id = await self.device_dao.find_from_configs(['test2'])
-        assert device_one_config_id == [device2]
+        result = await self.device_dao.find_from_configs(['test2'])
+        assert result == [device2]
 
-        device_two_config_ids = await self.device_dao.find_from_configs(
-            ['test1', 'test3']
-        )
-        assert device_two_config_ids == [device1, device3]
+        result = await self.device_dao.find_from_configs(['test1', 'test3'])
+        assert result == [device1, device3]
+
+        result = await self.device_dao.find_from_configs(['unknown'])
+        assert result == []
 
     @asyncio_run
     @fixtures.db.tenant(uuid=MAIN_TENANT_UUID)
@@ -47,6 +48,9 @@ class TestDevice(DBIntegrationTest):
     async def test_find_one_from_config(self, _, __, device):
         device_from_db = await self.device_dao.find_one_from_config('test4')
         assert device == device_from_db
+
+        with self.assertRaises(EntryNotFoundException):
+            await self.device_dao.find_one_from_config('unknown')
 
     @asyncio_run
     @fixtures.db.tenant(uuid=MAIN_TENANT_UUID)

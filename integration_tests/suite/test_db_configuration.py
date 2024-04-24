@@ -17,8 +17,13 @@ class TestServiceConfiguration(DBIntegrationTest):
     @asyncio_run
     @fixtures.db.service_configuration()
     async def test_find_one(self, service_conf):
-        service_conf_from_db = await self.service_configuration_dao.find_one()
-        assert service_conf == service_conf_from_db
+        result = await self.service_configuration_dao.find_one()
+        assert result == service_conf
+
+    @asyncio_run
+    async def test_find_one_error(self):
+        with self.assertRaises(EntryNotFoundException):
+            await self.service_configuration_dao.find_one()
 
     @asyncio_run
     async def test_create(self):
