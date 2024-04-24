@@ -52,6 +52,16 @@ class DeviceConfig(Model):
     role: str | None = dataclasses.field(default=None)
     configdevice: str | None = dataclasses.field(default=None)
     transient: bool = dataclasses.field(default=False)
+    registrar_main: str | None = dataclasses.field(default=None)
+    registrar_main_port: int | None = dataclasses.field(default=None)
+    proxy_main: str | None = dataclasses.field(default=None)
+    proxy_main_port: int | None = dataclasses.field(default=None)
+    proxy_outbound: str | None = dataclasses.field(default=None)
+    proxy_outbound_port: int | None = dataclasses.field(default=None)
+    registrar_backup: str | None = dataclasses.field(default=None)
+    registrar_backup_port: int | None = dataclasses.field(default=None)
+    proxy_backup: str | None = dataclasses.field(default=None)
+    proxy_backup_port: int | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'id'}
 
@@ -168,7 +178,9 @@ class DeviceRawConfig(Model):
     exten_pickup_group: str | None = dataclasses.field(default=None)
     exten_pickup_call: str | None = dataclasses.field(default=None)
     exten_voicemail: str | None = dataclasses.field(default=None)
+    user_uuid: str | None = dataclasses.field(default=None)
     phonebook_ip: str | None = dataclasses.field(default=None)
+    phonebook_profile: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'config_id'}
 
