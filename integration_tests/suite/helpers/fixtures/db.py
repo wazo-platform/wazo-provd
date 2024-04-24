@@ -131,6 +131,7 @@ def sip_line(**sip_line_args):
         @wraps(decorated)
         async def wrapper(self, *args, **kwargs):
             sip_line_args.setdefault('uuid', uuid.uuid4())
+            sip_line_args.setdefault('position', 1)
             model = SIPLine(**sip_line_args)
 
             sip_line = await self.sip_line_dao.create(model)
@@ -152,6 +153,7 @@ def sccp_line(**sccp_line_args):
         @wraps(decorated)
         async def wrapper(self, *args, **kwargs):
             sccp_line_args.setdefault('uuid', uuid.uuid4())
+            sccp_line_args.setdefault('position', 1)
             model = SCCPLine(**sccp_line_args)
 
             sccp_line = await self.sccp_line_dao.create(model)
@@ -173,6 +175,7 @@ def function_key(**function_key_args):
         @wraps(decorated)
         async def wrapper(self, *args, **kwargs):
             function_key_args.setdefault('uuid', uuid.uuid4())
+            function_key_args.setdefault('position', 1)
             model = FunctionKey(**function_key_args)
 
             function_key = await self.function_key_dao.create(model)
