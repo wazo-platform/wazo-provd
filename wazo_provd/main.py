@@ -32,8 +32,6 @@ from wazo_provd.app import ProvisioningApplication
 from wazo_provd.config import Options
 from wazo_provd.database import helpers, queries
 from wazo_provd.devices import ident, pgasso
-from wazo_provd.devices.config import ConfigCollection
-from wazo_provd.devices.device import DeviceCollection
 from wazo_provd.persist.json_backend import JsonDatabaseFactory
 from wazo_provd.rest.api.resource import ResponseFile
 from wazo_provd.rest.server import auth
@@ -119,6 +117,9 @@ class ProvisioningService(Service):
             device_dao = queries.DeviceDAO(self._sql_database)
             device_config_dao = queries.DeviceConfigDAO(self._sql_database)
             device_raw_config_dao = queries.DeviceRawConfigDAO(self._sql_database)
+            function_key_dao = queries.FunctionKeyDAO(self._sql_database)
+            sccp_line_dao = queries.SCCPLineDAO(self._sql_database)
+            sip_line_dao = queries.SIPLineDAO(self._sql_database)
             tenant_dao = queries.TenantDAO(self._sql_database)
             configuration_dao = queries.ServiceConfigurationDAO(self._sql_database)
 
@@ -126,6 +127,9 @@ class ProvisioningService(Service):
                 device_dao,
                 device_config_dao,
                 device_raw_config_dao,
+                function_key_dao,
+                sccp_line_dao,
+                sip_line_dao,
                 tenant_dao,
                 configuration_dao,
                 self._config,
