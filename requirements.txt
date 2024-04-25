@@ -10,7 +10,7 @@ markupsafe==1.1.1 # from jinja
 pyopenssl>=21.0.0,<23.0.0  # bullseye uses 20.0.1, but only the patched debian version still works.
 cryptography>=3.3.2 # for pyopenssl
 pyyaml==5.3.1
-pydantic==1.7.4
+pydantic==1.10.13
 requests==2.25.1
 stevedore==3.2.2
 twisted==20.3.0
