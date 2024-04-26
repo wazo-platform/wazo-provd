@@ -8,26 +8,31 @@ import logging
 import os.path
 import re
 import traceback
+from collections import deque
 from collections.abc import Callable, Generator
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
+from xivo.chain_map import ChainMap
 
 from wazo_provd.database.exceptions import EntryNotFoundException
 from wazo_provd.database.models import (
     Device,
     DeviceConfig,
     DeviceRawConfig,
+    FunctionKey,
+    SCCPLine,
     ServiceConfiguration,
+    SIPLine,
 )
 from wazo_provd.database.models import Tenant as TenantModel
 from wazo_provd.devices.config import RawConfigError, build_autocreate_config
-from wazo_provd.devices.device import needs_reconfiguration
+from wazo_provd.devices.device import check_device_validity, needs_reconfiguration
 from wazo_provd.localization import get_localization_service
 from wazo_provd.operation import (
     OIP_FAIL,
@@ -37,7 +42,6 @@ from wazo_provd.operation import (
 )
 from wazo_provd.persist.common import ID_KEY
 from wazo_provd.persist.common import InvalidIdError as PersistInvalidIdError
-from wazo_provd.persist.common import NonDeletableError as PersistNonDeletableError
 from wazo_provd.persist.id import get_id_generator_factory
 from wazo_provd.plugins import PluginManager, PluginNotLoadedError
 from wazo_provd.rest.server import auth
@@ -48,10 +52,14 @@ from wazo_provd.util import decode_bytes
 
 from .devices.schemas import (
     BaseDeviceDict,
+    CallManagerDict,
     ConfigDict,
     DeviceDict,
+    DeviceSchema,
+    FuncKeyDict,
     RawConfigDict,
     RawConfigSchema,
+    SipLineDict,
 )
 
 if TYPE_CHECKING:
@@ -63,7 +71,10 @@ if TYPE_CHECKING:
         DeviceConfigDAO,
         DeviceDAO,
         DeviceRawConfigDAO,
+        FunctionKeyDAO,
+        SCCPLineDAO,
         ServiceConfigurationDAO,
+        SIPLineDAO,
         TenantDAO,
     )
 
@@ -221,6 +232,9 @@ class ProvisioningApplication:
         device_dao: DeviceDAO,
         device_config_dao: DeviceConfigDAO,
         device_raw_config_dao: DeviceRawConfigDAO,
+        function_key_dao: FunctionKeyDAO,
+        sccp_line_dao: SCCPLineDAO,
+        sip_line_dao: SIPLineDAO,
         tenant_dao: TenantDAO,
         configuration_dao: ServiceConfigurationDAO,
         config: ProvdConfigDict,
@@ -232,6 +246,9 @@ class ProvisioningApplication:
         self.device_dao = device_dao
         self.device_config_dao = device_config_dao
         self.device_raw_config_dao = device_raw_config_dao
+        self.function_key_dao = function_key_dao
+        self.sccp_line_dao = sccp_line_dao
+        self.sip_line_dao = sip_line_dao
         self.tenant_dao = tenant_dao
         self.configuration_dao = configuration_dao
 
@@ -357,28 +374,76 @@ class ProvisioningApplication:
             return self.pg_mgr.get(device['plugin'])
         return None
 
+    def _cfg_raw_create_dict_from_model(
+        self, raw_conf_model: DeviceRawConfig
+    ) -> RawConfigDict:
+        raw_conf_dict = raw_conf_model.as_dict()
+        del raw_conf_dict['config_id']
+        return cast(RawConfigDict, raw_conf_dict)
+
     @defer.inlineCallbacks
-    def _get_flat_raw_config(self, config_id: str) -> Deferred:
+    def _get_flat_raw_config(self, config_id: str):
         config_deferreds = []
         parent_configs = yield defer.ensureDeferred(
             self.device_config_dao.get_parents(config_id)
         )
         for parent_config in parent_configs:
-            config_deferreds.append(
-                defer.ensureDeferred(
-                    self.device_raw_config_dao.get(parent_config.config_id)
-                )
-            )
+            config_deferreds.append(self.cfg_retrieve_raw_config(parent_config.id))
+
         raw_configs = yield defer.gatherResults(config_deferreds, consumeErrors=True)
+        raw_config_parents: deque[RawConfigDict] = deque()
+        for raw_config in raw_configs:
+            raw_config_parents.appendleft(raw_config)
+
+        flat_raw_config: RawConfigDict = cast(
+            RawConfigDict, ChainMap(*raw_config_parents)
+        )
+        return flat_raw_config
+
+    def _dev_create_model_from_dict(self, device: DeviceDict) -> Device:
+        auto_added = device.get('added') == "auto"
+        return Device(
+            id=device['id'],  # type: ignore[arg-type]
+            tenant_uuid=UUID(device['tenant_uuid']),
+            config_id=device.get('config', None),
+            mac=device.get('mac', None),
+            ip=str(device.get('ip', '')),
+            vendor=device.get('vendor', None),
+            model=device.get('model', None),
+            version=device.get('version', None),
+            plugin=device.get('plugin', None),
+            configured=device.get('configured', None),
+            auto_added=auto_added,
+            is_new=device.get('is_new', None),
+        )
+
+    def _dev_create_dict_from_model(self, device_model: Device) -> DeviceDict:
+        added = "auto" if device_model.auto_added else ""
+        return DeviceDict(
+            id=device_model.id,  # type: ignore[arg-type]
+            tenant_uuid=str(device_model.tenant_uuid),
+            config=device_model.config_id,
+            mac=device_model.mac,
+            ip=device_model.ip or "",
+            vendor=device_model.vendor,
+            model=device_model.model,
+            version=device_model.version,
+            plugin=device_model.plugin,
+            configured=device_model.configured,
+            added=added,
+            is_new=device_model.is_new,
+        )
 
     @defer.inlineCallbacks
     def _dev_get_raw_config(self, device: BaseDeviceDict | DeviceDict) -> Deferred:
         # Return a deferred that will fire with a raw config associated
         # with the device, or fire with None if there's no such raw config
-        if 'config' in device:
+        if device.get('config'):
             cfg_id = device['config']
             flat_config = yield self._get_flat_raw_config(cfg_id)
+            logger.debug('Got flat raw config: %s', flat_config)
             return defer.succeed(flat_config)
+        logger.debug('config key not in device, device = %s', device)
         return defer.succeed(None)
 
     @defer.inlineCallbacks
@@ -502,7 +567,10 @@ class ProvisioningApplication:
             device = yield defer.ensureDeferred(self.device_dao.get(device_id))
         except EntryNotFoundException:
             raise InvalidIdError(f'invalid device ID "{device_id}"')
-        defer.returnValue(device.as_dict())
+        logger.debug('Trying to get device %s as dict', device)
+        device_dict = self._dev_create_dict_from_model(device)
+        logger.debug('Device dict = %s', device_dict)
+        defer.returnValue(device_dict)
 
     @_wlock
     @defer.inlineCallbacks
@@ -540,14 +608,19 @@ class ProvisioningApplication:
                 device['tenant_uuid'] = self._tenant_uuid  # type: ignore
 
             device['is_new'] = device['tenant_uuid'] == self._tenant_uuid
+            yield defer.ensureDeferred(
+                self.tenant_dao.get_or_create(UUID(device['tenant_uuid']))
+            )
             if not device.get('id'):
                 device['id'] = next(get_id_generator_factory('default')())
 
             try:
-                device_model = Device(**device)
-                device_id = yield defer.ensureDeferred(
+                check_device_validity(device)
+                device_model = self._dev_create_model_from_dict(device)
+                added_device = yield defer.ensureDeferred(
                     self.device_dao.create(device_model)
                 )
+                device_id = added_device.id
             except PersistInvalidIdError as e:
                 raise InvalidIdError(e)
             else:
@@ -588,6 +661,7 @@ class ProvisioningApplication:
                 raise InvalidIdError(f'No id key for device {device}')
             else:
                 logger.info('Updating device %s', device_id)
+                check_device_validity(device)
                 old_device = yield self._dev_get_or_raise(device_id)
                 if needs_reconfiguration(old_device, device):
                     # Deconfigure old device it was configured
@@ -608,13 +682,14 @@ class ProvisioningApplication:
                 # the old device
                 if device != old_device:
                     device['is_new'] = device['tenant_uuid'] == self._tenant_uuid
-                    device_model = Device(**device)
+                    yield defer.ensureDeferred(
+                        self.tenant_dao.get_or_create(UUID(device['tenant_uuid']))
+                    )
+                    device_model = self._dev_create_model_from_dict(device)
                     yield defer.ensureDeferred(self.device_dao.update(device_model))
                     # check if old device was using a transient config that is
                     # no more in use
-                    if 'config' in old_device and old_device['config'] != device.get(
-                        'config'
-                    ):
+                    if old_device.get('config') != device.get('config'):
                         old_device_cfg_id = old_device['config']
                         try:
                             old_device_cfg_model = yield defer.ensureDeferred(
@@ -625,13 +700,13 @@ class ProvisioningApplication:
                             old_device_cfg = None
                         if old_device_cfg and old_device_cfg.get('transient'):
                             # if no devices are using this transient config, delete it
-                            if not (
+                            try:
                                 yield defer.ensureDeferred(
                                     self.device_dao.find_one_from_config(
                                         old_device_cfg_id
                                     )
-                                )  # TODO DAO method / should be generic or not?
-                            ):
+                                )
+                            except EntryNotFoundException:
                                 yield defer.ensureDeferred(
                                     self.device_config_dao.delete(old_device_cfg_id)
                                 )
@@ -658,24 +733,25 @@ class ProvisioningApplication:
         logger.info('Deleting device %s', device_id)
         try:
             device = yield self._dev_get_or_raise(device_id)
+            device_model = self._dev_create_model_from_dict(device)
             # Next line should never raise an exception since we successfully
             # retrieve the device with the same id just before and we are
             # using the write lock
-            yield defer.ensureDeferred(self.device_dao.delete(device_id))
+            yield defer.ensureDeferred(self.device_dao.delete(device_model))
             # check if device was using a transient config that is no more in use
-            if 'config' in device:
+            if device.get('config'):
                 device_cfg_id = device['config']
                 device_cfg_model = yield defer.ensureDeferred(
                     self.device_config_dao.get(device_cfg_id)
                 )
-                device_cfg = device_cfg_model.as_dict()
+                device_cfg = self._cfg_create_dict_from_model(device_cfg_model)
                 if device_cfg and device_cfg.get('transient'):
                     # if no devices are using this transient config, delete it
-                    if not (
+                    try:
                         yield defer.ensureDeferred(
                             self.device_dao.find_one_from_config(device_cfg_id)
                         )
-                    ):
+                    except EntryNotFoundException:
                         yield defer.ensureDeferred(
                             self.device_config_dao.delete(device_cfg_id)
                         )
@@ -685,24 +761,52 @@ class ProvisioningApplication:
             logger.error('Error while deleting device', exc_info=True)
             raise
 
-    def dev_find(
-        self, selector, tenant_uuids: list[str] | None = None, *args, **kwargs
-    ) -> Deferred:
-        # TODO
-        if tenant_uuids is not None:
-            selector['tenant_uuids'] = tenant_uuids
-        return self.device_dao.find(selector, *args, **kwargs)
+    def dev_find(self, selector, *args, **kwargs) -> Deferred:
+        results_deferred = defer.ensureDeferred(
+            self.device_dao.find(selector, *args, **kwargs)
+        )
+
+        def convert_to_dict(results):
+            dict_results = []
+            for result in results:
+                dict_results.append(self._dev_create_dict_from_model(result))
+            return defer.succeed(dict_results)
+
+        results_deferred.addCallback(convert_to_dict)
+        results_deferred.addErrback(self._handle_error)
+        return results_deferred
 
     def dev_find_one(self, selector, *args, **kwargs):
-        # TODO conversion layer for old selector to database selector
-        return self.device_dao.find(selector, *args, **kwargs)
+        results_deferred = defer.ensureDeferred(
+            self.device_dao.find(selector, *args, **kwargs)
+        )
+
+        def convert_to_dict(results):
+            for result in results:
+                return defer.succeed(self._dev_create_dict_from_model(result))
+
+        results_deferred.addCallback(convert_to_dict)
+        results_deferred.addErrback(self._handle_error)
+        return results_deferred
 
     def dev_get(
         self, device_id: str, tenant_uuids: list[str] | None = None
     ) -> Deferred:
-        return defer.ensureDeferred(
-            self.device_dao.get(device_id, tenant_uuids=tenant_uuids)
+        tenant_uuid_converted = (
+            [UUID(tenant_uuid) for tenant_uuid in tenant_uuids]
+            if tenant_uuids
+            else None
         )
+        result_deferred = defer.ensureDeferred(
+            self.device_dao.get(device_id, tenant_uuids=tenant_uuid_converted)
+        )
+
+        def convert_to_dict(result):
+            return defer.succeed(self._dev_create_dict_from_model(result))
+
+        result_deferred.addCallback(convert_to_dict)
+        result_deferred.addErrback(self._handle_error)
+        return result_deferred
 
     @_wlock
     @defer.inlineCallbacks
@@ -726,7 +830,8 @@ class ProvisioningApplication:
             configured = yield self._dev_configure_if_possible(device)
             if device['configured'] != configured:
                 device['configured'] = configured
-                yield self._dev_collection.update(device)
+                device_model = self._dev_create_model_from_dict(device)
+                yield defer.ensureDeferred(self.device_dao.update(device_model))
             defer.returnValue(configured)
         except Exception:
             logger.error('Error while reconfiguring device', exc_info=True)
@@ -765,10 +870,22 @@ class ProvisioningApplication:
     @defer.inlineCallbacks
     def _cfg_get_or_raise(self, config_id: str):
         try:
-            config = yield defer.ensureDeferred(self.device_config_dao.get(config_id))
+            config_model = yield defer.ensureDeferred(
+                self.device_config_dao.get(config_id)
+            )
         except EntryNotFoundException:
             raise InvalidIdError(f'Invalid config ID "{config_id}"')
-        defer.returnValue(config.as_dict())
+        defer.returnValue(self._cfg_create_dict_from_model(config_model))
+
+    def _cfg_create_dict_from_model(self, config_model: DeviceConfig) -> ConfigDict:
+        config_dict = config_model.as_dict()
+        config_dict['raw_config'] = None
+        return cast(ConfigDict, config_dict)
+
+    def _cfg_create_model_from_dict(self, config: ConfigDict) -> DeviceConfig:
+        conf_d = cast(dict, config)
+        del conf_d['raw_config']
+        return DeviceConfig(**conf_d)
 
     @_wlock
     @defer.inlineCallbacks
@@ -791,39 +908,75 @@ class ProvisioningApplication:
         logger.info('Inserting config %s', config.get(ID_KEY))
         try:
             try:
-                config_model = DeviceConfig(**config)
-                config_id = yield defer.ensureDeferred(
+                raw_config = cast(dict, config.get('raw_config'))
+                raw_config['config_id'] = config.get(ID_KEY)
+
+                if function_keys := raw_config.pop('funckeys', None):
+                    for function_key in function_keys:
+                        function_key_model = FunctionKey(
+                            uuid=uuid4(),
+                            config_id=raw_config['config_id'],
+                            **function_key,
+                        )
+                        yield defer.ensureDeferred(
+                            self.function_key_dao.create(function_key_model)
+                        )
+
+                if sip_lines := raw_config.pop('sip_lines', None):
+                    for sip_line in sip_lines:
+                        sip_line_model = SIPLine(
+                            uuid=uuid4(), config_id=raw_config['config_id'], **sip_line
+                        )
+                        yield defer.ensureDeferred(
+                            self.sip_line_dao.create(sip_line_model)
+                        )
+
+                if sccp_lines := raw_config.pop('sccp_call_managers', None):
+                    for sccp_line in sccp_lines:
+                        sccp_line_model = SCCPLine(
+                            uuid=uuid4(), config_id=raw_config['config_id'], **sccp_line
+                        )
+                        yield defer.ensureDeferred(
+                            self.sccp_line_dao.create(sccp_line_model)
+                        )
+
+                raw_config_model = DeviceRawConfig(**raw_config)
+                yield defer.ensureDeferred(
+                    self.device_raw_config_dao.create(raw_config_model)
+                )
+                config_model = self._cfg_create_model_from_dict(config)
+                new_config = yield defer.ensureDeferred(
                     self.device_config_dao.create(config_model)
                 )
-            except PersistInvalidIdError as e:
+                config_id = new_config.id
+            except (
+                PersistInvalidIdError
+            ) as e:  # NOTE(afournier): this is never raised by the DAO
                 raise InvalidIdError(e)
             else:
                 # configure each device that depend on the newly inserted config
                 # 1. get the set of affected configs
-                affected_cfg_ids = yield defer.ensureDeferred(
-                    self.device_config_dao.get_descendants(
-                        config_id
-                    )  # TODO device config DAO method
+                affected_cfg_models = yield defer.ensureDeferred(
+                    self.device_config_dao.get_descendants(config_id)
                 )
+                affected_cfg_ids = {cfg_model.id for cfg_model in affected_cfg_models}
                 affected_cfg_ids.add(config_id)
                 # 2. get the raw_config of every affected config
                 raw_configs = {}
                 for affected_cfg_id in affected_cfg_ids:
-                    raw_configs[affected_cfg_id] = yield defer.ensureDeferred(
-                        self.device_raw_config_dao.get_from_config_id(
-                            affected_cfg_id
-                        )  # TODO raw config DAO method
-                    )
+                    raw_config = self.cfg_retrieve_raw_config(affected_cfg_id)
+                    raw_configs[affected_cfg_id] = raw_config
+
                 # 3. reconfigure/deconfigure each affected devices
                 affected_devices = yield defer.ensureDeferred(
-                    self.device_dao.find_from_configs(
-                        list(affected_cfg_ids)
-                    )  # TODO device DAO method
+                    self.device_dao.find_from_configs(list(affected_cfg_ids))
                 )
-                for device in affected_devices:
+                for device_model in affected_devices:
+                    device = self._dev_create_dict_from_model(device_model)
                     plugin = self._dev_get_plugin(device)
                     if plugin is not None:
                         raw_config = raw_configs[device['config']]
+                        logger.debug('1 raw_config is %s', raw_config)
                         assert raw_config is not None
                         # deconfigure
                         if device['configured']:
@@ -845,7 +998,7 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def cfg_update(self, config):
+    def cfg_update(self, config: ConfigDict):
         """Update the config.
 
         Return a deferred that fire with None once the update is completed.
@@ -870,31 +1023,32 @@ class ProvisioningApplication:
             if old_config == config:
                 logger.info('config has not changed, ignoring update')
             else:
-                config_model = DeviceConfig(**config)
+                config_model = self._cfg_create_model_from_dict(config)
                 yield defer.ensureDeferred(self.device_config_dao.update(config_model))
-                affected_cfg_ids = yield defer.ensureDeferred(
+
+                affected_cfg_models = yield defer.ensureDeferred(
                     self.device_config_dao.get_descendants(config_id)
-                )  # TODO config DAO method
+                )
+                affected_cfg_ids = {cfg_model.id for cfg_model in affected_cfg_models}
                 affected_cfg_ids.add(config_id)
                 # 2. get the raw_config of every affected config
                 raw_configs = {}
                 for affected_cfg_id in affected_cfg_ids:
-                    raw_configs[affected_cfg_id] = yield defer.ensureDeferred(
-                        self.device_raw_config_dao.get_from_config_id(
-                            affected_cfg_id
-                        )  # TODO raw config DAO method
-                    )
+                    raw_config = self.cfg_retrieve_raw_config(affected_cfg_id)
+
+                    raw_configs[affected_cfg_id] = raw_config
+
                 # 3. reconfigure each device having a direct dependency on
                 #    one of the affected cfg id
                 affected_devices = yield defer.ensureDeferred(
-                    self.device_dao.find_from_configs(
-                        list(affected_cfg_ids)
-                    )  # TODO device DAO method
+                    self.device_dao.find_from_configs(list(affected_cfg_ids))
                 )
-                for device in affected_devices:
+                for device_model in affected_devices:
+                    device = self._dev_create_model_from_dict(device_model)
                     plugin = self._dev_get_plugin(device)
                     if plugin is not None:
                         raw_config = raw_configs[device['config']]
+                        logger.debug('2 raw_config is %s', raw_config)
                         assert raw_config is not None
                         # deconfigure
                         if device['configured']:
@@ -937,61 +1091,64 @@ class ProvisioningApplication:
                 device_config_model = yield defer.ensureDeferred(
                     self.device_config_dao.get(config_id)
                 )
-                yield defer.ensureDeferred(
-                    self.device_config_dao.delete(device_config_model)
-                )
             except EntryNotFoundException as e:
                 raise InvalidIdError(e)
-            except PersistNonDeletableError as e:
-                raise NonDeletableError(e)
-            else:
-                # 1. get the set of affected configs
-                affected_cfg_ids = yield defer.ensureDeferred(
-                    self.device_config_dao.get_descendants(
-                        config_id
-                    )  # TODO config DAO method
-                )
-                affected_cfg_ids.add(config_id)
-                # 2. get the raw_config of every affected config
-                raw_configs = {}
-                for affected_cfg_id in affected_cfg_ids:
-                    raw_configs[affected_cfg_id] = yield defer.ensureDeferred(
-                        self.device_raw_config_dao.get_from_config_id(
-                            affected_cfg_id
-                        )  # TODO raw config DAO method
-                    )
-                # 3. reconfigure/deconfigure each affected devices
-                affected_devices = yield self.device_dao.find_from_configs(
-                    list(affected_cfg_ids)
-                )
-                for device in affected_devices:
-                    plugin = self._dev_get_plugin(device)
-                    if plugin is not None:
-                        raw_config = raw_configs[device['config']]
-                        # deconfigure
+
+            if not device_config_model.deletable:
+                raise NonDeletableError(device_config_model)
+
+            yield defer.ensureDeferred(
+                self.device_config_dao.delete(device_config_model)
+            )
+
+            # 1. get the set of affected configs
+            affected_cfg_models = yield defer.ensureDeferred(
+                self.device_config_dao.get_descendants(config_id)
+            )
+            affected_cfg_ids = {cfg_model.id for cfg_model in affected_cfg_models}
+            affected_cfg_ids.add(config_id)
+
+            # 2. get the raw_config of every affected config
+            raw_configs = {}
+            for affected_cfg_id in affected_cfg_ids:
+                raw_config = self.cfg_retrieve_raw_config(affected_cfg_id)
+                raw_configs[affected_cfg_id] = raw_config
+
+            # 3. reconfigure/deconfigure each affected devices
+            affected_devices = yield self.device_dao.find_from_configs(
+                list(affected_cfg_ids)
+            )
+
+            for device_model in affected_devices:
+                device = self._dev_create_dict_from_model(device_model)
+                plugin = self._dev_get_plugin(device)
+                if plugin is not None:
+                    raw_config = raw_configs[device['config']]
+                    logger.debug('3 raw_config is %s', raw_config)
+                    # deconfigure
+                    if device['configured']:
+                        self._dev_deconfigure(device, plugin)
+                    # configure if device config is not the deleted config
+                    if device['config'] == config_id:
+                        assert raw_config is None
+                        # update device if it has changed
                         if device['configured']:
-                            self._dev_deconfigure(device, plugin)
-                        # configure if device config is not the deleted config
-                        if device['config'] == config_id:
-                            assert raw_config is None
-                            # update device if it has changed
-                            if device['configured']:
-                                device['configured'] = False
-                                device_model = Device(**device)
-                                yield defer.ensureDeferred(
-                                    self.device_dao.update(device_model)
-                                )
-                        else:
-                            assert raw_config is not None
-                            configured = yield self._dev_configure(
-                                device, plugin, raw_config
+                            device['configured'] = False
+                            device_model = self._dev_create_model_from_dict(device)
+                            yield defer.ensureDeferred(
+                                self.device_dao.update(device_model)
                             )
-                            # update device if it has changed
-                            if device['configured'] != configured:
-                                device_model = Device(**device)
-                                yield defer.ensureDeferred(
-                                    self.device_dao.update(device_model)
-                                )
+                    else:
+                        assert raw_config is not None
+                        configured = yield self._dev_configure(
+                            device, plugin, raw_config
+                        )
+                        # update device if it has changed
+                        if device['configured'] != configured:
+                            device_model = self._dev_create_model_from_dict(device)
+                            yield defer.ensureDeferred(
+                                self.device_dao.update(device_model)
+                            )
         except Exception:
             logger.error('Error while deleting config', exc_info=True)
             raise
@@ -1006,8 +1163,84 @@ class ProvisioningApplication:
         except EntryNotFoundException:
             return defer.fail(None)
 
+    @defer.inlineCallbacks
     def cfg_retrieve_raw_config(self, config_id):
-        return defer.ensureDeferred(self.device_raw_config_dao.get(config_id))
+        raw_config_model = yield defer.ensureDeferred(
+            self.device_raw_config_dao.get(config_id)
+        )
+        raw_config = self._cfg_raw_create_dict_from_model(raw_config_model)
+
+        funckeys_models = yield defer.ensureDeferred(
+            self.function_key_dao.find_from_config(config_id)
+        )
+        funckeys = {}
+        for funckey_model in funckeys_models:
+            funckey_dict = funckey_model.as_dict()
+            del funckey_dict['uuid']
+            del funckey_dict['config_id']
+            position = funckey_dict.pop('position')
+            funckeys[str(position)] = cast(FuncKeyDict, funckey_dict)
+        raw_config['funckeys'] = funckeys
+
+        sip_lines_models = yield defer.ensureDeferred(
+            self.sip_line_dao.find_from_config(config_id)
+        )
+        sip_lines = {}
+        for sip_line_model in sip_lines_models:
+            sip_line_dict = sip_line_model.as_dict()
+            del sip_line_dict['uuid']
+            del sip_line_dict['config_id']
+            position = sip_line_dict.pop('position')
+            sip_lines[str(position)] = cast(SipLineDict, sip_line_dict)
+        raw_config['sip_lines'] = sip_lines
+
+        sccp_lines_models = yield defer.ensureDeferred(
+            self.sccp_line_dao.find_from_config(config_id)
+        )
+        sccp_lines = {}
+        for sccp_line_model in sccp_lines_models:
+            sccp_line_dict = sccp_line_model.as_dict()
+            del sccp_line_dict['uuid']
+            del sccp_line_dict['config_id']
+            position = sccp_line_dict.pop('position')
+            sccp_lines[position] = cast(CallManagerDict, sccp_line_dict)
+        raw_config['sccp_call_managers'] = sccp_lines
+
+        return raw_config
+
+    @defer.inlineCallbacks
+    def cfg_insert_raw_config(self, config_id: str, raw_config: RawConfigDict):
+        function_keys = raw_config.pop('funckeys')
+        sip_lines = raw_config.pop('sip_lines')
+        sccp_lines = raw_config.pop('sccp_call_managers')
+
+        new_raw_config_model = DeviceRawConfig(**raw_config)
+        yield defer.ensureDeferred(
+            self.device_raw_config_dao.create(new_raw_config_model)
+        )
+
+        if function_keys:
+            for position, fkey in function_keys.items():
+                function_key_model = FunctionKey(
+                    uuid4(), config_id=config_id, position=position, **fkey
+                )
+                yield defer.ensureDeferred(
+                    self.function_key_dao.create(function_key_model)
+                )
+
+        if sip_lines:
+            for position, sip_line in sip_lines.items():
+                sip_line_model = SIPLine(
+                    uuid4(), config_id=config_id, position=position, **sip_line
+                )
+                yield defer.ensureDeferred(self.sip_line_dao.create(sip_line_model))
+
+        if sccp_lines:
+            for position, sccp_line in sccp_lines.items():
+                sccp_line_model = SIPLine(
+                    uuid4(), config_id=config_id, position=position, **sccp_line
+                )
+                yield defer.ensureDeferred(self.sccp_line_dao.create(sccp_line_model))
 
     def cfg_find(self, selector, *args, **kwargs):
         return defer.ensureDeferred(
@@ -1021,7 +1254,9 @@ class ProvisioningApplication:
 
     @_wlock
     @defer.inlineCallbacks
-    def cfg_create_new(self) -> Generator[None, ConfigDict | None, None]:
+    def cfg_create_new(
+        self,
+    ) -> Generator[None, DeviceConfig | DeviceRawConfig | None, None]:
         """Create a new config from the config with the autocreate role.
 
         Return a deferred that will fire with the ID of the newly created
@@ -1032,26 +1267,44 @@ class ProvisioningApplication:
         logger.info('Creating new config')
         try:
             new_config_id = None
-            config_result = yield defer.ensureDeferred(
-                self.device_config_dao.find_one(role='autocreate')
-            )
-            if config_result:
-                config = config_result.as_dict()
-                # remove the role of the config, so we don't create new config
-                # with the autocreate role
-                del config['role']
-                # remove factory and validation as it is automatically created
-                if new_config := build_autocreate_config(config):
-                    # TODO generate ID
-                    new_config_model = DeviceConfig(**new_config)
-                    new_config_id = yield defer.ensureDeferred(
-                        self.device_config_dao.create(new_config_model)
-                    )
-                else:
-                    logger.debug('Autocreate config factory returned null config')
-            else:
-                logger.debug('No config with the autocreate role found')
+            try:
+                config_result = yield defer.ensureDeferred(
+                    self.device_config_dao.find_one({'role': 'autocreate'})
+                )
+            except EntryNotFoundException:
+                logger.warning('No config with the autocreate role found')
+                defer.returnValue(None)
 
+            cast_config_result = cast(ConfigDict, config_result.as_dict())
+            try:
+                linked_raw_config = yield defer.ensureDeferred(
+                    self.device_raw_config_dao.get(cast_config_result['id'])
+                )
+            except EntryNotFoundException:
+                linked_raw_config = None
+
+            if linked_raw_config:
+                cast_config_result['raw_config'] = yield self.cfg_retrieve_raw_config(
+                    linked_raw_config.config_id
+                )
+            config = ConfigDict(**cast_config_result)
+
+            # remove the role of the config, so we don't create new config
+            # with the autocreate role
+            del config['role']
+            # remove factory and validation as it is automatically created
+            if new_config := build_autocreate_config(config):
+                cast_new_config = cast(dict, new_config)
+
+                if new_raw_config := cast_new_config.pop('raw_config', None):
+                    yield self.cfg_insert_raw_config(new_config['id'], new_raw_config)
+
+                new_config_model = DeviceConfig(**cast_new_config)
+                new_config_id = yield defer.ensureDeferred(
+                    self.device_config_dao.create(new_config_model)
+                )
+            else:
+                logger.debug('Autocreate config factory returned null config')
             defer.returnValue(new_config_id)
         except Exception:
             logger.error('Error while autocreating config', exc_info=True)
@@ -1109,7 +1362,9 @@ class ProvisioningApplication:
     @defer.inlineCallbacks
     def _pg_configure_all_devices(self, plugin_id: str):
         logger.info('Reconfiguring all devices using plugin %s', plugin_id)
-        devices = yield self._dev_collection.find({'plugin': plugin_id})
+        devices = yield defer.ensureDeferred(
+            self.device_dao.find({'plugin': plugin_id})
+        )
         for device in devices:
             # deconfigure
             if device['configured']:
@@ -1118,7 +1373,8 @@ class ProvisioningApplication:
             configured = yield self._dev_configure_if_possible(device)
             if device['configured'] != configured:
                 device['configured'] = configured
-                yield self._dev_collection.update(device)
+                device_model = self._dev_create_model_from_dict(device)
+                yield defer.ensureDeferred(self.device_dao.update(device_model))
 
     def pg_install(self, plugin_id: str) -> tuple[Deferred, OperationInProgress]:
         """Install the plugin with the given id.
@@ -1229,12 +1485,13 @@ class ProvisioningApplication:
         # soft deconfigure all the device that were configured by this device
         # note that there is no point in calling plugin.deconfigure for every
         # of these devices since the plugin is removed anyway
-        affected_devices = yield self._dev_collection.find(
-            {'plugin': plugin_id, 'configured': True}
+        affected_devices = yield defer.ensureDeferred(
+            self.device_dao.find({'plugin': plugin_id, 'configured': True})
         )
         for device in affected_devices:
             device['configured'] = False
-            yield self._dev_collection.update(device)
+            device_model = self._dev_create_model_from_dict(device)
+            yield defer.ensureDeferred(self.device_dao.update(device_model))
 
     @_wlock
     @defer.inlineCallbacks
@@ -1255,7 +1512,9 @@ class ProvisioningApplication:
             logger.error('Can\'t reload plugin %s: not installed', plugin_id)
             raise Exception(f'plugin {plugin_id} is not installed')
 
-        devices = yield self._dev_collection.find({'plugin': plugin_id})
+        devices = yield defer.ensureDeferred(
+            self.device_dao.find({'plugin': plugin_id})
+        )
         devices = list(devices)
 
         # unload plugin
@@ -1275,7 +1534,8 @@ class ProvisioningApplication:
             for device in devices:
                 if device['configured']:
                     device['configured'] = False
-                    yield self._dev_collection.update(device)
+                    device_model = self._dev_create_model_from_dict(device)
+                    yield defer.ensureDeferred(self.device_dao.update(device_model))
             raise
 
         # reconfigure every device
@@ -1283,7 +1543,8 @@ class ProvisioningApplication:
             configured = yield self._dev_configure_if_possible(device)
             if device['configured'] != configured:
                 device['configured'] = configured
-                yield self._dev_collection.update(device)
+                device_model = self._dev_create_model_from_dict(device)
+                yield defer.ensureDeferred(self.device_dao.update(device_model))
 
     def pg_retrieve(self, plugin_id: str):
         return self.pg_mgr[plugin_id]
