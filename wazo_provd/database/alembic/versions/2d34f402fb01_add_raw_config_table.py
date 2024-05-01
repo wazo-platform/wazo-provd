@@ -23,7 +23,7 @@ def upgrade():
         sa.Column(
             'config_id',
             sa.Text,
-            sa.ForeignKey('provd_device_config.id'),
+            sa.ForeignKey('provd_device_config.id', ondelete='CASCADE'),
             primary_key=True,
         ),
         sa.Column('ip', sa.Text),

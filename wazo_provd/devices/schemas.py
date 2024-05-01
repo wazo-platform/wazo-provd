@@ -169,7 +169,7 @@ class RawConfigDict(TypedDict):
     exten_pickup_group: Union[str, None]
     exten_pickup_call: Union[str, None]
     exten_voicemail: Union[str, None]
-    funckeys: FuncKeyDict
+    funckeys: dict[str, FuncKeyDict]
     X_xivo_phonebook_ip: Union[str, None]
     X_xivo_phonebook_profile: Union[str, None]
     X_xivo_user_uuid: Union[str, None]
@@ -278,10 +278,10 @@ class ConfigDict(BaseConfigDict, total=False):
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
-        "id": Field(),
+        "id": Field(regex=r'^[0-9a-z]+$'),
+        "X_type": Field(alias="type"),
         "parent_id": Field(...),
         "raw_config": Field(...),
-        "X_type": Field(alias="type"),
     },
     type_overrides={'raw_config': RawConfigSchema},  # type: ignore[valid-type]
 )
@@ -309,6 +309,7 @@ class DeviceDict(BaseDeviceDict, total=False):
 DeviceSchema = create_model_from_typeddict(
     DeviceDict,
     {
+        "id": Field(regex=r'^[0-9a-z]+$'),
         "mac": Field(regex=_NORMED_MAC.pattern),
         "config": Field(alias="config_id"),
     },
