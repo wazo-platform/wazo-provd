@@ -35,6 +35,7 @@ from wazo_provd.app import (
     ProvisioningApplication,
     TenantInvalidForDeviceError,
 )
+from wazo_provd.database.exceptions import EntryNotFoundException
 from wazo_provd.localization import get_locale_and_language
 from wazo_provd.operation import (
     OperationInProgress,
@@ -287,15 +288,11 @@ def _add_sort_parameters(args: dict[str, list[str]], result: dict[str, Any]) -> 
     # sort=mac&sort_ord=ASC
     if 'sort' in args:
         key = args['sort'][0]
-        direction = 1
         if 'sort_ord' in args:
-            raw_direction = args['sort_ord'][0]
-            if raw_direction == 'ASC':
-                direction = 1
-            elif raw_direction == 'DESC':
-                direction = -1
-            else:
-                logger.warning('Invalid sort_ord value: %s', raw_direction)
+            direction = args['sort_ord'][0]
+            if direction != 'ASC' and direction != 'DESC':
+                logger.warning('Invalid sort_ord value: %s', direction)
+                direction = 'ASC'
         result['sort'] = (key, direction)
 
 
@@ -986,13 +983,12 @@ class DeviceResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.{device_id}.read')
     def render_GET(self, request: Request):
         def on_callback(device):
-            if device is None:
-                deferred_respond_no_resource(request)
-            else:
-                data = json_dumps({'device': device})
-                deferred_respond_ok(request, data)
+            data = json_dumps({'device': device})
+            deferred_respond_ok(request, data)
 
         def on_error(failure):
+            if failure.check(EntryNotFoundException):
+                deferred_respond_no_resource(request)
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
@@ -1032,7 +1028,10 @@ class DeviceResource(AuthResource):
 
         def on_errback(failure):
             if failure.check(
-                InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+                EntryNotFoundException,
+                InvalidIdError,
+                TenantInvalidForDeviceError,
+                UnauthorizedTenant,
             ):
                 deferred_respond_no_resource(request)
             else:
@@ -1063,7 +1062,10 @@ class DeviceResource(AuthResource):
 
         def on_errback(failure):
             if failure.check(
-                InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+                EntryNotFoundException,
+                InvalidIdError,
+                TenantInvalidForDeviceError,
+                UnauthorizedTenant,
             ):
                 deferred_respond_no_resource(request)
             else:
@@ -1172,13 +1174,12 @@ class ConfigResource(AuthResource):
     @required_acl('provd.cfg_mgr.configs.{config_id}.read')
     def render_GET(self, request: Request) -> NOT_DONE_YET:
         def on_callback(config):
-            if config is None:
-                deferred_respond_no_resource(request)
-            else:
-                data = json_dumps({'config': config})
-                deferred_respond_ok(request, data)
+            data = json_dumps({'config': config})
+            deferred_respond_ok(request, data)
 
         def on_error(failure):
+            if failure.check(EntryNotFoundException):
+                deferred_respond_no_resource(request)
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
         d = self._app.cfg_retrieve(self.config_id)

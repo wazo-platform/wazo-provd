@@ -16,9 +16,26 @@ logger = logging.getLogger(__name__)
 class Model(metaclass=abc.ABCMeta):
     _meta: ClassVar[dict[str, Any]]
 
-    def as_dict(self) -> dict[str, Any]:
-        self_dict = dataclasses.asdict(self)
-        return self_dict
+    def as_dict(
+        self, ignore_associations=False, ignore_foreign_keys=False
+    ) -> dict[str, Any]:
+        dict_output = {}
+        for field in dataclasses.fields(self):
+            if not (
+                ignore_associations
+                and field.metadata.get('assoc')
+                or ignore_foreign_keys
+                and field.metadata.get('foreign_key')
+            ):
+                value = getattr(self, field.name)
+                if dataclasses.is_dataclass(value):
+                    dict_output[field.name] = value.as_dict(
+                        ignore_associations=ignore_associations
+                    )
+                else:
+                    dict_output[field.name] = value
+
+        return dict_output
 
 
 @dataclasses.dataclass
@@ -63,13 +80,17 @@ class DeviceConfig(Model):
     proxy_backup: str | None = dataclasses.field(default=None)
     proxy_backup_port: int | None = dataclasses.field(default=None)
 
+    raw_config: DeviceRawConfig | None = dataclasses.field(
+        default=None, metadata={'assoc': True}
+    )
+
     _meta = {'primary_key': 'id'}
 
 
 @dataclasses.dataclass
 class SIPLine(Model):
     uuid: UUID
-    config_id: str
+    config_id: str = dataclasses.field(metadata={'foreign_key': True})
     position: int
     proxy_ip: str | None = dataclasses.field(default=None)
     proxy_port: int | None = dataclasses.field(default=None)
@@ -100,7 +121,7 @@ class SIPLine(Model):
 @dataclasses.dataclass
 class SCCPLine(Model):
     uuid: UUID
-    config_id: str
+    config_id: str = dataclasses.field(metadata={'foreign_key': True})
     position: int
     ip: str | None = dataclasses.field(default=None)
     port: int | None = dataclasses.field(default=None)
@@ -111,7 +132,7 @@ class SCCPLine(Model):
 @dataclasses.dataclass
 class FunctionKey(Model):
     uuid: UUID
-    config_id: str
+    config_id: str = dataclasses.field(metadata={'foreign_key': True})
     position: int
     type: str | None = dataclasses.field(default=None)  # enum "speeddial, blf, park"
     value: str | None = dataclasses.field(default=None)
@@ -123,7 +144,7 @@ class FunctionKey(Model):
 
 @dataclasses.dataclass
 class DeviceRawConfig(Model):
-    config_id: str
+    config_id: str = dataclasses.field(metadata={'foreign_key': True})
     ip: str | None = dataclasses.field(default=None)
     http_port: int | None = dataclasses.field(default=None)
     http_base_url: str | None = dataclasses.field(default=None)
@@ -182,6 +203,16 @@ class DeviceRawConfig(Model):
     phonebook_ip: str | None = dataclasses.field(default=None)
     phonebook_profile: str | None = dataclasses.field(default=None)
 
+    function_keys: dict[str, FunctionKey] | None = dataclasses.field(
+        default=None, metadata={'assoc': True}
+    )
+    sip_lines: dict[str, SIPLine] | None = dataclasses.field(
+        default=None, metadata={'assoc': True}
+    )
+    sccp_lines: dict[str, SCCPLine] | None = dataclasses.field(
+        default=None, metadata={'assoc': True}
+    )
+
     _meta = {'primary_key': 'config_id'}
 
 
@@ -189,7 +220,9 @@ class DeviceRawConfig(Model):
 class Device(Model):
     id: str
     tenant_uuid: UUID
-    config_id: str | None = dataclasses.field(default=None)
+    config_id: str | None = dataclasses.field(
+        default=None, metadata={'foreign_key': True}
+    )
     mac: str | None = dataclasses.field(default=None)
     ip: str | None = dataclasses.field(default=None)
     vendor: str | None = dataclasses.field(default=None)

@@ -64,6 +64,7 @@ class _BaseIntegrationTest(AssetLaunchingTestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.set_client()
+        cls.start_postgres_service()
         cls.wait_strategy.wait(cls)
 
     @classmethod
@@ -134,8 +135,10 @@ class DBIntegrationTest(_BaseIntegrationTest):
         self.tenant_dao = TenantDAO(self.db)
         self.service_configuration_dao = ServiceConfigurationDAO(self.db)
         self.device_dao = DeviceDAO(self.db)
-        self.device_config_dao = DeviceConfigDAO(self.db)
-        self.device_raw_config_dao = DeviceRawConfigDAO(self.db)
         self.sip_line_dao = SIPLineDAO(self.db)
         self.sccp_line_dao = SCCPLineDAO(self.db)
         self.function_key_dao = FunctionKeyDAO(self.db)
+        self.device_raw_config_dao = DeviceRawConfigDAO(
+            self.db, self.function_key_dao, self.sip_line_dao, self.sccp_line_dao
+        )
+        self.device_config_dao = DeviceConfigDAO(self.db, self.device_raw_config_dao)

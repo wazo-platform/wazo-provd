@@ -377,8 +377,7 @@ class ProvisioningApplication:
     def _cfg_raw_create_dict_from_model(
         self, raw_conf_model: DeviceRawConfig
     ) -> RawConfigDict:
-        raw_conf_dict = raw_conf_model.as_dict()
-        del raw_conf_dict['config_id']
+        raw_conf_dict = raw_conf_model.as_dict(ignore_foreign_keys=True)
         return cast(RawConfigDict, raw_conf_dict)
 
     @defer.inlineCallbacks
@@ -1169,42 +1168,6 @@ class ProvisioningApplication:
             self.device_raw_config_dao.get(config_id)
         )
         raw_config = self._cfg_raw_create_dict_from_model(raw_config_model)
-
-        funckeys_models = yield defer.ensureDeferred(
-            self.function_key_dao.find_from_config(config_id)
-        )
-        funckeys = {}
-        for funckey_model in funckeys_models:
-            funckey_dict = funckey_model.as_dict()
-            del funckey_dict['uuid']
-            del funckey_dict['config_id']
-            position = funckey_dict.pop('position')
-            funckeys[str(position)] = cast(FuncKeyDict, funckey_dict)
-        raw_config['funckeys'] = funckeys
-
-        sip_lines_models = yield defer.ensureDeferred(
-            self.sip_line_dao.find_from_config(config_id)
-        )
-        sip_lines = {}
-        for sip_line_model in sip_lines_models:
-            sip_line_dict = sip_line_model.as_dict()
-            del sip_line_dict['uuid']
-            del sip_line_dict['config_id']
-            position = sip_line_dict.pop('position')
-            sip_lines[str(position)] = cast(SipLineDict, sip_line_dict)
-        raw_config['sip_lines'] = sip_lines
-
-        sccp_lines_models = yield defer.ensureDeferred(
-            self.sccp_line_dao.find_from_config(config_id)
-        )
-        sccp_lines = {}
-        for sccp_line_model in sccp_lines_models:
-            sccp_line_dict = sccp_line_model.as_dict()
-            del sccp_line_dict['uuid']
-            del sccp_line_dict['config_id']
-            position = sccp_line_dict.pop('position')
-            sccp_lines[position] = cast(CallManagerDict, sccp_line_dict)
-        raw_config['sccp_call_managers'] = sccp_lines
 
         return raw_config
 

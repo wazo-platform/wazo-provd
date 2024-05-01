@@ -105,10 +105,6 @@ class TestDevices(BaseIntegrationTest):
         cls._reset_auth_tenants()
 
     @classmethod
-    def _create_auth_tenant(cls) -> None:
-        cls.mock_auth.set_tenants(*DEFAULT_TENANTS)
-
-    @classmethod
     def _delete_auth_tenant(cls) -> None:
         cls.mock_auth.set_tenants(*DEFAULT_TENANTS)
 
@@ -527,18 +523,22 @@ class TestDevices(BaseIntegrationTest):
         ):
             BusClient.send_tenant_deleted(DELETED_TENANT, 'slug')
 
-            assert_that(
-                calling(self._client.devices.get).with_args(
-                    device1['id'], tenant_uuid=DELETED_TENANT
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
-            assert_that(
-                calling(self._client.devices.get).with_args(
-                    device2['id'], tenant_uuid=DELETED_TENANT
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+            def devices_deleted():
+                assert_that(
+                    calling(self._client.devices.get).with_args(
+                        device1['id'], tenant_uuid=DELETED_TENANT
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
+                assert_that(
+                    calling(self._client.devices.get).with_args(
+                        device2['id'], tenant_uuid=DELETED_TENANT
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
+
+            until.assert_(devices_deleted, tries=20, interval=0.5)
+
             result = self._client.devices.get(device3['id'])
             assert_that(result, has_entry('id', device3['id']))
 
@@ -547,9 +547,6 @@ class TestDevices(BaseIntegrationTest):
             '/etc/wazo-provd/conf.d/01-syncdb.yml',
             content='general: {syncdb: {start_sec: 0, interval_sec: 0.1}}',
         )
-        self.restart_service('provd')
-        self.set_client()
-        self.wait_strategy.wait(self)
 
         with (
             fixtures.http.Device(
@@ -562,24 +559,21 @@ class TestDevices(BaseIntegrationTest):
                 self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1
             ) as device3,
         ):
+            self.restart_service('provd')
+            self.set_client()
+            self.wait_strategy.wait(self)
 
             def test_devices() -> None:
                 with TestDevices.delete_auth_tenant(DELETED_TENANT):
-                    # to be able to access to the provd API, the auth tenants are recreated
-                    TestDevices._reset_auth_tenants()
                     assert_that(
-                        calling(self._client.devices.get).with_args(
-                            device1['id'], tenant_uuid=DELETED_TENANT
-                        ),
+                        calling(self._client.devices.get).with_args(device1['id']),
                         raises(ProvdError).matching(has_properties('status_code', 404)),
                     )
                     assert_that(
-                        calling(self._client.devices.get).with_args(
-                            device2['id'], tenant_uuid=DELETED_TENANT
-                        ),
+                        calling(self._client.devices.get).with_args(device2['id']),
                         raises(ProvdError).matching(has_properties('status_code', 404)),
                     )
                     result = self._client.devices.get(device3['id'])
                     assert_that(result, has_entry('id', device3['id']))
 
-            until.assert_(test_devices, tries=10, interval=5)
+            until.assert_(test_devices, tries=20, interval=0.5)

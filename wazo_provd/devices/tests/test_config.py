@@ -31,7 +31,7 @@ def test_config_schema_empty() -> None:
     assert isinstance(error, ValidationError)
     assert error.errors() == [
         {
-            'loc': ('parent_ids',),
+            'loc': ('parent_id',),
             'msg': 'field required',
             'type': 'value_error.missing',
         },
