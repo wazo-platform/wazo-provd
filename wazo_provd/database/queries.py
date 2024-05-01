@@ -7,7 +7,7 @@ import dataclasses
 import logging
 import uuid
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, TypeVar
 
 import psycopg2.extras
 from psycopg2 import sql
@@ -47,7 +47,22 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
     ) -> list[dataclasses.Field]:
         exclude = exclude or []
         fields = dataclasses.fields(self.__model__)
-        return [field for field in fields if field.name not in exclude]
+        return [
+            field
+            for field in fields
+            if field.name not in exclude and not field.metadata.get('assoc')
+        ]
+
+    def _get_model_associations(
+        self, exclude: list[str] | None = None
+    ) -> list[dataclasses.Field]:
+        exclude = exclude or []
+        fields = dataclasses.fields(self.__model__)
+        return [
+            field
+            for field in fields
+            if field.name not in exclude and field.metadata.get('assoc')
+        ]
 
     def _get_model_fields_by_name(
         self, exclude: list[str] | None = None
@@ -55,6 +70,12 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         exclude = exclude or []
         fields = dataclasses.fields(self.__model__)
         return {field.name: field for field in fields if field.name not in exclude}
+
+    async def _load_associations(self, model: M) -> M:
+        return model
+
+    async def _save_associations(self, model: M) -> M:
+        return model
 
     def _prepare_create_query(self) -> sql.SQL:
         model_pkey = self.__model__._meta['primary_key']
@@ -78,7 +99,7 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
 
     async def create(self, model: M) -> M:
         create_query = self._prepare_create_query()
-        model_dict = model.as_dict()
+        model_dict = model.as_dict(ignore_associations=True)
         query_result = await self._db_connection.runQuery(create_query, {**model_dict})
         for result in query_result:
             res = await self.get(result[0])
@@ -102,7 +123,9 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         query = self._prepare_get_query()
         query_results = await self._db_connection.runQuery(query, [pkey_value])
         for result in query_results:
-            return self.__model__(*result)
+            new_model = self.__model__(*result)
+            model = await self._load_associations(new_model)
+            return model
         raise EntryNotFoundException('Could not get entry')
 
     def _prepare_update_query(self) -> sql.SQL:
@@ -132,7 +155,8 @@ class BaseDAO(Generic[M], metaclass=abc.ABCMeta):
         update_query = self._prepare_update_query()
         pkey = self.__model__._meta['primary_key']
         pkey_value = getattr(model, pkey)
-        model_dict = model.as_dict()
+        await self.get(pkey_value)
+        model_dict = model.as_dict(ignore_associations=True)
         del model_dict[pkey]
         await self._db_connection.runOperation(
             update_query, {'pkey': pkey_value, **model_dict}
@@ -282,6 +306,21 @@ class DeviceConfigDAO(BaseDAO):
     __tablename__ = 'provd_device_config'
     __model__ = DeviceConfig
 
+    def __init__(
+        self,
+        db_connection: adbapi.ConnectionPool,
+        raw_config_dao: DeviceRawConfigDAO,
+    ):
+        super().__init__(db_connection)
+        self._raw_config_dao = raw_config_dao
+
+    async def _load_associations(self, model: DeviceConfig) -> DeviceConfig:
+        try:
+            model.raw_config = await self._raw_config_dao.get(model.id)
+        except EntryNotFoundException:
+            model.raw_config = None
+        return model
+
     def _prepare_get_descendants_query(self) -> sql.SQL:
         fields = self._get_model_fields()
         field_names = [sql.Identifier(field.name) for field in fields]
@@ -317,7 +356,9 @@ class DeviceConfigDAO(BaseDAO):
     async def get_descendants(self, config_id: str) -> list[DeviceConfig]:
         query = self._prepare_get_descendants_query()
         results = await self._db_connection.runQuery(query, [config_id])
-        return [self.__model__(*result) for result in results]
+        return [
+            await self._load_associations(self.__model__(*result)) for result in results
+        ]
 
     def _prepare_get_parents_query(self) -> sql.SQL:
         fields = self._get_model_fields()
@@ -359,7 +400,9 @@ class DeviceConfigDAO(BaseDAO):
     async def get_parents(self, config_id: str) -> list[DeviceConfig]:
         query = self._prepare_get_parents_query()
         results = await self._db_connection.runQuery(query, {'pkey': config_id})
-        return [self.__model__(*result) for result in results]
+        return [
+            await self._load_associations(self.__model__(*result)) for result in results
+        ]
 
     def _prepare_find_query(
         self,
@@ -390,18 +433,138 @@ class DeviceConfigDAO(BaseDAO):
     ) -> list[DeviceConfig]:
         query = self._prepare_find_query(selectors, skip, limit, sort)
         results = await self._db_connection.runQuery(query)
-        return [self.__model__(*result) for result in results]
 
-    async def find_one(self, selectors: dict[str, Any] | None = None) -> DeviceConfig:
+        return [
+            await self._load_associations(self.__model__(*result)) for result in results
+        ]
+
+    async def find_one(
+        self, selectors: dict[str, Any] | None = None
+    ) -> Optional[DeviceConfig]:
         query = self._prepare_find_query(selectors, 0, 0, None)
         results = await self._db_connection.runQuery(query)
         for result in results:
-            return self.__model__(*result)
+            return await self._load_associations(self.__model__(*result))
+        return None
+
+    async def _save_associations(self, model: DeviceConfig) -> DeviceConfig:
+        if not model.raw_config:
+            return model
+
+        model.raw_config.config_id = model.id
+        try:
+            await self._raw_config_dao.update(model.raw_config)
+        except EntryNotFoundException:
+            raw_config = await self._raw_config_dao.create(model.raw_config)
+            model.raw_config = raw_config
+        return model
+
+    async def create(self, model: DeviceConfig) -> DeviceConfig:
+        await super().create(model)
+        new_model = await self._save_associations(model)
+        return new_model
+
+    async def update(self, model: DeviceConfig) -> None:
+        await super().update(model)
+        await self._save_associations(model)
+
+    async def delete(self, model: DeviceConfig) -> None:
+        if model.raw_config:
+            await self._raw_config_dao.delete(model.raw_config)
+        new_parent = model.parent_id
+        children = await self.get_descendants(model.id)
+        if children:
+            for child in children:
+                child.parent_id = new_parent
+                await self.update(child)
+        await super().delete(model)
 
 
 class DeviceRawConfigDAO(BaseDAO):
     __tablename__ = 'provd_device_raw_config'
     __model__ = DeviceRawConfig
+
+    def __init__(
+        self,
+        db_connection: adbapi.ConnectionPool,
+        fkey_dao: FunctionKeyDAO,
+        sip_line_dao: SIPLineDAO,
+        sccp_line_dao: SCCPLineDAO,
+    ) -> None:
+        super().__init__(db_connection)
+        self._fkey_dao = fkey_dao
+        self._sip_line_dao = sip_line_dao
+        self._sccp_line_dao = sccp_line_dao
+
+    async def _load_associations(self, model: DeviceRawConfig) -> DeviceRawConfig:
+        function_keys: list[FunctionKey] = await self._fkey_dao.find_from_config(
+            model.config_id
+        )
+        if function_keys:
+            model.function_keys = {str(fkey.position): fkey for fkey in function_keys}
+        sip_lines: list[SIPLine] = await self._sip_line_dao.find_from_config(
+            model.config_id
+        )
+        if sip_lines:
+            model.sip_lines = {
+                str(sip_line.position): sip_line for sip_line in sip_lines
+            }
+        sccp_lines: list[SCCPLine] = await self._sccp_line_dao.find_from_config(
+            model.config_id
+        )
+        if sccp_lines:
+            model.sccp_lines = {
+                str(sccp_line.position): sccp_line for sccp_line in sccp_lines
+            }
+        return model
+
+    async def _save_associations(self, model: DeviceRawConfig) -> DeviceRawConfig:
+        if model.function_keys:
+            for position, fkey in model.function_keys.items():
+                fkey.config_id = model.config_id
+                fkey.position = int(position)
+                try:
+                    await self._fkey_dao.update(fkey)
+                    print('Updating fkey', fkey)
+                except EntryNotFoundException:
+                    fkey.uuid = fkey.uuid or uuid.uuid4()
+                    await self._fkey_dao.create(fkey)
+                    print('Creating fkey', fkey)
+
+        if model.sip_lines:
+            for position, sip_line in model.sip_lines.items():
+                sip_line.config_id = model.config_id
+                sip_line.position = int(position)
+                try:
+                    await self._sip_line_dao.update(sip_line)
+                except EntryNotFoundException:
+                    sip_line.uuid = sip_line.uuid or uuid.uuid4()
+                    await self._sip_line_dao.create(sip_line)
+
+        if model.sccp_lines:
+            for position, sccp_line in model.sccp_lines.items():
+                sccp_line.config_id = model.config_id
+                sccp_line.position = int(position)
+                try:
+                    await self._sccp_line_dao.update(sccp_line)
+                except EntryNotFoundException:
+                    sccp_line.uuid = sccp_line.uuid or uuid.uuid4()
+                    await self._sccp_line_dao.create(sccp_line)
+        return model
+
+    async def get(self, pkey_value: Any) -> DeviceRawConfig:
+        model = await super().get(pkey_value)
+        model = await self._load_associations(model)
+        return model
+
+    async def create(self, model: DeviceRawConfig) -> DeviceRawConfig:
+        await super().create(model)
+        new_model = await self._save_associations(model)
+        return new_model
+
+    async def update(self, model: DeviceRawConfig) -> None:
+        await super().update(model)
+        await self._save_associations(model)
 
 
 class DeviceDAO(BaseDAO):
@@ -483,7 +646,7 @@ class DeviceDAO(BaseDAO):
         raise EntryNotFoundException('Could not get entry')
 
     def _prepare_tenant_uuids_find_query(
-        self, tenant_uuids: list[uuid.UUID]
+        self, tenant_uuids: list[uuid.UUID | str]
     ) -> sql.SQL:
         return sql.SQL('{tenant_uuid} = ANY({tenant_uuids}) AND ').format(
             tenant_uuid=sql.Identifier('tenant_uuid'),
@@ -493,7 +656,7 @@ class DeviceDAO(BaseDAO):
     def _prepare_find_query(
         self,
         selectors: dict[str, Any] | None,
-        tenant_uuids: list[uuid.UUID] | None,
+        tenant_uuids: list[uuid.UUID | str] | None,
         skip: int,
         limit: int,
         sort: tuple[str, Literal['ASC', 'DESC']] | None,
@@ -518,7 +681,7 @@ class DeviceDAO(BaseDAO):
     async def find(
         self,
         selectors: dict[str, Any] | None = None,
-        tenant_uuids: list[uuid.UUID] | None = None,
+        tenant_uuids: list[uuid.UUID | str] | None = None,
         skip: int = 0,
         limit: int = 0,
         sort: tuple[str, Literal['ASC', 'DESC']] | None = None,

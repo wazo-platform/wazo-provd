@@ -25,7 +25,7 @@ def upgrade():
         sa.Column(
             'config_id',
             sa.Text,
-            sa.ForeignKey('provd_device_config.id'),
+            sa.ForeignKey('provd_device_config.id', ondelete='CASCADE'),
             nullable=False,
         ),
         sa.Column('position', sa.Integer),

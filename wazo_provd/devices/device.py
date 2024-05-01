@@ -76,7 +76,7 @@ def needs_reconfiguration(old_device: DeviceDict, new_device: DeviceDict) -> boo
 
 
 # do
-def _check_device_validity(device: DeviceDict) -> None:
+def check_device_validity(device: DeviceDict) -> None:
     if device_mac := device.get('mac'):
         if not is_normed_mac(device_mac):
             raise ValueError(f'Non-normalized MAC address {device_mac}')
@@ -90,9 +90,9 @@ def _check_device_validity(device: DeviceDict) -> None:
 
 class DeviceCollection(ForwardingDocumentCollection):
     def insert(self, device: DeviceDict):
-        _check_device_validity(device)
+        check_device_validity(device)
         return self._collection.insert(device)
 
     def update(self, device: DeviceDict):
-        _check_device_validity(device)
+        check_device_validity(device)
         return self._collection.update(device)

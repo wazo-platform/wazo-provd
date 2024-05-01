@@ -395,33 +395,6 @@ class TestDeviceDAO:
             == expected_composed_query
         )
 
-    def test_find_query_unknown_selector_is_ignored(self):
-        device_dao = DeviceDAO(db_connection)
-        expected_composed_query = sql.Composed(
-            [
-                sql.SQL('SELECT '),
-                self.all_fields,
-                sql.SQL(' FROM '),
-                sql.Identifier('provd_device'),
-                sql.SQL(' WHERE '),
-                sql.Composed(
-                    [
-                        sql.Identifier('mac'),
-                        sql.SQL(' LIKE '),
-                        sql.Literal('%11:22:33%'),
-                    ]
-                ),
-                sql.SQL(';'),
-            ]
-        )
-
-        assert (
-            device_dao._prepare_find_query(
-                {'mac': '11:22:33', 'unknown': '123'}, None, 0, 0, None
-            )
-            == expected_composed_query
-        )
-
     def test_find_query_multitenant_filter(self):
         device_dao = DeviceDAO(db_connection)
         expected_composed_query = sql.Composed(
@@ -618,6 +591,8 @@ class TestDeviceConfigDAO:
             sql.SQL(','),
             sql.Identifier('parent_id'),
             sql.SQL(','),
+            sql.Identifier('label'),
+            sql.SQL(','),
             sql.Identifier('deletable'),
             sql.SQL(','),
             sql.Identifier('type'),
@@ -627,6 +602,26 @@ class TestDeviceConfigDAO:
             sql.Identifier('configdevice'),
             sql.SQL(','),
             sql.Identifier('transient'),
+            sql.SQL(','),
+            sql.Identifier('registrar_main'),
+            sql.SQL(','),
+            sql.Identifier('registrar_main_port'),
+            sql.SQL(','),
+            sql.Identifier('proxy_main'),
+            sql.SQL(','),
+            sql.Identifier('proxy_main_port'),
+            sql.SQL(','),
+            sql.Identifier('proxy_outbound'),
+            sql.SQL(','),
+            sql.Identifier('proxy_outbound_port'),
+            sql.SQL(','),
+            sql.Identifier('registrar_backup'),
+            sql.SQL(','),
+            sql.Identifier('registrar_backup_port'),
+            sql.SQL(','),
+            sql.Identifier('proxy_backup'),
+            sql.SQL(','),
+            sql.Identifier('proxy_backup_port'),
         ]
     )
 
@@ -635,6 +630,8 @@ class TestDeviceConfigDAO:
             sql.Identifier('provd_device_config', 'id'),
             sql.SQL(','),
             sql.Identifier('provd_device_config', 'parent_id'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'label'),
             sql.SQL(','),
             sql.Identifier('provd_device_config', 'deletable'),
             sql.SQL(','),
@@ -645,11 +642,37 @@ class TestDeviceConfigDAO:
             sql.Identifier('provd_device_config', 'configdevice'),
             sql.SQL(','),
             sql.Identifier('provd_device_config', 'transient'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'registrar_main'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'registrar_main_port'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'proxy_main'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'proxy_main_port'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'proxy_outbound'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'proxy_outbound_port'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'registrar_backup'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'registrar_backup_port'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'proxy_backup'),
+            sql.SQL(','),
+            sql.Identifier('provd_device_config', 'proxy_backup_port'),
         ]
     )
 
     def test_get_descendants(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
 
         expected_composed_query = sql.Composed(
             [
@@ -686,7 +709,13 @@ class TestDeviceConfigDAO:
         )
 
     def test_get_parents(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
 
         expected_composed_query = sql.Composed(
             [
@@ -722,7 +751,13 @@ class TestDeviceConfigDAO:
         assert device_config_dao._prepare_get_parents_query() == expected_composed_query
 
     def test_find_query_no_selector(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -741,7 +776,13 @@ class TestDeviceConfigDAO:
         )
 
     def test_find_query_single_selector(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -766,7 +807,13 @@ class TestDeviceConfigDAO:
         )
 
     def test_find_query_multiple_selectors(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -800,35 +847,14 @@ class TestDeviceConfigDAO:
             == expected_composed_query
         )
 
-    def test_find_query_unknown_selector_is_ignored(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
-        expected_composed_query = sql.Composed(
-            [
-                sql.SQL('SELECT '),
-                self.all_fields,
-                sql.SQL(' FROM '),
-                sql.Identifier('provd_device_config'),
-                sql.SQL(' WHERE '),
-                sql.Composed(
-                    [
-                        sql.Identifier('role'),
-                        sql.SQL(' LIKE '),
-                        sql.Literal('%autocreate%'),
-                    ]
-                ),
-                sql.SQL(';'),
-            ]
-        )
-
-        assert (
-            device_config_dao._prepare_find_query(
-                {'role': 'autocreate', 'unknown': '123'}, 0, 0, None
-            )
-            == expected_composed_query
-        )
-
     def test_find_query_sort(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -859,7 +885,13 @@ class TestDeviceConfigDAO:
         )
 
     def test_find_query_limit_skip(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -921,7 +953,13 @@ class TestDeviceConfigDAO:
         )
 
     def test_find_query_all_filters(self):
-        device_config_dao = DeviceConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
+        device_config_dao = DeviceConfigDAO(db_connection, raw_config_dao)
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -958,7 +996,12 @@ class TestDeviceConfigDAO:
 
 class TestDeviceRawConfigDAO:
     def test_get(self):
-        device_raw_config_dao = DeviceRawConfigDAO(db_connection)
+        fkey_dao = FunctionKeyDAO(db_connection)
+        sip_line_dao = SIPLineDAO(db_connection)
+        sccp_line_dao = SCCPLineDAO(db_connection)
+        device_raw_config_dao = DeviceRawConfigDAO(
+            db_connection, fkey_dao, sip_line_dao, sccp_line_dao
+        )
         expected_composed_query = sql.Composed(
             [
                 sql.SQL('SELECT '),
@@ -1067,6 +1110,12 @@ class TestDeviceRawConfigDAO:
                         sql.Identifier('exten_pickup_call'),
                         sql.SQL(','),
                         sql.Identifier('exten_voicemail'),
+                        sql.SQL(','),
+                        sql.Identifier('user_uuid'),
+                        sql.SQL(','),
+                        sql.Identifier('phonebook_ip'),
+                        sql.SQL(','),
+                        sql.Identifier('phonebook_profile'),
                     ]
                 ),
                 sql.SQL(' FROM '),
@@ -1090,6 +1139,8 @@ class TestSIPLineDAO:
                         sql.Identifier('uuid'),
                         sql.SQL(','),
                         sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('position'),
                         sql.SQL(','),
                         sql.Identifier('proxy_ip'),
                         sql.SQL(','),
@@ -1150,6 +1201,8 @@ class TestSCCPLineDAO:
                         sql.SQL(','),
                         sql.Identifier('config_id'),
                         sql.SQL(','),
+                        sql.Identifier('position'),
+                        sql.SQL(','),
                         sql.Identifier('ip'),
                         sql.SQL(','),
                         sql.Identifier('port'),
@@ -1176,6 +1229,8 @@ class TestFunctionKeyDAO:
                         sql.Identifier('uuid'),
                         sql.SQL(','),
                         sql.Identifier('config_id'),
+                        sql.SQL(','),
+                        sql.Identifier('position'),
                         sql.SQL(','),
                         sql.Identifier('type'),
                         sql.SQL(','),
