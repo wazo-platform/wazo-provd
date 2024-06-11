@@ -33,7 +33,7 @@ from wazo_provd.persist.common import InvalidIdError as PersistInvalidIdError
 from wazo_provd.persist.common import NonDeletableError as PersistNonDeletableError
 from wazo_provd.plugins import PluginManager, PluginNotLoadedError
 from wazo_provd.rest.server import auth
-from wazo_provd.rest.server.helpers.tenants import Tenant, Tokens
+from wazo_provd.rest.server.helpers.tenants import Tenant, tenant_helpers
 from wazo_provd.services import (
     InvalidParameterError,
     JsonConfigPersister,
@@ -261,7 +261,7 @@ class ProvisioningApplication:
         logger.debug('Setting token for provd app: %s', token_id)
         self._token = token_id
         auth_client = auth.get_auth_client()
-        token = Tokens(auth_client).get(self._token)
+        token = tenant_helpers.Token(self._token, auth_client)
         self.set_tenant_uuid(Tenant.from_token(token).uuid)
 
     def tenant_uuid(self) -> str | None:
