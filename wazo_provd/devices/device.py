@@ -76,7 +76,7 @@ def needs_reconfiguration(old_device: DeviceDict, new_device: DeviceDict) -> boo
 
 
 # do
-def check_device_validity(device: DeviceDict) -> None:
+def check_device_validity(device: DeviceDict) -> DeviceDict:
     if device_mac := device.get('mac'):
         if not is_normed_mac(device_mac):
             raise ValueError(f'Non-normalized MAC address {device_mac}')
@@ -85,7 +85,7 @@ def check_device_validity(device: DeviceDict) -> None:
             raise ValueError(f'Non-normalized IP address {device_ip}')
     if 'tenant_uuid' not in device:
         raise ValueError('Tenant UUID not specified')
-    DeviceSchema.validate(device)
+    return DeviceSchema.validate(device).dict(by_alias=True)
 
 
 class DeviceCollection(ForwardingDocumentCollection):

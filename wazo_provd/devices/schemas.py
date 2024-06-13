@@ -53,7 +53,7 @@ class FuncKeyType(str, Enum):
 
 
 class SchemaConfig:
-    extra = "allow"
+    extra = "ignore"
     use_enum_values = True
     arbitrary_types_allowed = True
 
@@ -87,7 +87,9 @@ class CallManagerDict(TypedDict):
     port: Union[int, None]
 
 
-CallManagerSchema = create_model_from_typeddict(CallManagerDict, {'ip': Field(...)})
+CallManagerSchema = create_model_from_typeddict(
+    CallManagerDict, {'ip': Field(...)}, config=SchemaConfig
+)
 
 
 class FuncKeyDict(TypedDict):
@@ -113,6 +115,7 @@ FuncKeySchema = create_model_from_typeddict(
     FuncKeyDict,
     {"type": Field(...)},
     {'validate_type_if_required': validate_type_if_required},
+    config=SchemaConfig,
 )
 
 
@@ -131,8 +134,8 @@ class RawConfigDict(TypedDict):
     vlan_pc_port_id: Union[int, None]
     syslog_enabled: Union[bool, None]
     syslog_ip: Union[str, None]
-    syslog_port: int
-    syslog_level: SyslogLevel
+    syslog_port: Union[int, None]
+    syslog_level: Union[int, None]
     admin_username: Union[str, None]
     admin_password: Union[str, None]
     user_username: Union[str, None]
@@ -158,8 +161,8 @@ class RawConfigDict(TypedDict):
     sip_local_certificate: Union[str, None]
     sip_local_key: Union[str, None]
     sip_subscribe_mwi: Union[bool, None]
-    sip_lines: dict[str, SipLineDict]
-    sccp_call_managers: dict[str, CallManagerDict]
+    sip_lines: Union[dict[str, SipLineDict], None]
+    sccp_call_managers: Union[dict[str, CallManagerDict], None]
     exten_dnd: Union[str, None]
     exten_fwd_unconditional: Union[str, None]
     exten_fwd_no_answer: Union[str, None]
@@ -169,13 +172,10 @@ class RawConfigDict(TypedDict):
     exten_pickup_group: Union[str, None]
     exten_pickup_call: Union[str, None]
     exten_voicemail: Union[str, None]
-    funckeys: dict[str, FuncKeyDict]
+    funckeys: Union[dict[str, FuncKeyDict], None]
     X_xivo_phonebook_ip: Union[str, None]
     X_xivo_phonebook_profile: Union[str, None]
     X_xivo_user_uuid: Union[str, None]
-    config_version: Union[
-        int, None
-    ]  # NOTE(afournier): this variable is unused. See WAZO-3619
 
 
 @validator('timezone', allow_reuse=True)
@@ -187,8 +187,10 @@ def validate_timezone(
 
 @validator('sccp_call_managers', 'funckeys', allow_reuse=True)
 def validate_numeric_keys(
-    cls: type[BaseModel], value: dict[str, Any]
-) -> dict[str, Any]:
+    cls: type[BaseModel], value: Union[dict[str, Any], None]
+) -> Union[dict[str, Any], None]:
+    if not value:
+        return
     if not all(INTEGER_KEY_REGEX.match(k) for k in value):
         raise ValueError("Dictionary keys must be a positive integer in string format.")
     return value
@@ -206,15 +208,6 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
         if not values.get(f'{field}_{name}') and values.get(f'{field}_enabled'):
             raise ValueError(f'Field `{name}_{field}` is required if {name} is enabled')
 
-    custom_fields = set(values) - {field.alias for field in cls.__fields__.values()}
-    invalid_custom_fields = [
-        custom_field
-        for custom_field in custom_fields
-        if not custom_field.startswith('X_')
-    ]
-    if any(invalid_custom_fields):
-        raise ValueError('Custom fields must start with `X_`', invalid_custom_fields)
-
     return values
 
 
@@ -222,14 +215,14 @@ RawConfigSchema = create_model_from_typeddict(
     RawConfigDict,
     {
         "ip": Field(),
-        "funckeys": Field(default_factory=dict),
+        "funckeys": Field(default_factory=dict, alias="function_keys"),
         "locale": Field(regex=r'[a-z]{2}_[A-Z]{2}'),
         "syslog_port": Field(514),
         "syslog_level": Field(SyslogLevel.WARNING),
         "sip_srtp_mode": Field(SrtpMode.DISABLED),
         "sip_transport": Field(Transport.UDP),
         "sip_lines": Field(default_factory=dict),
-        "sccp_call_managers": Field(default_factory=dict),
+        "sccp_call_managers": Field(default_factory=dict, alias="sccp_lines"),
         "vlan_id": Field(gte=0, lte=4094),
         "vlan_priority": Field(gte=0, lte=7),
         "vlan_pc_port_id": Field(gte=0, lte=4094),
@@ -244,17 +237,17 @@ RawConfigSchema = create_model_from_typeddict(
     },
     config=SchemaConfig,
     type_overrides={
-        'funckeys': dict[str, FuncKeySchema],  # type: ignore[valid-type]
-        'sip_lines': dict[str, SipLineSchema],  # type: ignore[valid-type]
-        'sccp_call_managers': dict[str, CallManagerSchema],  # type: ignore[valid-type]
+        'funckeys': Union[dict[str, FuncKeySchema], None],  # type: ignore[valid-type]
+        'sip_lines': Union[dict[str, SipLineSchema], None],  # type: ignore[valid-type]
+        'sccp_call_managers': Union[dict[str, CallManagerSchema], None],  # type: ignore[valid-type]
     },
 )
 
 
 class BaseConfigDict(TypedDict):
     id: Union[str, None]
-    parent_id: str
-    raw_config: RawConfigDict
+    parent_id: Union[str, None]
+    raw_config: Union[RawConfigDict, None]
 
 
 class ConfigDict(BaseConfigDict, total=False):
@@ -280,10 +273,9 @@ ConfigSchema = create_model_from_typeddict(
     {
         "id": Field(regex=r'^[0-9a-z]+$'),
         "X_type": Field(alias="type"),
-        "parent_id": Field(...),
-        "raw_config": Field(...),
     },
-    type_overrides={'raw_config': RawConfigSchema},  # type: ignore[valid-type]
+    config=SchemaConfig,
+    type_overrides={'raw_config': Union[RawConfigSchema, None]},  # type: ignore[valid-type]
 )
 
 
@@ -313,4 +305,5 @@ DeviceSchema = create_model_from_typeddict(
         "mac": Field(regex=_NORMED_MAC.pattern),
         "config": Field(alias="config_id"),
     },
+    config=SchemaConfig,
 )

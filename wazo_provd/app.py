@@ -31,7 +31,12 @@ from wazo_provd.database.models import (
     SIPLine,
 )
 from wazo_provd.database.models import Tenant as TenantModel
-from wazo_provd.devices.config import RawConfigError, build_autocreate_config
+from wazo_provd.devices.config import (
+    RawConfigError,
+    build_autocreate_config,
+    check_config_validity,
+    config_types_fixes,
+)
 from wazo_provd.devices.device import check_device_validity, needs_reconfiguration
 from wazo_provd.localization import get_localization_service
 from wazo_provd.operation import (
@@ -54,6 +59,7 @@ from .devices.schemas import (
     BaseDeviceDict,
     CallManagerDict,
     ConfigDict,
+    ConfigSchema,
     DeviceDict,
     DeviceSchema,
     FuncKeyDict,
@@ -179,9 +185,9 @@ def _check_common_raw_config_validity(raw_config: dict[str, Any]) -> None:
             raise RawConfigError(f'missing {param} parameter')
 
 
-def _check_raw_config_validity(raw_config: RawConfigDict) -> None:
+def _check_raw_config_validity(raw_config: RawConfigDict) -> RawConfigDict:
     try:
-        RawConfigSchema.validate(raw_config)
+        return RawConfigSchema.validate(raw_config)
     except ValidationError as e:
         # Try to resemble as close as possible to the old method. Do we really want this?
         error = e.errors()[0]
@@ -874,17 +880,12 @@ class ProvisioningApplication:
             )
         except EntryNotFoundException:
             raise InvalidIdError(f'Invalid config ID "{config_id}"')
+        logger.debug('Config model is: %s', config_model)
         defer.returnValue(self._cfg_create_dict_from_model(config_model))
 
     def _cfg_create_dict_from_model(self, config_model: DeviceConfig) -> ConfigDict:
         config_dict = config_model.as_dict()
-        config_dict['raw_config'] = None
         return cast(ConfigDict, config_dict)
-
-    def _cfg_create_model_from_dict(self, config: ConfigDict) -> DeviceConfig:
-        conf_d = cast(dict, config)
-        del conf_d['raw_config']
-        return DeviceConfig(**conf_d)
 
     @_wlock
     @defer.inlineCallbacks
@@ -907,43 +908,9 @@ class ProvisioningApplication:
         logger.info('Inserting config %s', config.get(ID_KEY))
         try:
             try:
-                raw_config = cast(dict, config.get('raw_config'))
-                raw_config['config_id'] = config.get(ID_KEY)
-
-                if function_keys := raw_config.pop('funckeys', None):
-                    for function_key in function_keys:
-                        function_key_model = FunctionKey(
-                            uuid=uuid4(),
-                            config_id=raw_config['config_id'],
-                            **function_key,
-                        )
-                        yield defer.ensureDeferred(
-                            self.function_key_dao.create(function_key_model)
-                        )
-
-                if sip_lines := raw_config.pop('sip_lines', None):
-                    for sip_line in sip_lines:
-                        sip_line_model = SIPLine(
-                            uuid=uuid4(), config_id=raw_config['config_id'], **sip_line
-                        )
-                        yield defer.ensureDeferred(
-                            self.sip_line_dao.create(sip_line_model)
-                        )
-
-                if sccp_lines := raw_config.pop('sccp_call_managers', None):
-                    for sccp_line in sccp_lines:
-                        sccp_line_model = SCCPLine(
-                            uuid=uuid4(), config_id=raw_config['config_id'], **sccp_line
-                        )
-                        yield defer.ensureDeferred(
-                            self.sccp_line_dao.create(sccp_line_model)
-                        )
-
-                raw_config_model = DeviceRawConfig(**raw_config)
-                yield defer.ensureDeferred(
-                    self.device_raw_config_dao.create(raw_config_model)
-                )
-                config_model = self._cfg_create_model_from_dict(config)
+                config_dict = check_config_validity(config)
+                config_dict = config_types_fixes(config_dict)
+                config_model = DeviceConfig.from_dict(config_dict)
                 new_config = yield defer.ensureDeferred(
                     self.device_config_dao.create(config_model)
                 )
@@ -1018,11 +985,14 @@ class ProvisioningApplication:
                 raise InvalidIdError(f'No id key for config {config}')
 
             logger.info('Updating config %s', config_id)
+            logger.debug('Complete config is: %s', config)
             old_config = yield self._cfg_get_or_raise(config_id)
             if old_config == config:
                 logger.info('config has not changed, ignoring update')
             else:
-                config_model = self._cfg_create_model_from_dict(config)
+                config_dict = check_config_validity(config)
+                config_dict = config_types_fixes(config_dict)
+                config_model = DeviceConfig.from_dict(config_dict)
                 yield defer.ensureDeferred(self.device_config_dao.update(config_model))
 
                 affected_cfg_models = yield defer.ensureDeferred(
@@ -1114,8 +1084,8 @@ class ProvisioningApplication:
                 raw_configs[affected_cfg_id] = raw_config
 
             # 3. reconfigure/deconfigure each affected devices
-            affected_devices = yield self.device_dao.find_from_configs(
-                list(affected_cfg_ids)
+            affected_devices = yield defer.ensureDeferred(
+                self.device_dao.find_from_configs(list(affected_cfg_ids))
             )
 
             for device_model in affected_devices:
@@ -1152,63 +1122,52 @@ class ProvisioningApplication:
             logger.error('Error while deleting config', exc_info=True)
             raise
 
+    @defer.inlineCallbacks
     def cfg_retrieve(self, config_id):
         """Return a deferred that fire with the config with the given ID, or
         fire with None if there's no such document.
 
         """
         try:
-            return defer.ensureDeferred(self.device_config_dao.get(config_id))
+            logger.debug('Trying to retrieve config %s', config_id)
+            config = yield defer.ensureDeferred(self.device_config_dao.get(config_id))
+            config_schema = ConfigSchema.validate(config.as_dict())
+            output_config = config_schema.dict()
+            logger.debug('Fetched config %s', output_config)
+            defer.returnValue(output_config)
         except EntryNotFoundException:
-            return defer.fail(None)
+            raise
+        except Exception as e:
+            logger.error('Unexpected exception', exc_info=e, stack_info=True)
+            raise
 
     @defer.inlineCallbacks
     def cfg_retrieve_raw_config(self, config_id):
-        raw_config_model = yield defer.ensureDeferred(
-            self.device_raw_config_dao.get(config_id)
-        )
-        raw_config = self._cfg_raw_create_dict_from_model(raw_config_model)
-
-        return raw_config
+        try:
+            raw_config_model = yield defer.ensureDeferred(
+                self.device_raw_config_dao.get(config_id)
+            )
+            raw_config_schema = RawConfigSchema.validate(raw_config_model.as_dict())
+            raw_config = raw_config_schema.dict()
+            return raw_config
+        except EntryNotFoundException:
+            raise
+        except Exception as e:
+            logger.error('Unexpected exception', exc_info=e, stack_info=True)
+            raise
 
     @defer.inlineCallbacks
-    def cfg_insert_raw_config(self, config_id: str, raw_config: RawConfigDict):
-        function_keys = raw_config.pop('funckeys')
-        sip_lines = raw_config.pop('sip_lines')
-        sccp_lines = raw_config.pop('sccp_call_managers')
-
-        new_raw_config_model = DeviceRawConfig(**raw_config)
-        yield defer.ensureDeferred(
-            self.device_raw_config_dao.create(new_raw_config_model)
-        )
-
-        if function_keys:
-            for position, fkey in function_keys.items():
-                function_key_model = FunctionKey(
-                    uuid4(), config_id=config_id, position=position, **fkey
-                )
-                yield defer.ensureDeferred(
-                    self.function_key_dao.create(function_key_model)
-                )
-
-        if sip_lines:
-            for position, sip_line in sip_lines.items():
-                sip_line_model = SIPLine(
-                    uuid4(), config_id=config_id, position=position, **sip_line
-                )
-                yield defer.ensureDeferred(self.sip_line_dao.create(sip_line_model))
-
-        if sccp_lines:
-            for position, sccp_line in sccp_lines.items():
-                sccp_line_model = SIPLine(
-                    uuid4(), config_id=config_id, position=position, **sccp_line
-                )
-                yield defer.ensureDeferred(self.sccp_line_dao.create(sccp_line_model))
-
     def cfg_find(self, selector, *args, **kwargs):
-        return defer.ensureDeferred(
+        config_models = yield defer.ensureDeferred(
             self.device_config_dao.find(selector, *args, **kwargs)
         )
+        configs_output = []
+        for config_model in config_models:
+            config_schema = ConfigSchema.validate(config_model.as_dict())
+            config = config_schema.dict()
+            configs_output.append(config)
+
+        return configs_output
 
     def cfg_find_one(self, selector, *args, **kwargs):
         return defer.ensureDeferred(
@@ -1229,28 +1188,15 @@ class ProvisioningApplication:
         """
         logger.info('Creating new config')
         try:
-            new_config_id = None
-            try:
-                config_result = yield defer.ensureDeferred(
-                    self.device_config_dao.find_one({'role': 'autocreate'})
-                )
-            except EntryNotFoundException:
+            new_config = None
+            config_result = yield defer.ensureDeferred(
+                self.device_config_dao.find_one({'role': 'autocreate'})
+            )
+            if not config_result:
                 logger.warning('No config with the autocreate role found')
                 defer.returnValue(None)
 
-            cast_config_result = cast(ConfigDict, config_result.as_dict())
-            try:
-                linked_raw_config = yield defer.ensureDeferred(
-                    self.device_raw_config_dao.get(cast_config_result['id'])
-                )
-            except EntryNotFoundException:
-                linked_raw_config = None
-
-            if linked_raw_config:
-                cast_config_result['raw_config'] = yield self.cfg_retrieve_raw_config(
-                    linked_raw_config.config_id
-                )
-            config = ConfigDict(**cast_config_result)
+            config = cast(ConfigDict, config_result.as_dict())
 
             # remove the role of the config, so we don't create new config
             # with the autocreate role
@@ -1258,17 +1204,13 @@ class ProvisioningApplication:
             # remove factory and validation as it is automatically created
             if new_config := build_autocreate_config(config):
                 cast_new_config = cast(dict, new_config)
-
-                if new_raw_config := cast_new_config.pop('raw_config', None):
-                    yield self.cfg_insert_raw_config(new_config['id'], new_raw_config)
-
-                new_config_model = DeviceConfig(**cast_new_config)
-                new_config_id = yield defer.ensureDeferred(
+                new_config_model = DeviceConfig.from_dict(cast_new_config)
+                new_config = yield defer.ensureDeferred(
                     self.device_config_dao.create(new_config_model)
                 )
             else:
                 logger.debug('Autocreate config factory returned null config')
-            defer.returnValue(new_config_id)
+            defer.returnValue(new_config.id)
         except Exception:
             logger.error('Error while autocreating config', exc_info=True)
             raise

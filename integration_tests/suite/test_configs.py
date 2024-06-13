@@ -6,6 +6,7 @@ from hamcrest import (
     calling,
     equal_to,
     has_entry,
+    has_item,
     has_key,
     has_properties,
     is_,
@@ -23,8 +24,10 @@ class TestConfigs(BaseIntegrationTest):
     wait_strategy = NoWaitStrategy()
 
     def test_list(self) -> None:
-        results = self._client.configs.list()
-        assert_that(results, has_key('configs'))
+        with fixtures.http.Configuration(self._client) as config:
+            results = self._client.configs.list()
+            assert_that(results, has_key('configs'))
+            assert_that(results['configs'], has_item(has_entry('id', config['id'])))
 
     def test_list_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
@@ -82,7 +85,7 @@ class TestConfigs(BaseIntegrationTest):
     def test_create(self) -> None:
         config = {
             'id': 'test1',
-            'parent_ids': ['base'],
+            'parent_id': 'base',
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
@@ -119,7 +122,7 @@ class TestConfigs(BaseIntegrationTest):
         provd = self.make_provd(INVALID_TOKEN)
         config = {
             'id': 'test1',
-            'parent_ids': ['base'],
+            'parent_id': 'base',
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
@@ -171,7 +174,7 @@ class TestConfigs(BaseIntegrationTest):
     def test_delete_undeletable_error(self) -> None:
         config = {
             'id': 'test1',
-            'parent_ids': ['base'],
+            'parent_id': 'base',
             'deletable': False,
             'X_type': 'internal',
             'raw_config': {
@@ -192,6 +195,11 @@ class TestConfigs(BaseIntegrationTest):
         config['deletable'] = True
         self._client.configs.update(config)
         self._client.configs.delete(config['id'])
+
+        assert_that(
+            calling(self._client.configs.get).with_args(config['id']),
+            raises(ProvdError).matching(has_properties('status_code', 404)),
+        )
 
     def test_delete_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)

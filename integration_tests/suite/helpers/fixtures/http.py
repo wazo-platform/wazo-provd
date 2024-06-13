@@ -94,6 +94,8 @@ class Plugin:
 
 
 class Configuration:
+    _count = 0
+
     def __init__(self, client: ProvdClient, delete_on_exit: bool = True) -> None:
         self._client = client
         self._config: ConfigDict = None  # type: ignore[assignment]
@@ -101,8 +103,8 @@ class Configuration:
 
     def __enter__(self) -> ConfigDict:
         config = {
-            'id': 'test1',
-            'parent_ids': ['base'],
+            'id': f'test{self._count}',
+            'parent_id': 'base',
             'deletable': True,
             'X_type': 'internal',
             'raw_config': {
@@ -115,6 +117,7 @@ class Configuration:
         }
         result = self._client.configs.create(config)
         self._config = self._client.configs.get(result['id'])
+        self._count += 1
         return self._config
 
     def __exit__(

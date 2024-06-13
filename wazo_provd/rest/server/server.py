@@ -303,7 +303,7 @@ def find_arguments_from_request(request: Request) -> dict[str, Any]:
     result: dict[str, Any] = {}
     args: dict[str, list[str]] = decode_value(request.args)
     _add_selector_parameter(args, result)
-    _add_fields_parameter(args, result)
+    # _add_fields_parameter(args, result)
     _add_skip_parameter(args, result)
     _add_limit_parameters(args, result)
     _add_sort_parameters(args, result)
@@ -1129,7 +1129,7 @@ class ConfigsResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(configs):
-            data = json_dumps({'configs': list(configs)})
+            data = json_dumps({'configs': configs})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
@@ -1205,6 +1205,7 @@ class ConfigResource(AuthResource):
                     request, failure.value, http.INTERNAL_SERVER_ERROR
                 )
 
+        logger.debug('Config pre-update: %s', config)
         d = self._app.cfg_update(config)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1246,6 +1247,8 @@ class RawConfigResource(AuthResource):
                 deferred_respond_ok(request, data)
 
         def on_errback(failure):
+            if failure.check(EntryNotFoundException):
+                deferred_respond_no_resource(request)
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
             return failure
 

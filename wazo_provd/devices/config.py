@@ -34,12 +34,12 @@ from collections import defaultdict
 from collections.abc import Callable, Generator
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 
-from wazo_provd.devices.schemas import ConfigSchema
+from wazo_provd.devices.schemas import ConfigSchema, SyslogLevel
 from wazo_provd.persist.common import ID_KEY
 from wazo_provd.persist.util import ForwardingDocumentCollection
 from wazo_provd.util import decode_bytes
@@ -482,7 +482,22 @@ def _rec_update_dict(base_dict, overlay_dict):
             base_dict[k] = v
 
 
-def _check_config_validity(config: ConfigDict) -> None:
+def config_types_fixes(config: ConfigDict) -> dict[str, Any]:
+    syslog_map = {
+        SyslogLevel.DEBUG: 4,
+        SyslogLevel.INFO: 3,
+        SyslogLevel.WARNING: 2,
+        SyslogLevel.ERROR: 1,
+        SyslogLevel.CRITICAL: 0,
+    }
+    new_config = cast(dict[str, Any], config)
+    if syslog_level := config['raw_config'].get('syslog_level'):
+        new_config['raw_config']['syslog_level'] = syslog_map.get(syslog_level)
+
+    return new_config
+
+
+def check_config_validity(config: ConfigDict) -> ConfigDict:
     if 'parent_id' not in config:
         raise ValueError('missing "parent_id" field in config')
 
@@ -499,7 +514,7 @@ def _check_config_validity(config: ConfigDict) -> None:
         )
     # This also does the same as all the validations above and more,
     # the others were only left since apparently we want the same messages.
-    ConfigSchema.validate(config)
+    return ConfigSchema.validate(config).dict(by_alias=True)
 
 
 def _needs_child_and_parent_indexes(
@@ -574,7 +589,7 @@ class ConfigCollection(ForwardingDocumentCollection):
     @_needs_child_and_parent_indexes
     def insert(self, config: ConfigDict) -> Deferred:
         config = _remove_none_values_for_device(config)
-        _check_config_validity(config)
+        check_config_validity(config)
 
         def callback(config_id: str) -> str:
             config_id = decode_bytes(config_id)
@@ -596,7 +611,7 @@ class ConfigCollection(ForwardingDocumentCollection):
     @_needs_child_and_parent_indexes
     def update(self, config: ConfigDict) -> Deferred:
         config = _remove_none_values_for_device(config)
-        _check_config_validity(config)
+        check_config_validity(config)
 
         def callback(_: Any) -> None:
             config_id = decode_bytes(config[ID_KEY])  # type: ignore
