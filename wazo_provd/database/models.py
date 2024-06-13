@@ -86,6 +86,14 @@ class DeviceConfig(Model):
 
     _meta = {'primary_key': 'id'}
 
+    @classmethod
+    def from_dict(cls, input_dict: dict[str, Any]) -> DeviceConfig:
+        raw_config = None
+        if raw_config_dict := input_dict.pop('raw_config', None):
+            raw_config_dict['config_id'] = input_dict.get('config_id', None)
+            raw_config = DeviceRawConfig.from_dict(raw_config_dict)
+        return cls(**input_dict, raw_config=raw_config)
+
 
 @dataclasses.dataclass
 class SIPLine(Model):
@@ -117,6 +125,10 @@ class SIPLine(Model):
 
     _meta = {'primary_key': 'uuid'}
 
+    @classmethod
+    def from_dict(cls, input_dict: dict[str, Any]) -> SIPLine:
+        return cls(**input_dict)
+
 
 @dataclasses.dataclass
 class SCCPLine(Model):
@@ -127,6 +139,10 @@ class SCCPLine(Model):
     port: int | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'uuid'}
+
+    @classmethod
+    def from_dict(cls, input_dict: dict[str, Any]) -> SCCPLine:
+        return cls(**input_dict)
 
 
 @dataclasses.dataclass
@@ -140,6 +156,10 @@ class FunctionKey(Model):
     line: str | None = dataclasses.field(default=None)
 
     _meta = {'primary_key': 'uuid'}
+
+    @classmethod
+    def from_dict(cls, input_dict: dict[str, Any]) -> FunctionKey:
+        return cls(**input_dict)
 
 
 @dataclasses.dataclass
@@ -214,6 +234,58 @@ class DeviceRawConfig(Model):
     )
 
     _meta = {'primary_key': 'config_id'}
+
+    @classmethod
+    def from_dict(cls, input_dict: dict[str, Any]) -> DeviceRawConfig:
+        function_keys = None
+        sip_lines = None
+        sccp_lines = None
+
+        config_id = input_dict.get('config_id', None)
+
+        if function_keys_dict := input_dict.pop('function_keys', None):
+            function_keys = {}
+            for position, function_key_dict in function_keys_dict.items():
+                function_key_dict['config_id'] = config_id
+                function_keys[position] = FunctionKey.from_dict(function_key_dict)
+        if sip_lines_dict := input_dict.pop('sip_lines', None):
+            sip_lines = {}
+            for position, sip_line_dict in sip_lines_dict.items():
+                sip_line_dict['config_id'] = config_id
+                sip_lines[position] = SIPLine.from_dict(sip_line_dict)
+        if sccp_lines_dict := input_dict.pop('sccp_lines', None):
+            sccp_lines = {}
+            for position, sccp_line_dict in sccp_lines_dict.items():
+                sccp_line_dict['config_id'] = config_id
+                sccp_lines[position] = SCCPLine.from_dict(sccp_line_dict)
+
+        return cls(
+            **input_dict,
+            function_keys=function_keys,
+            sip_lines=sip_lines,
+            sccp_lines=sccp_lines,
+        )
+
+    def as_dict(
+        self, ignore_associations=False, ignore_foreign_keys=False
+    ) -> dict[str, Any]:
+        dict_output = super().as_dict(
+            ignore_associations=ignore_associations,
+            ignore_foreign_keys=ignore_foreign_keys,
+        )
+        if function_keys := dict_output.get('function_keys', None):
+            for position, function_key in function_keys.items():
+                dict_output['function_keys'][position] = function_key.as_dict()
+
+        if sip_lines := dict_output.get('sip_lines', None):
+            for position, sip_line in sip_lines.items():
+                dict_output['sip_lines'][position] = sip_line.as_dict()
+
+        if sccp_lines := dict_output.get('sccp_lines', None):
+            for position, sccp_line in sccp_lines.items():
+                dict_output['sccp_lines'][position] = sccp_line.as_dict()
+
+        return dict_output
 
 
 @dataclasses.dataclass
