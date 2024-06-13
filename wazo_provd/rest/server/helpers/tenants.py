@@ -40,4 +40,4 @@ class Tokens(tenant_helpers.Tokens):
         token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
         if not token_id:
             raise InvalidToken()
-        return self.get(token_id)
+        return tenant_helpers.Token(token_id, self._auth)
