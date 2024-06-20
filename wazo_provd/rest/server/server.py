@@ -20,6 +20,7 @@ import json
 import logging
 from binascii import a2b_base64
 from collections.abc import Callable, Generator
+from time import sleep
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from twisted.internet import defer
@@ -905,6 +906,7 @@ class DeviceDHCPInfoResource(AuthResource):
         if op == 'commit':
             dhcp_request: DHCPRequest = {'ip': ip, 'mac': mac, 'options': options}  # type: ignore
             self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
+            sleep(5)
             return respond_no_content(request)
         if op == 'expiry' or op == 'release':
             # we are keeping this only for compatibility -- release and
@@ -932,14 +934,21 @@ class DevicesResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(devices):
+            logger.debug('On devices callback: %s', devices)
             data = json_dumps({'devices': list(devices)})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
+            logger.debug('On devices errback: %s', failure)
             deferred_respond_error(request, failure.value)
 
         recurse = self._extract_recurse(request)
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
+        logger.debug(
+            'AFDEBUG trying to find devices with arguments: %s %s',
+            find_arguments,
+            tenant_uuids,
+        )
         d = self._app.dev_find(**find_arguments, tenant_uuids=tenant_uuids)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -983,10 +992,12 @@ class DeviceResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.{device_id}.read')
     def render_GET(self, request: Request):
         def on_callback(device):
+            logger.debug('On callback for device %s', device)
             data = json_dumps({'device': device})
             deferred_respond_ok(request, data)
 
         def on_error(failure):
+            logger.debug('On errback for device: %s', failure)
             if failure.check(EntryNotFoundException):
                 deferred_respond_no_resource(request)
             deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
@@ -1129,10 +1140,12 @@ class ConfigsResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(configs):
+            logger.debug('In callback of configs, configs: %s', configs)
             data = json_dumps({'configs': configs})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
+            logger.debug('On errback of configs, failure = %s', failure)
             deferred_respond_error(request, failure.value)
 
         d = self._app.cfg_find(**find_arguments)

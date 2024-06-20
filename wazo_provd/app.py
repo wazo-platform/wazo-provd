@@ -11,6 +11,7 @@ import traceback
 from collections import deque
 from collections.abc import Callable, Generator
 from copy import deepcopy
+from time import sleep
 from typing import TYPE_CHECKING, Any, Literal, Union, cast
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
@@ -386,6 +387,7 @@ class ProvisioningApplication:
         raw_conf_dict = raw_conf_model.as_dict(ignore_foreign_keys=True)
         return cast(RawConfigDict, raw_conf_dict)
 
+    @_rlock
     @defer.inlineCallbacks
     def _get_flat_raw_config(self, config_id: str):
         config_deferreds = []
@@ -423,21 +425,18 @@ class ProvisioningApplication:
         )
 
     def _dev_create_dict_from_model(self, device_model: Device) -> DeviceDict:
-        added = "auto" if device_model.auto_added else ""
-        return DeviceDict(
-            id=device_model.id,  # type: ignore[arg-type]
-            tenant_uuid=str(device_model.tenant_uuid),
-            config=device_model.config_id,
-            mac=device_model.mac,
-            ip=device_model.ip or "",
-            vendor=device_model.vendor,
-            model=device_model.model,
-            version=device_model.version,
-            plugin=device_model.plugin,
-            configured=device_model.configured,
-            added=added,
-            is_new=device_model.is_new,
-        )
+        try:
+            device_schema = DeviceSchema.validate(device_model.as_dict())
+            return device_schema.dict()
+        except Exception as e:
+            logger.error(
+                'Could not load device %s: %s',
+                device_model.id,
+                e,
+                exc_info=e,
+                stack_info=True,
+            )
+            raise
 
     @defer.inlineCallbacks
     def _dev_get_raw_config(self, device: BaseDeviceDict | DeviceDict) -> Deferred:
@@ -620,18 +619,20 @@ class ProvisioningApplication:
                 device['id'] = next(get_id_generator_factory('default')())
 
             try:
+                logger.critical('AFDEBUG pre-insert')
                 check_device_validity(device)
                 device_model = self._dev_create_model_from_dict(device)
                 added_device = yield defer.ensureDeferred(
                     self.device_dao.create(device_model)
                 )
                 device_id = added_device.id
+                logger.critical('AFDEBUG created device with id: %s', device_id)
             except PersistInvalidIdError as e:
                 raise InvalidIdError(e)
             else:
                 configured = yield self._dev_configure_if_possible(device)
                 if configured:
-                    device_model.configured = True
+                    logging.debug('AFDEBUG Device %s configured', device['id'])
                     yield defer.ensureDeferred(self.device_dao.update(device_model))
                 defer.returnValue(device_id)
         except Exception:
@@ -675,6 +676,9 @@ class ProvisioningApplication:
                     # Configure new device if possible
                     configured = yield self._dev_configure_if_possible(device)
                     device['configured'] = configured
+                    if configured:
+                        device_model = self._dev_create_model_from_dict(device)
+                        yield defer.ensureDeferred(self.device_dao.update(device_model))
                 else:
                     device['configured'] = old_device['configured']
                 if pre_update_hook is not None:
@@ -832,6 +836,10 @@ class ProvisioningApplication:
             device = yield self._dev_get_or_raise(device_id)
             if device['configured']:
                 self._dev_deconfigure_if_possible(device)
+                device['configured'] = False
+                device_model = self._dev_create_model_from_dict(device)
+                yield defer.ensureDeferred(self.device_dao.update(device_model))
+
             configured = yield self._dev_configure_if_possible(device)
             if device['configured'] != configured:
                 device['configured'] = configured
@@ -884,8 +892,12 @@ class ProvisioningApplication:
         defer.returnValue(self._cfg_create_dict_from_model(config_model))
 
     def _cfg_create_dict_from_model(self, config_model: DeviceConfig) -> ConfigDict:
-        config_dict = config_model.as_dict()
-        return cast(ConfigDict, config_dict)
+        try:
+            config_schema = ConfigSchema.validate(config_model.as_dict())
+            return config_schema.dict()
+        except ValidationError as e:
+            logger.error('Could not load config %s: %s', config_model.id, e, exc_info=e)
+            raise
 
     @_wlock
     @defer.inlineCallbacks
@@ -948,7 +960,9 @@ class ProvisioningApplication:
                         if device['configured']:
                             self._dev_deconfigure(device, plugin)
                         # configure
-                        configured = self._dev_configure(device, plugin, raw_config)
+                        configured = yield self._dev_configure(
+                            device, plugin, raw_config
+                        )
                         # update device if it has changed
                         if device['configured'] != configured:
                             device['configured'] = configured
@@ -1130,10 +1144,10 @@ class ProvisioningApplication:
         """
         try:
             logger.debug('Trying to retrieve config %s', config_id)
-            config = yield defer.ensureDeferred(self.device_config_dao.get(config_id))
-            config_schema = ConfigSchema.validate(config.as_dict())
-            output_config = config_schema.dict()
-            logger.debug('Fetched config %s', output_config)
+            config_model = yield defer.ensureDeferred(
+                self.device_config_dao.get(config_id)
+            )
+            output_config = self._cfg_create_dict_from_model(config_model)
             defer.returnValue(output_config)
         except EntryNotFoundException:
             raise
@@ -1148,14 +1162,14 @@ class ProvisioningApplication:
                 self.device_raw_config_dao.get(config_id)
             )
             raw_config_schema = RawConfigSchema.validate(raw_config_model.as_dict())
-            raw_config = raw_config_schema.dict()
-            return raw_config
+            return raw_config_schema.dict()
         except EntryNotFoundException:
             raise
         except Exception as e:
             logger.error('Unexpected exception', exc_info=e, stack_info=True)
             raise
 
+    @_rlock
     @defer.inlineCallbacks
     def cfg_find(self, selector, *args, **kwargs):
         config_models = yield defer.ensureDeferred(
@@ -1163,8 +1177,7 @@ class ProvisioningApplication:
         )
         configs_output = []
         for config_model in config_models:
-            config_schema = ConfigSchema.validate(config_model.as_dict())
-            config = config_schema.dict()
+            config = self._cfg_create_dict_from_model(config_model)
             configs_output.append(config)
 
         return configs_output
@@ -1208,6 +1221,7 @@ class ProvisioningApplication:
                 new_config = yield defer.ensureDeferred(
                     self.device_config_dao.create(new_config_model)
                 )
+                logger.debug('Autocreated config: %s', new_config)
             else:
                 logger.debug('Autocreate config factory returned null config')
             defer.returnValue(new_config.id)
@@ -1274,6 +1288,8 @@ class ProvisioningApplication:
             # deconfigure
             if device['configured']:
                 self._dev_deconfigure_if_possible(device)
+                device_model = self._dev_create_model_from_dict(device)
+                yield defer.ensureDeferred(self.device_dao.update(device_model))
             # configure
             configured = yield self._dev_configure_if_possible(device)
             if device['configured'] != configured:

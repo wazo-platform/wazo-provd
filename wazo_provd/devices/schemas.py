@@ -8,6 +8,7 @@ of the `create_model_from_typeddict`. This can be remedied if we upgrade to
 pydantic 1.9+ and can use their more robust implementation.
 """
 import re
+import uuid
 from enum import Enum
 from ipaddress import IPv4Address
 from typing import Any, Literal, TypedDict, Union
@@ -271,7 +272,7 @@ class ConfigDict(BaseConfigDict, total=False):
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
-        "id": Field(regex=r'^[0-9a-z]+$'),
+        "id": Field(regex=r'^[0-9a-z_-]+$'),
         "X_type": Field(alias="type"),
     },
     config=SchemaConfig,
@@ -282,7 +283,7 @@ ConfigSchema = create_model_from_typeddict(
 class BaseDeviceDict(TypedDict, total=False):
     id: Union[str, None]
     mac: Union[str, None]
-    ip: Union[IPv4Address, str]
+    ip: Union[str, None]
     config: Union[str, None]
     model: Union[str, None]
     plugin: Union[str, None]
@@ -298,12 +299,27 @@ class DeviceDict(BaseDeviceDict, total=False):
     added: str
 
 
+@validator('tenant_uuid', pre=True)
+def validate_tenant_uuid(cls: type[BaseModel], value: Union[uuid.UUID, None]) -> Union[str, None]:
+    return str(value) if value else None
+
+
+@validator('ip')
+def validate_ip(cls: type[BaseModel], value: Union[str, None]) -> Union[str, None]:
+    return str(IPv4Address(value)) if value else None
+
+
 DeviceSchema = create_model_from_typeddict(
     DeviceDict,
     {
         "id": Field(regex=r'^[0-9a-z]+$'),
         "mac": Field(regex=_NORMED_MAC.pattern),
         "config": Field(alias="config_id"),
+        "added": Field(default="auto"),
+    },
+    {
+        "validate_tenant_uuid": validate_tenant_uuid,
+        "validate_ip": validate_ip,
     },
     config=SchemaConfig,
 )

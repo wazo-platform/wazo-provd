@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from time import sleep
 from typing import Any
 
 from hamcrest import (
