@@ -96,7 +96,6 @@ def respond_no_content(
 
 
 def respond_created_no_content(request: Request, location: str) -> NOT_DONE_YET:
-    request.setHeader(b'Location', location.encode('ascii'))
     return respond_no_content(request, http.CREATED)
 
 
@@ -932,8 +931,6 @@ class DevicesResource(AuthResource):
             return self._app.dev_insert(device)
 
         def on_callback(device_id):
-            location = uri_append_path(request.path, device_id)
-            request.setHeader(b'Location', location.encode('ascii'))
             data = json_dumps({'id': device_id})
             deferred_respond_ok(request, data, http.CREATED)
 
@@ -1075,8 +1072,6 @@ class AutocreateConfigResource(AuthResource):
     @required_acl('provd.cfg_mgr.autocreate.create')
     def render_POST(self, request: Request, content) -> NOT_DONE_YET:
         def on_callback(config_id):
-            location = uri_append_path(request.path, config_id)
-            request.setHeader(b'Location', location.encode('ascii'))
             data = json_dumps({'id': config_id})
             deferred_respond_ok(request, data, http.CREATED)
 
@@ -1119,8 +1114,6 @@ class ConfigsResource(AuthResource):
         config = content['config']
 
         def on_callback(config_id):
-            location = uri_append_path(request.path, config_id)
-            request.setHeader('Location', location.encode('ascii'))
             data = json_dumps({'id': config_id})
             deferred_respond_ok(request, data, http.CREATED)
 
