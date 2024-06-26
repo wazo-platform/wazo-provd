@@ -1,4 +1,4 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from hamcrest import assert_that, calling, has_entry, has_key, has_properties
@@ -14,13 +14,19 @@ from .helpers.base import (
     VALID_TOKEN_MULTITENANT,
     BaseIntegrationTest,
 )
+from .helpers.bus import BusClient, setup_bus
 from .helpers.operation import operation_fail, operation_successful
-from .helpers.wait_strategy import NoWaitStrategy
+from .helpers.wait_strategy import EverythingOkWaitStrategy
 
 
 class TestParams(BaseIntegrationTest):
     asset = 'base'
-    wait_strategy = NoWaitStrategy()
+    wait_strategy = EverythingOkWaitStrategy()
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
 
     def test_get(self) -> None:
         result = self._client.params.get('locale')
@@ -110,7 +116,7 @@ class TestParams(BaseIntegrationTest):
 
     def test_provisioning_key_for_invalid_tenant(self) -> None:
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(INVALID_TENANT)
+        provd.tenant_uuid = INVALID_TENANT
         assert_that(
             calling(provd.params.update).with_args('provisioning_key', 'not-working'),
             raises(ProvdError).matching(has_properties('status_code', 401)),
@@ -153,7 +159,7 @@ class TestParams(BaseIntegrationTest):
     def test_provisioning_key_for_unconfigured_tenant(self) -> None:
         # Do not use SUB_TENANT_1 in another provisioning key test
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_1)
+        provd.tenant_uuid = SUB_TENANT_1
         assert_that(
             provd.params.get('provisioning_key'),
             has_entry('value', None),
@@ -165,7 +171,7 @@ class TestParams(BaseIntegrationTest):
         self._client.params.update('provisioning_key', 'secure-key')
 
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_2)
+        provd.tenant_uuid = SUB_TENANT_2
         assert_that(
             calling(provd.params.update).with_args('provisioning_key', 'secure-key'),
             raises(ProvdError).matching(has_properties('status_code', 400)),
@@ -177,6 +183,20 @@ class TestParams(BaseIntegrationTest):
         self._client.params.update('provisioning_key', None)
 
         provd = self.make_provd(VALID_TOKEN_MULTITENANT)
-        provd.set_tenant(SUB_TENANT_2)
+        provd.tenant_uuid = SUB_TENANT_2
         # Should not raise an error since multiple tenants can have a null provisioning key
         provd.params.update('provisioning_key', None)
+
+    def test_provisioning_key_deleted_tenant(self) -> None:
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.tenant_uuid = SUB_TENANT_2
+        provd.params.update('provisioning_key', '123testingkey')
+        BusClient.send_tenant_deleted(SUB_TENANT_2, 'slug')
+
+        def _empty_provisioning_key():
+            assert_that(
+                provd.params.get('provisioning_key'),
+                has_entry('value', None),
+            )
+
+        until.assert_(_empty_provisioning_key, tries=10, interval=5)
