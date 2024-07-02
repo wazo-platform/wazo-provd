@@ -31,8 +31,6 @@ from wazo_provd.app import ProvisioningApplication
 from wazo_provd.config import Options
 from wazo_provd.database import helpers, queries
 from wazo_provd.devices import ident, pgasso
-from wazo_provd.devices.config import ConfigCollection
-from wazo_provd.devices.device import DeviceCollection
 from wazo_provd.persist.json_backend import JsonDatabaseFactory
 from wazo_provd.rest.api.resource import ResponseFile
 from wazo_provd.rest.server import auth
@@ -115,23 +113,26 @@ class ProvisioningService(Service):
         self._sql_database = self._create_sql_database()
 
         try:
-            cfg_collection = ConfigCollection(self._database.collection('configs'))
-            dev_collection = DeviceCollection(self._database.collection('devices'))
+            device_dao = queries.DeviceDAO(self._sql_database)
+            function_key_dao = queries.FunctionKeyDAO(self._sql_database)
+            sip_line_dao = queries.SIPLineDAO(self._sql_database)
+            sccp_line_dao = queries.SCCPLineDAO(self._sql_database)
+            device_raw_config_dao = queries.DeviceRawConfigDAO(
+                self._sql_database, function_key_dao, sip_line_dao, sccp_line_dao
+            )
+            device_config_dao = queries.DeviceConfigDAO(
+                self._sql_database, device_raw_config_dao
+            )
             tenant_dao = queries.TenantDAO(self._sql_database)
             configuration_dao = queries.ServiceConfigurationDAO(self._sql_database)
-            if self._config['database']['ensure_common_indexes']:
-                logger.debug('Ensuring index existence on collections')
-                try:
-                    dev_collection.ensure_index('mac')
-                    dev_collection.ensure_index('ip')
-                    dev_collection.ensure_index('sn')
-                except AttributeError as e:
-                    logger.warning(
-                        'This type of database doesn\'t seem to support index: %s', e
-                    )
+
             self.app = ProvisioningApplication(
-                cfg_collection,
-                dev_collection,
+                device_dao,
+                device_config_dao,
+                device_raw_config_dao,
+                function_key_dao,
+                sccp_line_dao,
+                sip_line_dao,
                 tenant_dao,
                 configuration_dao,
                 self._config,
@@ -449,13 +450,15 @@ class ResourcesDeletionService(Service):
 
     @defer.inlineCallbacks
     def delete_devices(self, tenant_uuid):
+        logger.critical('AFDEBUG: delete_devices')
         app = self._prov_service.app
-        devices = yield app.dev_find(selector={'tenant_uuid': tenant_uuid})
+        devices = yield app.dev_find({}, tenant_uuids=[tenant_uuid])
         for device in devices:
             yield app.dev_delete(device['id'])
 
     @defer.inlineCallbacks
     def delete_tenant_configuration(self, tenant_uuid):
+        logger.critical('AFDEBUG: delete_tenant_configuration')
         configure_service = self._prov_service.app.configure_service
         all_tenants = yield configure_service.get('tenants')
         try:
@@ -482,6 +485,7 @@ class BusEventConsumerService(ResourcesDeletionService):
         yield self.delete_tenant_configuration(tenant_uuid)
 
     def startService(self) -> None:
+        logger.critical('AFDEBUG: starting BusEventConsumerService')
         self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
         status.get_status_aggregator().add_provider(self._bus_consumer.provide_status)
         self._bus_consumer.subscribe('auth_tenant_deleted', self._auth_tenant_deleted)
@@ -522,6 +526,7 @@ class SyncdbService(ResourcesDeletionService):
 
     @defer.inlineCallbacks
     def remove_resources_for_deleted_tenants(self) -> Deferred:
+        logger.critical('AFDEBUG: looping call')
         auth_client = auth.get_auth_client()
         auth_tenants = {
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
@@ -532,10 +537,13 @@ class SyncdbService(ResourcesDeletionService):
     @defer.inlineCallbacks
     def remove_devices_for_deleted_tenants(self, auth_tenants) -> Deferred:
         app = self._prov_service.app
-        devices = yield app.dev_find(
-            selector={'tenant_uuid': {'$nin': list(auth_tenants)}}
-        )
+        devices = yield app.dev_find({}, tenant_uuids=list(auth_tenants))
         provd_tenants = {device['tenant_uuid'] for device in devices}
+        logger.critical(
+            'AFDEBUG: provd_tenants = %s, auth_tenants = %s',
+            provd_tenants,
+            auth_tenants,
+        )
         removed_tenants = provd_tenants - auth_tenants
 
         for t in removed_tenants:

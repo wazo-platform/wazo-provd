@@ -18,7 +18,7 @@ class TestSCCPLine(DBIntegrationTest):
     @fixtures.db.device_config()
     async def test_create(self, device_config):
         sccp_line_uuid = uuid.uuid4()
-        sccp_line = SCCPLine(sccp_line_uuid, device_config.id)
+        sccp_line = SCCPLine(sccp_line_uuid, device_config.id, 1)
         created_sccp_line = await self.sccp_line_dao.create(sccp_line)
         assert created_sccp_line == sccp_line
 

@@ -23,7 +23,7 @@ def upgrade():
         sa.Column(
             'config_id',
             sa.Text,
-            sa.ForeignKey('provd_device_config.id'),
+            sa.ForeignKey('provd_device_config.id', ondelete='CASCADE'),
             primary_key=True,
         ),
         sa.Column('ip', sa.Text),
@@ -76,6 +76,9 @@ def upgrade():
         sa.Column('exten_pickup_group', sa.Text),
         sa.Column('exten_pickup_call', sa.Text),
         sa.Column('exten_voicemail', sa.Text),
+        sa.Column('phonebook_ip', sa.Text),
+        sa.Column('phonebook_profile', sa.Text),
+        sa.Column('user_uuid', sa.Text),
     )
     op.create_check_constraint(
         'ck_protocol',
