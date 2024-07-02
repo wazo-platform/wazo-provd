@@ -446,9 +446,9 @@ class ProvisioningApplication:
             cfg_id = device['config']
             flat_config = yield self._get_flat_raw_config(cfg_id)
             logger.debug('Got flat raw config: %s', flat_config)
-            return defer.succeed(flat_config)
+            return defer.returnValue(flat_config)
         logger.debug('config key not in device, device = %s', device)
-        return defer.succeed(None)
+        return defer.returnValue(None)
 
     @defer.inlineCallbacks
     def _dev_get_plugin_and_raw_config(self, device):
