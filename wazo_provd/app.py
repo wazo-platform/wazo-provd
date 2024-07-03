@@ -204,7 +204,7 @@ def _set_defaults_raw_config(raw_config: RawConfigDict) -> None:
         raw_config.setdefault('sip_registrar_ip', raw_config['sip_proxy_ip'])
     raw_config.setdefault('sip_srtp_mode', 'disabled')  # type: ignore[typeddict-item]
     raw_config.setdefault('sip_transport', 'udp')  # type: ignore[typeddict-item]
-    if 'sip_lines' not in raw_config:
+    if 'sip_lines' not in raw_config or raw_config['sip_lines'] is None:
         raw_config['sip_lines'] = {}
     else:
         for line in raw_config['sip_lines'].values():
