@@ -353,10 +353,12 @@ class SearchDeviceRetriever(AbstractDeviceRetriever):
         self._app = app
         self._key = key
 
-    def retrieve(self, dev_info) -> Deferred:
+    @defer.inlineCallbacks
+    def retrieve(self, dev_info):
         if self._key in dev_info:
-            return self._app.dev_find_one({self._key: dev_info[self._key]})
-        return defer.succeed(None)
+            device = yield self._app.dev_find_one({self._key: dev_info[self._key]})
+            defer.returnValue(device)
+        defer.returnValue(None)
 
 
 class IpDeviceRetriever(AbstractDeviceRetriever):
