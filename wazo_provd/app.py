@@ -387,7 +387,6 @@ class ProvisioningApplication:
         raw_conf_dict = raw_conf_model.as_dict(ignore_foreign_keys=True)
         return cast(RawConfigDict, raw_conf_dict)
 
-    @_rlock
     @defer.inlineCallbacks
     def _get_flat_raw_config(self, config_id: str):
         config_deferreds = []

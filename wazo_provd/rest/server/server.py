@@ -905,9 +905,13 @@ class DeviceDHCPInfoResource(AuthResource):
 
         if op == 'commit':
             dhcp_request: DHCPRequest = {'ip': ip, 'mac': mac, 'options': options}  # type: ignore
-            self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
-            sleep(5)
-            return respond_no_content(request)
+            d = self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
+
+            def on_callback(ign):
+                deferred_respond_no_content(request)
+
+            d.addCallbacks(on_callback)
+            return NOT_DONE_YET
         if op == 'expiry' or op == 'release':
             # we are keeping this only for compatibility -- release and
             # expiry event doesn't interest us anymore
