@@ -12,8 +12,8 @@ from twisted.application import internet
 from twisted.application.service import IServiceMaker, MultiService, Service
 from twisted.internet import defer, reactor, ssl, task
 from twisted.internet.defer import Deferred
+from twisted.logger import STDLibLogObserver
 from twisted.plugin import IPlugin
-from twisted.python import log
 from twisted.python.util import sibpath
 from twisted.web.resource import Resource as UnsecuredResource
 from wazo_bus.consumer import BusConsumer
@@ -52,7 +52,7 @@ ONE_DAY_SEC = 86400
 
 # given in command line to redirect logs to standard logging
 def twistd_logs() -> Callable[[dict[str, Any]], None]:
-    return log.PythonLoggingObserver().emit
+    return STDLibLogObserver()
 
 
 class ProvisioningService(Service):
