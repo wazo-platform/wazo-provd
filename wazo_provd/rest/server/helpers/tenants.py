@@ -10,13 +10,15 @@ from xivo.tenant_helpers import InvalidTenant, InvalidToken, UnauthorizedTenant
 from wazo_provd.util import decode_bytes
 
 if TYPE_CHECKING:
+    from wazo_auth_client import Client as AuthClient
+
     from wazo_provd.servers.http_site import Request
 
 
 class Tenant(tenant_helpers.Tenant):
     @classmethod
-    def autodetect(cls, request: Request, tokens: Tokens):
-        token = tokens.from_headers(request)
+    def autodetect(cls, request: Request, auth: AuthClient):
+        token = Token.from_headers(request, auth)
         try:
             tenant = cls.from_headers(request)
         except InvalidTenant:
@@ -35,9 +37,10 @@ class Tenant(tenant_helpers.Tenant):
         return cls(uuid=tenant_uuid)
 
 
-class Tokens(tenant_helpers.Tokens):
-    def from_headers(self, request: Request):
+class Token(tenant_helpers.Token):
+    @classmethod
+    def from_headers(cls, request: Request, auth: AuthClient):
         token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
         if not token_id:
             raise InvalidToken()
-        return tenant_helpers.Token(token_id, self._auth)
+        return cls(token_id, auth)
