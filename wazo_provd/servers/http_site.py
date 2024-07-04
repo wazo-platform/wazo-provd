@@ -18,7 +18,7 @@ from twisted.web.resource import _computeAllowedMethods
 
 from wazo_provd.app import DeviceNotInProvdTenantError, TenantInvalidForDeviceError
 from wazo_provd.rest.server import auth
-from wazo_provd.rest.server.helpers.tenants import Tenant, Tokens, tenant_helpers
+from wazo_provd.rest.server.helpers.tenants import Tenant, tenant_helpers
 from wazo_provd.util import decode_bytes
 
 logger = logging.getLogger(__name__)
@@ -97,8 +97,7 @@ class AuthResource(resource.Resource):
     def _extract_tenant_uuid(self, request: Request):
         auth_client = auth.get_auth_client()
 
-        tokens = Tokens(auth_client)
-        return Tenant.autodetect(request, tokens).uuid
+        return Tenant.autodetect(request, auth_client).uuid
 
     def _build_tenant_list(self, tenant_uuid=None, recurse=False):
         auth_client = auth.get_auth_client()
