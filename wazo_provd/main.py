@@ -5,6 +5,7 @@ from __future__ import annotations
 import builtins
 import logging
 import os.path
+import sys
 from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -12,7 +13,7 @@ from twisted.application import internet
 from twisted.application.service import IServiceMaker, MultiService, Service
 from twisted.internet import defer, reactor, ssl, task
 from twisted.internet.defer import Deferred
-from twisted.logger import STDLibLogObserver
+from twisted.logger import globalLogPublisher, LogLevel, Logger, LoggingFile, STDLibLogObserver
 from twisted.plugin import IPlugin
 from twisted.python.util import sibpath
 from twisted.web.resource import Resource as UnsecuredResource
@@ -51,14 +52,16 @@ ONE_DAY_SEC = 86400
 
 
 class CustomSTDLibLogObserver(STDLibLogObserver):
-    def __call__(self, event) -> None:
-        print(event)
+    def __call__(self, event: dict[str, str]):
+        if event.get("log_io", "").startswith("--- Logging error"):
+            # This causes the memory to rise rapidly and the process gets killed by the OOM
+            return
         super().__call__(event)
 
 
 # given in command line to redirect logs to standard logging
 def twistd_logs() -> Callable[[dict[str, Any]], None]:
-    return CustomSTDLibLogObserver()
+    return CustomSTDLibLogObserver(name=__name__)
 
 
 class ProvisioningService(Service):
@@ -534,6 +537,20 @@ class SyncdbService(ResourcesDeletionService):
         Service.stopService(self)
 
 
+# class CustomLogger(Logger):
+#     def __init__(self, *args, **kwargs):
+#         print("Initiated custom logger")
+#         super().__init__(*args, **kwargs)
+
+#     def emit(self, level, format=None, **kwargs):
+#         if "Logging error" in kwargs.get("log_io", ""):
+#             sys.exit(111)
+#         try:
+#             super().emit(level, format, **kwargs)
+#         except Exception:
+#             sys.exit(88)
+
+
 @implementer(IServiceMaker, IPlugin)
 class ProvisioningServiceMaker:
     tapname = 'wazo-provd'
@@ -544,6 +561,16 @@ class ProvisioningServiceMaker:
         setup_logging(LOG_FILE_NAME, debug=options['verbose'])
         security.setup_logging()
         silence_loggers(['amqp.connection.Connection.heartbeat_tick'], logging.INFO)
+        sys.excepthook = sys.__excepthook__
+        # streams = [("stdout", LogLevel.info), ("stderr", LogLevel.error)]
+        # for (stream, level) in streams:
+        #     old_stream = getattr(sys, stream)
+        #     logging_file = LoggingFile(
+        #         logger=CustomLogger(namespace=stream, observer=globalLogPublisher),
+        #         level=level,
+        #         encoding=getattr(old_stream, "encoding", None),
+        #     )
+        #     setattr(sys, stream, logging_file)
 
     def _read_config(self, options: Options) -> ProvdConfigDict:
         logger.info('Reading application configuration')

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import gc
 import logging
 from typing import Any
 
@@ -410,6 +411,7 @@ class SimpleBackendDocumentCollection(AbstractDocumentCollection):
             return self._do_find_unsorted(selector, fields, skip, limit)
 
     def find(self, selector, fields=None, skip=0, limit=0, sort=None):
+        gc.enable()
         logger.debug(
             'Executing find in backend based collection with:\n'
             '  selector: %s\n'
@@ -423,6 +425,7 @@ class SimpleBackendDocumentCollection(AbstractDocumentCollection):
             limit,
             sort,
         )
+        gc.disable()
         return defer.succeed(self._do_find(selector, fields, skip, limit, sort))
 
     def find_one(self, selector):
