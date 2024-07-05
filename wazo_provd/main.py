@@ -50,9 +50,15 @@ API_VERSION = b'0.2'
 ONE_DAY_SEC = 86400
 
 
+class CustomSTDLibLogObserver(STDLibLogObserver):
+    def __call__(self, event) -> None:
+        print(event)
+        super().__call__(event)
+
+
 # given in command line to redirect logs to standard logging
 def twistd_logs() -> Callable[[dict[str, Any]], None]:
-    return STDLibLogObserver()
+    return CustomSTDLibLogObserver()
 
 
 class ProvisioningService(Service):
