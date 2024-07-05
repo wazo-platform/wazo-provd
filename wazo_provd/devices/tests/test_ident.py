@@ -15,7 +15,6 @@ from wazo_provd.devices import ident
 from wazo_provd.devices.ident import (
     AddDeviceRetriever,
     DHCPRequest,
-    HTTPKeyVerifyingHook,
     LastSeenUpdater,
     RemoveOutdatedIpDeviceUpdater,
     Request,
@@ -435,28 +434,3 @@ class TestGetIPFromHTTPRequestWithProxies(unittest.TestCase):
         self.assertRaises(
             RuntimeError, _get_ip_from_http_request_with_proxies, self.request, 3
         )
-
-
-class TestHTTPKeyVerifyingHook(unittest.TestCase):
-    def setUp(self) -> None:
-        self.request = Mock()
-
-    def test_strip_key_from_request(self):
-        self.request.prepath = ['my-key']
-        self.request.postpath = ['my-file']
-
-        path = HTTPKeyVerifyingHook._strip_key_from_request('my-key', self.request)
-
-        assert path == 'my-file'
-        assert self.request.prepath == ['my-file']
-        assert self.request.postpath == []
-
-    def test_strip_key_from_empty_request(self):
-        self.request.prepath = ['my-key']
-        self.request.postpath = []
-
-        path = HTTPKeyVerifyingHook._strip_key_from_request('my-key', self.request)
-
-        assert path == ''
-        assert self.request.prepath == ['']
-        assert self.request.postpath == []
