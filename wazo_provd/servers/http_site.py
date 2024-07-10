@@ -68,11 +68,10 @@ class AuthResource(resource.Resource):
             )[0]
             return decorated_render_method(request)
         except (
-            auth.auth_verifier.Unauthorized,
-            auth.auth_verifier.InvalidTokenAPIException,
-            auth.auth_verifier.MissingPermissionsTokenAPIException,
+            auth.http_exceptions.Unauthorized,
+            auth.http_exceptions.InvalidTokenAPIException,
+            auth.http_exceptions.MissingPermissionsTokenAPIException,
             tenant_helpers.InvalidTenant,
-            tenant_helpers.InvalidToken,
             tenant_helpers.InvalidUser,
             tenant_helpers.UnauthorizedTenant,
         ):

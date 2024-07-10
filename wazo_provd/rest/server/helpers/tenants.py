@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from xivo import tenant_helpers
-from xivo.tenant_helpers import InvalidTenant, InvalidToken, UnauthorizedTenant
+from xivo.tenant_helpers import (
+    InvalidTenant,
+    InvalidTokenAPIException,
+    UnauthorizedTenant,
+)
 
 from wazo_provd.util import decode_bytes
 
@@ -42,5 +46,5 @@ class Token(tenant_helpers.Token):
     def from_headers(cls, request: Request, auth: AuthClient):
         token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
         if not token_id:
-            raise InvalidToken()
+            raise InvalidTokenAPIException()
         return cls(token_id, auth)
