@@ -5,15 +5,12 @@ from __future__ import annotations
 import logging
 from functools import wraps
 
-import requests
 from wazo_auth_client import Client as AuthClient
-from wazo_auth_client.exceptions import (
-    InvalidTokenException,
-    MissingPermissionsTokenException,
-)
-from xivo import auth_verifier
+from xivo import auth_verifier, http_exceptions
 
 from wazo_provd.util import decode_bytes
+
+__all__ = ['http_exceptions']
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +22,7 @@ _auth_client = None
 def get_auth_verifier():
     global _auth_verifier
     if not _auth_verifier:
-        _auth_verifier = AuthVerifier()
+        _auth_verifier = AuthVerifierProvd()
     return _auth_verifier
 
 
@@ -36,39 +33,33 @@ def get_auth_client(**config):
     return _auth_client
 
 
-class AuthVerifier(auth_verifier.AuthVerifier):
+class AuthVerifierProvd:
+    def __init__(self):
+        self.auth_client = None
+        self.helpers = auth_verifier.AuthVerifierHelpers()
+
+    def set_client(self, auth_client):
+        self.auth_client = auth_client
+
     def verify_token(self, obj, request, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # backward compatibility: when func.acl is not defined, it should
-            # probably just raise an AttributeError
-            no_auth = getattr(func, 'no_auth', False)
-            if no_auth:
+            if self.helpers.extract_no_auth(func):
                 return func(*args, **kwargs)
 
-            acl_check = getattr(func, 'acl', self._fallback_acl_check)
-            token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
+            token_uuid = decode_bytes(request.getHeader(b'X-Auth-Token'))
             tenant_uuid = decode_bytes(request.getHeader(b'Wazo-Tenant'))
-            kwargs_for_required_acl = kwargs | obj.__dict__
-            required_acl = self._required_acl(acl_check, args, kwargs_for_required_acl)
-            try:
-                token_is_valid = self.client().token.check(
-                    token_id, required_acl, tenant=tenant_uuid
-                )
-            except InvalidTokenException:
-                return self._handle_invalid_token_exception(
-                    token_id, required_access=required_acl
-                )
-            except MissingPermissionsTokenException:
-                return self._handle_missing_permissions_token_exception(
-                    token_id, required_access=required_acl
-                )
-            except requests.RequestException as e:
-                return self.handle_unreachable(e)
+            required_acl = self.helpers.extract_required_acl(
+                func,
+                kwargs | obj.__dict__,
+            )
 
-            if token_is_valid:
-                return func(*args, **kwargs)
-
-            return self.handle_unauthorized(token_id, required_access=required_acl)
+            self.helpers.validate_token(
+                self.auth_client,
+                token_uuid,
+                required_acl,
+                tenant_uuid,
+            )
+            return func(*args, **kwargs)
 
         return wrapper
