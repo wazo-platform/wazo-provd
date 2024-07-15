@@ -1,4 +1,4 @@
-# Copyright 2015-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2015-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
@@ -14,6 +14,12 @@ _URL_META_FORMAT = (
 )
 
 
+_URL_META_FORMAT_V2 = (
+    '{{scheme}}://{{hostname}}:{{port}}/0.1/directories/{entry_point}/default/{vendor}/v2?'
+    '{qs_prefix}xivo_user_uuid={{user_uuid}}{qs_suffix}'
+)
+
+
 def add_xivo_phonebook_url(
     raw_config: dict[str, Any],
     vendor: str,
@@ -25,6 +31,17 @@ def add_xivo_phonebook_url(
     add_xivo_phonebook_url_from_format(raw_config, url_format)
 
 
+def add_wazo_phonebook_url_v2(
+    raw_config: dict[str, Any],
+    vendor: str,
+    entry_point: str = 'input',
+    qs_prefix: str = '',
+    qs_suffix: str = '',
+) -> None:
+    url_format = _build_url_format_v2(vendor, entry_point, qs_prefix, qs_suffix)
+    add_wazo_phonebook_url_from_format_v2(raw_config, url_format)
+
+
 def _build_url_format(
     vendor: str, entry_point: str, qs_prefix: str, qs_suffix: str
 ) -> str:
@@ -33,6 +50,21 @@ def _build_url_format(
     if qs_suffix:
         qs_suffix = '&' + qs_suffix
     return _URL_META_FORMAT.format(
+        vendor=vendor,
+        entry_point=entry_point,
+        qs_prefix=qs_prefix,
+        qs_suffix=qs_suffix,
+    )
+
+
+def _build_url_format_v2(
+    vendor: str, entry_point: str, qs_prefix: str, qs_suffix: str
+) -> str:
+    if qs_prefix:
+        qs_prefix = qs_prefix + '&amp;'
+    if qs_suffix:
+        qs_suffix = '&amp;' + qs_suffix
+    return _URL_META_FORMAT_V2.format(
         vendor=vendor,
         entry_point=entry_point,
         qs_prefix=qs_prefix,
@@ -51,6 +83,25 @@ def add_xivo_phonebook_url_from_format(raw_config, url_format) -> None:
     scheme = raw_config.get('X_xivo_phonebook_scheme', 'http')
     port = raw_config.get('X_xivo_phonebook_port', 9498)
     raw_config['XX_xivo_phonebook_url'] = url_format.format(
+        scheme=scheme,
+        hostname=hostname,
+        profile='default',
+        port=port,
+        user_uuid=user_uuid,
+    )
+
+
+def add_wazo_phonebook_url_from_format_v2(raw_config, url_format) -> None:
+    if not (hostname := raw_config.get('X_xivo_phonebook_ip')):
+        return
+
+    if not (user_uuid := raw_config.get('X_xivo_user_uuid')):
+        logger.warning('Not adding XX_wazo_phonebook_url_v2: no user uuid')
+        return
+
+    scheme = raw_config.get('X_xivo_phonebook_scheme', 'http')
+    port = raw_config.get('X_xivo_phonebook_port', 9498)
+    raw_config['XX_wazo_phonebook_url_v2'] = url_format.format(
         scheme=scheme,
         hostname=hostname,
         profile='default',

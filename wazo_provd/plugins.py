@@ -79,6 +79,8 @@ _PLUGIN_INFO_INSTALLED_KEYS = _PLUGIN_INFO_KEYS
 # Export some name/objects to be used by plugins
 add_xivo_phonebook_url = phonebook.add_xivo_phonebook_url
 add_xivo_phonebook_url_from_format = phonebook.add_xivo_phonebook_url_from_format
+add_wazo_phonebook_url_v2 = phonebook.add_wazo_phonebook_url_v2
+add_wazo_phonebook_url_from_format_v2 = phonebook.add_wazo_phonebook_url_from_format_v2
 
 add_wazo_phoned_user_service_url = phoned_users.add_wazo_phoned_user_service_url
 
