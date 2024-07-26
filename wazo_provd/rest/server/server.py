@@ -812,7 +812,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
             def on_tenant_valid_for_device(tenant_uuid):
                 deferred = self._app.dev_synchronize(device_id)
                 oip = operation_in_progres_from_deferred(deferred)
-                _ignore_deferred_error(deferred)
+                # _ignore_deferred_error(deferred)
                 location = self._add_new_oip(oip, request)
                 return respond_created_no_content(request, location)
 
@@ -820,6 +820,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
                 if failure.check(
                     InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
                 ):
+                    logger.debug('Failure while synchronizing: %s', failure)
                     deferred_respond_no_resource(request)
                 else:
                     deferred_respond_error(
@@ -1003,8 +1004,10 @@ class DeviceResource(AuthResource):
         def on_error(failure):
             logger.debug('On errback for device: %s', failure)
             if failure.check(EntryNotFoundException):
+                logger.debug('Errback is an EntryNotFoundException')
                 deferred_respond_no_resource(request)
-            deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+            else:
+                deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
 
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
         d = self._app.dev_get(self.device_id, tenant_uuids=tenant_uuids)

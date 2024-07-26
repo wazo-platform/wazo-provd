@@ -389,6 +389,7 @@ class SynchronizeService(Service):
             self._config['general']['sync_service_type']
         )
         if sync_service is not None:
+            logger.debug('Should register sync service...')
             wazo_provd.synchronize.register_sync_service(sync_service)
         Service.startService(self)
 
@@ -454,6 +455,7 @@ class ResourcesDeletionService(Service):
         logger.critical('AFDEBUG: delete_devices')
         app = self._prov_service.app
         devices = yield app.dev_find({}, tenant_uuids=[tenant_uuid])
+        logger.debug('Devices to delete: %s', devices)
         for device in devices:
             yield app.dev_delete(device['id'])
 
@@ -527,7 +529,6 @@ class SyncdbService(ResourcesDeletionService):
 
     @defer.inlineCallbacks
     def remove_resources_for_deleted_tenants(self) -> Deferred:
-        logger.critical('AFDEBUG: looping call')
         auth_client = auth.get_auth_client()
         auth_tenants = {
             tenant['uuid'] for tenant in auth_client.tenants.list()['items']
