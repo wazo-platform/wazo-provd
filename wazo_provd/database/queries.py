@@ -648,7 +648,7 @@ class DeviceDAO(BaseDAO):
     def _prepare_tenant_uuids_find_query(
         self, tenant_uuids: list[uuid.UUID | str]
     ) -> sql.SQL:
-        clean_tenant_uuids = [uuid.UUID(tenant_uuid) for tenant_uuid in tenant_uuids]
+        clean_tenant_uuids = [uuid.UUID(str(tenant_uuid)) for tenant_uuid in tenant_uuids]
         return sql.SQL('{tenant_uuid} = ANY({tenant_uuids}) AND ').format(
             tenant_uuid=sql.Identifier('tenant_uuid'),
             tenant_uuids=sql.Literal(clean_tenant_uuids),
