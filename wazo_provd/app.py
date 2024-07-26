@@ -425,7 +425,7 @@ class ProvisioningApplication:
 
     def _dev_create_dict_from_model(self, device_model: Device) -> DeviceDict:
         try:
-            device_schema = DeviceSchema.validate(device_model.as_dict())
+            device_schema = DeviceSchema(**device_model.as_dict())
             return device_schema.dict()
         except Exception as e:
             logger.error(
@@ -508,8 +508,8 @@ class ProvisioningApplication:
                     'Error while configuring device %s', device_id, exc_info=True
                 )
             else:
-                return True
-        return False
+                defer.returnValue(True)
+        defer.returnValue(False)
 
     @defer.inlineCallbacks
     def _dev_configure_if_possible(self, device: BaseDeviceDict | DeviceDict):
@@ -519,7 +519,8 @@ class ProvisioningApplication:
         if plugin is None:
             defer.returnValue(False)
         else:
-            yield self._dev_configure(device, plugin, raw_config)
+            configured = yield self._dev_configure(device, plugin, raw_config)
+            defer.returnValue(configured)
 
     def _dev_deconfigure(self, device: BaseDeviceDict | DeviceDict, plugin):
         # Return true if the device has been successfully deconfigured (i.e.
@@ -630,9 +631,13 @@ class ProvisioningApplication:
                 raise InvalidIdError(e)
             else:
                 configured = yield self._dev_configure_if_possible(device)
+                device['configured'] = configured
                 if configured:
                     logging.debug('AFDEBUG Device %s configured', device['id'])
+                    device_model = self._dev_create_model_from_dict(device)
                     yield defer.ensureDeferred(self.device_dao.update(device_model))
+                else:
+                    logging.debug('Could not configure device %s', device['id'])
                 defer.returnValue(device_id)
         except Exception:
             logger.error('Error while inserting device', exc_info=True)

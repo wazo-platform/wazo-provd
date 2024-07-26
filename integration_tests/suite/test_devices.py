@@ -228,7 +228,9 @@ class TestDevices(BaseIntegrationTest):
                 calling(self._client.devices.update).with_args(
                     {'id': device['id'], 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}
                 ),
-                raises(ProvdError).matching(has_properties('status_code', 500)),
+                raises(ProvdError).matching(
+                    has_properties('status_code', 500)
+                ),  # FIXME(afournier): should be 400
             )
 
     def test_update_error_invalid_token(self) -> None:
@@ -300,7 +302,13 @@ class TestDevices(BaseIntegrationTest):
 
     def test_synchronize_subtenant_from_main(self) -> None:
         with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            self._client.devices.synchronize(device['id'], tenant_uuid=MAIN_TENANT)
+            with self._client.devices.synchronize(
+                device['id'],
+                tenant_uuid=MAIN_TENANT,
+            ) as operation_progress:
+                until.assert_(
+                    operation_successful, operation_progress, tries=20, interval=0.5
+                )
 
     def test_synchronize_main_from_subtenant(self) -> None:
         with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
