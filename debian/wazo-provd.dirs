@@ -1,4 +1,5 @@
 etc/wazo-provd/conf.d
+etc/rsyslog.d
 var/lib/wazo-provd
 var/cache/wazo-provd
 etc/nginx/locations/https-enabled
