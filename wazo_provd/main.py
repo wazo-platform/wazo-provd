@@ -472,7 +472,7 @@ class ResourcesDeletionService(Service):
             )
             yield defer.ensureDeferred(self._prov_service.app.tenant_dao.delete(tenant))
         except KeyError:
-            pass
+            logger.debug('Tenant %s not in provd database', tenant_uuid)
 
 
 class BusEventConsumerService(ResourcesDeletionService):

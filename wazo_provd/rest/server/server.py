@@ -813,6 +813,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
                 deferred = self._app.dev_synchronize(device_id)
                 oip = operation_in_progres_from_deferred(deferred)
                 # _ignore_deferred_error(deferred)
+                deferred.addErrback(self._app._handle_error)
                 location = self._add_new_oip(oip, request)
                 return respond_created_no_content(request, location)
 
@@ -1007,7 +1008,9 @@ class DeviceResource(AuthResource):
                 logger.debug('Errback is an EntryNotFoundException')
                 deferred_respond_no_resource(request)
             else:
-                deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
         d = self._app.dev_get(self.device_id, tenant_uuids=tenant_uuids)
