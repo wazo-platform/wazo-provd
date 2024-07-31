@@ -552,9 +552,7 @@ class AutocreateConfigDeviceUpdater(AbstractDeviceUpdater):
 
     @defer.inlineCallbacks
     def update(self, device: DeviceDict, dev_info, request, request_type):
-        logger.debug('AFDEBUG Autocreate update')
         if 'config' not in device:
-            logger.debug('AFDEBUG no config in device')
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
                 device['config'] = new_config_id

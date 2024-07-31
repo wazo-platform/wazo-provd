@@ -451,7 +451,6 @@ class ResourcesDeletionService(Service):
 
     @defer.inlineCallbacks
     def delete_devices(self, tenant_uuid):
-        logger.critical('AFDEBUG: delete_devices')
         app = self._prov_service.app
         devices = yield app.dev_find({}, tenant_uuids=[tenant_uuid])
         logger.debug('Devices to delete: %s', devices)
@@ -460,7 +459,6 @@ class ResourcesDeletionService(Service):
 
     @defer.inlineCallbacks
     def delete_tenant_configuration(self, tenant_uuid):
-        logger.critical('AFDEBUG: delete_tenant_configuration')
         configure_service = self._prov_service.app.configure_service
         all_tenants = yield configure_service.get('tenants')
         try:
@@ -487,7 +485,6 @@ class BusEventConsumerService(ResourcesDeletionService):
         yield self.delete_tenant_configuration(tenant_uuid)
 
     def startService(self) -> None:
-        logger.critical('AFDEBUG: starting BusEventConsumerService')
         self._bus_consumer = ProvdBusConsumer.from_config(self._config['bus'])
         status.get_status_aggregator().add_provider(self._bus_consumer.provide_status)
         self._bus_consumer.subscribe('auth_tenant_deleted', self._auth_tenant_deleted)
@@ -540,11 +537,6 @@ class SyncdbService(ResourcesDeletionService):
         app = self._prov_service.app
         devices = yield app.dev_find({}, tenant_uuids=list(auth_tenants))
         provd_tenants = {device['tenant_uuid'] for device in devices}
-        logger.critical(
-            'AFDEBUG: provd_tenants = %s, auth_tenants = %s',
-            provd_tenants,
-            auth_tenants,
-        )
         removed_tenants = provd_tenants - auth_tenants
 
         for t in removed_tenants:
