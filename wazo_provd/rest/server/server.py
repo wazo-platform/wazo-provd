@@ -950,11 +950,6 @@ class DevicesResource(AuthResource):
 
         recurse = self._extract_recurse(request)
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
-        logger.debug(
-            'AFDEBUG trying to find devices with arguments: %s %s',
-            find_arguments,
-            tenant_uuids,
-        )
         d = self._app.dev_find(**find_arguments, tenant_uuids=tenant_uuids)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET

@@ -370,13 +370,8 @@ class ProvisioningApplication:
     # device methods
 
     def _dev_get_plugin(self, device: BaseDeviceDict | DeviceDict) -> dict | None:
-        logger.debug('AFDEBUG: in _dev_get_plugin')
         if 'plugin' in device:
-            logger.debug(
-                'AFDEBUG Trying to get plugin from device: %s', device['plugin']
-            )
             return self.pg_mgr.get(device['plugin'])
-        logger.debug('AFDEBUG no plugin in device, exiting _dev_get_plugin')
         return None
 
     def _cfg_raw_create_dict_from_model(
@@ -452,22 +447,11 @@ class ProvisioningApplication:
         # Return a deferred that will fire with a tuple (plugin, raw_config)
         # associated with the device, or fire with the tuple (None, None) if
         # there's at least one without etc. etc
-        logger.debug('AFDEBUG in dev_get_plugin_and_raw_config')
         plugin = self._dev_get_plugin(device)
-        logger.debug(
-            'AFDEBUG _dev_get_plugin_and_raw_config: device = %s, plugin = %s',
-            device,
-            plugin,
-        )
         if plugin:
-            logger.debug('AFDEBUG if 1 start')
             raw_config = yield self._dev_get_raw_config(device)
-            logger.debug('AFDEBUG if 1 end')
             if raw_config is not None:
-                logger.debug('AFDEBUG if 2 start')
                 defer.returnValue((plugin, raw_config))
-                logger.debug('AFDEBUG if 2 end')
-        logger.debug('AFDEBUG no if')
         defer.returnValue((None, None))
 
     @defer.inlineCallbacks
@@ -525,20 +509,12 @@ class ProvisioningApplication:
     def _dev_configure_if_possible(self, device: BaseDeviceDict | DeviceDict):
         # Return a deferred that fire with true if the device has been
         # successfully configured (i.e. no exception were raised), else false.
-        logger.debug('AFDEBUG entering _dev_configure_if_possible')
         plugin, raw_config = yield self._dev_get_plugin_and_raw_config(device)
         if plugin is None:
-            logger.debug('AFDEBUG _dev_configure_if_possible: `plugin` is None')
             defer.returnValue(False)
         else:
-            logger.debug('AFDEBUG _dev_configure_if_possible before dev_configure')
             configured = yield self._dev_configure(device, plugin, raw_config)
-            logger.debug(
-                'AFDEBUG _dev_configure_if_possible Newly configured device has configured value of %s',
-                configured,
-            )
             defer.returnValue(configured)
-        logger.debug('AFDEBUG exiting _dev_configure_if_possible')
 
     def _dev_deconfigure(self, device: BaseDeviceDict | DeviceDict, plugin):
         # Return true if the device has been successfully deconfigured (i.e.
@@ -637,21 +613,18 @@ class ProvisioningApplication:
                 device['id'] = next(get_id_generator_factory('default')())
 
             try:
-                logger.critical('AFDEBUG pre-insert')
                 check_device_validity(device)
                 device_model = self._dev_create_model_from_dict(device)
                 added_device = yield defer.ensureDeferred(
                     self.device_dao.create(device_model)
                 )
                 device_id = added_device.id
-                logger.critical('AFDEBUG created device with id: %s', device_id)
             except PersistInvalidIdError as e:
                 raise InvalidIdError(e)
             else:
                 configured = yield self._dev_configure_if_possible(device)
                 device['configured'] = configured
                 if configured:
-                    logging.debug('AFDEBUG Device %s configured', device['id'])
                     device_model = self._dev_create_model_from_dict(device)
                     yield defer.ensureDeferred(self.device_dao.update(device_model))
                 else:
@@ -1268,7 +1241,6 @@ class ProvisioningApplication:
         logger.info('Loaded %d plugins.', loaded_plugins)
 
     def _pg_configure_pg(self, plugin_id: str) -> None:
-        logger.debug('AFDEBUG entering _pg_configure_pg with plugin_id: %s', plugin_id)
         # Raise an exception if configure_common fail
         plugin = self.pg_mgr[plugin_id]
         common_config = deepcopy(self._base_raw_config)
@@ -1278,10 +1250,8 @@ class ProvisioningApplication:
         except Exception:
             logger.error('Error while configuring plugin %s', plugin_id, exc_info=True)
             raise
-        logger.debug('AFDEBUG exiting _pg_configure_pg with plugin_id: %s', plugin_id)
 
     def _pg_load(self, plugin_id: str) -> None:
-        logger.debug('AFDEBUG entering _pg_load with plugin_id: %s', plugin_id)
         # Raise an exception if plugin loading or common configuration fail
         gen_cfg = dict(self._split_config['general'])
         gen_cfg['proxies'] = self.proxies
@@ -1293,7 +1263,6 @@ class ProvisioningApplication:
             raise
         else:
             self._pg_configure_pg(plugin_id)
-        logger.debug('AFDEBUG exiting _pg_load with plugin_id: %s', plugin_id)
 
     def _pg_unload(self, plugin_id: str) -> None:
         # This method should never raise an exception
@@ -1312,15 +1281,12 @@ class ProvisioningApplication:
         )
         for device_model in devices:
             device_dict = self._dev_create_dict_from_model(device_model)
-            logger.debug('AFDEBUG In device loop, device = %s', device_model)
             # deconfigure
             if device_model.configured:
-                logger.debug('AFDEBUG device is configured, deconfiguring...')
                 device_model.configured = self._dev_deconfigure_if_possible(
                     device_model
                 )
                 yield defer.ensureDeferred(self.device_dao.update(device_model))
-                logger.debug('AFDEBUG device deconfigured')
             # configure
             device_dict = self._dev_create_dict_from_model(device_model)
             configured = yield self._dev_configure_if_possible(device_dict)
