@@ -10,6 +10,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install
 ADD . /usr/src/wazo-provd
 WORKDIR /usr/src/wazo-provd
+# incremental==24.7.0+ is downloaded automatically by twisted install
+# but this version is incompatible with setuptools 58.1 from python:3.9-slim-bullseye
+RUN pip install incremental==17.5.0
 RUN pip install -r requirements.txt
 RUN python setup.py install
 
