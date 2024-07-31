@@ -648,7 +648,9 @@ class DeviceDAO(BaseDAO):
     def _prepare_tenant_uuids_find_query(
         self, tenant_uuids: list[uuid.UUID | str]
     ) -> sql.SQL:
-        clean_tenant_uuids = [uuid.UUID(str(tenant_uuid)) for tenant_uuid in tenant_uuids]
+        clean_tenant_uuids = [
+            uuid.UUID(str(tenant_uuid)) for tenant_uuid in tenant_uuids
+        ]
         return sql.SQL('{tenant_uuid} = ANY({tenant_uuids}) AND ').format(
             tenant_uuid=sql.Identifier('tenant_uuid'),
             tenant_uuids=sql.Literal(clean_tenant_uuids),
@@ -687,7 +689,11 @@ class DeviceDAO(BaseDAO):
         limit: int = 0,
         sort: tuple[str, Literal['ASC', 'DESC']] | None = None,
     ) -> list[Device]:
-        logger.debug('Devices find with selectors: %s and tenant_uuids: %s', selectors, tenant_uuids)
+        logger.debug(
+            'Devices find with selectors: %s and tenant_uuids: %s',
+            selectors,
+            tenant_uuids,
+        )
         query = self._prepare_find_query(selectors, tenant_uuids, skip, limit, sort)
         results = await self._db_connection.runQuery(query)
         return [self.__model__(*result) for result in results]
