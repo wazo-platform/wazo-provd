@@ -11,7 +11,6 @@ import traceback
 from collections import deque
 from collections.abc import Callable, Generator
 from copy import deepcopy
-from time import sleep
 from typing import TYPE_CHECKING, Any, Literal, Union, cast
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
@@ -26,10 +25,7 @@ from wazo_provd.database.models import (
     Device,
     DeviceConfig,
     DeviceRawConfig,
-    FunctionKey,
-    SCCPLine,
     ServiceConfiguration,
-    SIPLine,
 )
 from wazo_provd.database.models import Tenant as TenantModel
 from wazo_provd.devices.config import (
@@ -58,15 +54,12 @@ from wazo_provd.util import decode_bytes
 
 from .devices.schemas import (
     BaseDeviceDict,
-    CallManagerDict,
     ConfigDict,
     ConfigSchema,
     DeviceDict,
     DeviceSchema,
-    FuncKeyDict,
     RawConfigDict,
     RawConfigSchema,
-    SipLineDict,
 )
 
 if TYPE_CHECKING:

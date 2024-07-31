@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from time import sleep
 from typing import Any
 
 from hamcrest import (
@@ -222,13 +221,21 @@ class TestDevices(BaseIntegrationTest):
             with fixtures.http.Device(self._client) as device:
                 assert_that(
                     calling(self._client.devices.update).with_args(
-                        {'id': 'invalid_id', 'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
+                        {
+                            'id': 'invalid_id',
+                            'ip': '1.2.3.4',
+                            'mac': '00:11:22:33:44:55',
+                        }
                     ),
                     raises(ProvdError).matching(has_properties('status_code', 404)),
                 )
                 assert_that(
                     calling(self._client.devices.update).with_args(
-                        {'id': device['id'], 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}
+                        {
+                            'id': device['id'],
+                            'ip': '10.0.1.1',
+                            'mac': '00:11:22:33:44:xx',
+                        }
                     ),
                     raises(ProvdError).matching(
                         has_properties('status_code', 500)
@@ -287,7 +294,9 @@ class TestDevices(BaseIntegrationTest):
     def test_synchronize(self) -> None:
         with fixtures.http.Plugin(self._client):
             with fixtures.http.Device(self._client) as device:
-                with self._client.devices.synchronize(device['id']) as operation_progress:
+                with self._client.devices.synchronize(
+                    device['id']
+                ) as operation_progress:
                     until.assert_(
                         operation_successful, operation_progress, tries=20, interval=0.5
                     )

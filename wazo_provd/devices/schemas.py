@@ -300,7 +300,9 @@ class DeviceDict(BaseDeviceDict, total=False):
 
 
 @validator('tenant_uuid', pre=True)
-def validate_tenant_uuid(cls: type[BaseModel], value: Union[uuid.UUID, None]) -> Union[str, None]:
+def validate_tenant_uuid(
+    cls: type[BaseModel], value: Union[uuid.UUID, None]
+) -> Union[str, None]:
     return str(value) if value else None
 
 
