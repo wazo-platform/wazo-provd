@@ -89,7 +89,7 @@ autoprov_config = {
     "id": "autoprov",
 }
 
-configs_to_insert = [
+configs_to_insert: list[dict[str, Any]] = [
     base_config,
     default_config,
     default_config_device,

@@ -20,7 +20,6 @@ import json
 import logging
 from binascii import a2b_base64
 from collections.abc import Callable, Generator
-from time import sleep
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from twisted.internet import defer

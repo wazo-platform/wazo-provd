@@ -216,7 +216,7 @@ def create_model_from_typeddict(
     field_options: dict[str, type] | None = None,
     validators: dict[str, Callable[..., Any]] | None = None,
     config: type | None = None,
-    type_overrides: dict[str, type] | None = None,
+    type_overrides: dict[str, Any] | None = None,
 ) -> type[BaseModel]:
     """
     This is a helper that creates a pydantic model from a TypedDict definition.

@@ -140,7 +140,10 @@ class TestConfigs(BaseIntegrationTest):
 
     def test_update(self) -> None:
         with fixtures.http.Configuration(self._client) as config:
-            config['raw_config']['ntp_ip'] = '127.0.0.1'
+            if 'raw_config' in config and config['raw_config'] is not None:
+                config['raw_config'] = config['raw_config'].update(
+                    {'ntp_ip': '127.0.0.1'}
+                )
             self._client.configs.update(config)
             result = self._client.configs.get(config['id'])
             assert_that(result['raw_config'], has_entry('ntp_ip', '127.0.0.1'))
