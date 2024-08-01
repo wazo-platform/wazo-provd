@@ -191,7 +191,7 @@ def validate_numeric_keys(
     cls: type[BaseModel], value: Union[dict[str, Any], None]
 ) -> Union[dict[str, Any], None]:
     if not value:
-        return
+        return None
     if not all(INTEGER_KEY_REGEX.match(k) for k in value):
         raise ValueError("Dictionary keys must be a positive integer in string format.")
     return value
@@ -240,7 +240,9 @@ RawConfigSchema = create_model_from_typeddict(
     type_overrides={
         'funckeys': Union[dict[str, FuncKeySchema], None],  # type: ignore[valid-type]
         'sip_lines': Union[dict[str, SipLineSchema], None],  # type: ignore[valid-type]
-        'sccp_call_managers': Union[dict[str, CallManagerSchema], None],  # type: ignore[valid-type]
+        'sccp_call_managers': (
+            Union[dict[str, CallManagerSchema], None]  # type: ignore[valid-type]
+        ),
     },
 )
 

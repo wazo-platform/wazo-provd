@@ -150,7 +150,7 @@ class TestDeviceRawConfig(DBIntegrationTest):
     ):
         device_raw_config = await self.device_raw_config_dao.get('deviceconf')
         new_fkey = FunctionKey(uuid=uuid.uuid4(), config_id='deviceconf', position=3)
-        device_raw_config.function_keys['3'] = new_fkey
+        device_raw_config.function_keys = {'3': new_fkey}
         await self.device_raw_config_dao.update(device_raw_config)
 
         updated_device_raw_config = await self.device_raw_config_dao.get(
@@ -160,8 +160,7 @@ class TestDeviceRawConfig(DBIntegrationTest):
 
         fkey2.position = 5
         fkey1.label = '123 testing'
-        device_raw_config.function_keys['5'] = fkey2
-        device_raw_config.function_keys['1'] = fkey1
+        device_raw_config.function_keys = {'5': fkey2, '1': fkey1}
         del device_raw_config.function_keys['8']
         await self.device_raw_config_dao.update(device_raw_config)
 
@@ -172,8 +171,7 @@ class TestDeviceRawConfig(DBIntegrationTest):
 
         sip_line2.position = 5
         sip_line1.display_name = 'Uncle Bob'
-        device_raw_config.sip_lines['5'] = sip_line2
-        device_raw_config.sip_lines['1'] = sip_line1
+        device_raw_config.sip_lines = {'5': sip_line2, '1': sip_line1}
         del device_raw_config.sip_lines['8']
         await self.device_raw_config_dao.update(device_raw_config)
 
@@ -184,8 +182,7 @@ class TestDeviceRawConfig(DBIntegrationTest):
 
         sccp_line2.position = 5
         sccp_line1.ip = '1.2.3.4'
-        device_raw_config.sccp_lines['5'] = sccp_line2
-        device_raw_config.sccp_lines['1'] = sccp_line1
+        device_raw_config.sccp_lines = {'5': sccp_line2, '1': sccp_line1}
         del device_raw_config.sccp_lines['8']
         await self.device_raw_config_dao.update(device_raw_config)
 
