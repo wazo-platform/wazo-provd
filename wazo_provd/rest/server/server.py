@@ -529,9 +529,14 @@ class ConfigureParameterResource(AuthResource):
                 e = failure.value
                 logger.info('Invalid value for key %s: %r', self.param_id, value)
                 deferred_respond_error(request, e)
-            if failure.check(KeyError):
+            elif failure.check(KeyError):
                 logger.info('Invalid/unknown key: %s', self.param_id)
                 deferred_respond_no_resource(request)
+            else:
+                logger.error('Unknown error: %s', failure)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._cfg_srv.set(self.param_id, value, tenant_uuid=self.tenant_uuid)
         d.addCallbacks(on_callback, on_errback)
