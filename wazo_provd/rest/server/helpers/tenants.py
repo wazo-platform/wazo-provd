@@ -46,5 +46,5 @@ class Token(tenant_helpers.Token):
     def from_headers(cls, request: Request, auth: AuthClient):
         token_id = decode_bytes(request.getHeader(b'X-Auth-Token'))
         if not token_id:
-            raise InvalidTokenAPIException(None)
+            raise InvalidTokenAPIException('')
         return cls(token_id, auth)

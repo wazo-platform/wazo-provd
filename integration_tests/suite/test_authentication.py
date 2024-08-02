@@ -12,7 +12,7 @@ class TestAuthentication(BaseIntegrationTest):
     asset = 'base'
 
     def test_no_token(self) -> None:
-        client = self.make_provd(None)
+        client = self.make_provd('')
 
         assert_that(
             calling(client.status.get),
