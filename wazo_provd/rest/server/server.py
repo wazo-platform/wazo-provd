@@ -1202,7 +1202,10 @@ class ConfigResource(AuthResource):
         def on_error(failure):
             if failure.check(EntryNotFoundException):
                 deferred_respond_no_resource(request)
-            deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+            else:
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._app.cfg_retrieve(self.config_id)
         d.addCallbacks(on_callback, on_error)
@@ -1271,8 +1274,10 @@ class RawConfigResource(AuthResource):
         def on_errback(failure):
             if failure.check(EntryNotFoundException):
                 deferred_respond_no_resource(request)
-            deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-            return failure
+            else:
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._app.cfg_retrieve_raw_config(self.config_id)
         d.addCallbacks(on_callback, on_errback)

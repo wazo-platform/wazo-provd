@@ -481,8 +481,9 @@ def config_types_fixes(config: ConfigDict) -> dict[str, Any]:
         SyslogLevel.CRITICAL: 0,
     }
     new_config = cast(dict[str, Any], config)
-    if syslog_level := new_config['raw_config'].get('syslog_level'):
-        new_config['raw_config']['syslog_level'] = syslog_map.get(syslog_level)
+    if new_raw_config := new_config.get('raw_config', None):
+        if syslog_level := new_raw_config.get('syslog_level', None):
+            new_config['raw_config']['syslog_level'] = syslog_map.get(syslog_level)
 
     return new_config
 
@@ -497,7 +498,7 @@ def check_config_validity(config: ConfigDict) -> ConfigDict:
     if 'raw_config' not in config:
         raise ValueError('missing "raw_config" field in config')
 
-    raw_config = config['raw_config']
+    raw_config: dict[str, Any] = cast(dict[str, Any], config['raw_config']) or {}
     if not isinstance(raw_config, dict):
         raise ValueError(
             f'"raw_config" field must be a dict; is {type(config["raw_config"])}'

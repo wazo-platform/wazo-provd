@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+import copy
 import dataclasses
 import logging
 import uuid
@@ -502,6 +503,7 @@ class DeviceRawConfigDAO(BaseDAO):
         )
         if function_keys:
             model.function_keys = {str(fkey.position): fkey for fkey in function_keys}
+
         sip_lines: list[SIPLine] = await self._sip_line_dao.find_from_config(
             model.config_id
         )
@@ -509,6 +511,7 @@ class DeviceRawConfigDAO(BaseDAO):
             model.sip_lines = {
                 str(sip_line.position): sip_line for sip_line in sip_lines
             }
+
         sccp_lines: list[SCCPLine] = await self._sccp_line_dao.find_from_config(
             model.config_id
         )
@@ -519,19 +522,48 @@ class DeviceRawConfigDAO(BaseDAO):
         return model
 
     async def _save_associations(self, model: DeviceRawConfig) -> DeviceRawConfig:
+        original_model = await self._load_associations(copy.copy(model))
         if model.function_keys:
+            if original_model.function_keys:
+                fkeys_to_delete = set(original_model.function_keys.keys()) - set(
+                    model.function_keys.keys()
+                )
+                for fkey_to_delete in fkeys_to_delete:
+                    try:
+                        await self._fkey_dao.delete(
+                            original_model.function_keys[fkey_to_delete]
+                        )
+                    except EntryNotFoundException:
+                        logger.error(
+                            'Could not delete function key: %s', fkey_to_delete
+                        )
+                        raise
+
             for position, fkey in model.function_keys.items():
                 fkey.config_id = model.config_id
                 fkey.position = int(position)
                 try:
                     await self._fkey_dao.update(fkey)
-                    print('Updating fkey', fkey)
                 except EntryNotFoundException:
                     fkey.uuid = fkey.uuid or uuid.uuid4()
                     await self._fkey_dao.create(fkey)
-                    print('Creating fkey', fkey)
 
         if model.sip_lines:
+            if original_model.sip_lines:
+                sip_lines_to_delete = set(original_model.sip_lines.keys()) - set(
+                    model.sip_lines.keys()
+                )
+                for sip_line_to_delete in sip_lines_to_delete:
+                    try:
+                        await self._sip_line_dao.delete(
+                            original_model.sip_lines[sip_line_to_delete]
+                        )
+                    except EntryNotFoundException:
+                        logger.error(
+                            'Could not delete SIP line: %s', sip_line_to_delete
+                        )
+                        raise
+
             for position, sip_line in model.sip_lines.items():
                 sip_line.config_id = model.config_id
                 sip_line.position = int(position)
@@ -542,6 +574,21 @@ class DeviceRawConfigDAO(BaseDAO):
                     await self._sip_line_dao.create(sip_line)
 
         if model.sccp_lines:
+            if original_model.sccp_lines:
+                sccp_lines_to_delete = set(original_model.sccp_lines.keys()) - set(
+                    model.sccp_lines.keys()
+                )
+                for sccp_line_to_delete in sccp_lines_to_delete:
+                    try:
+                        await self._sccp_line_dao.delete(
+                            original_model.sccp_lines[sccp_line_to_delete]
+                        )
+                    except EntryNotFoundException:
+                        logger.error(
+                            'Could not delete SCCP line: %s', sccp_line_to_delete
+                        )
+                        raise
+
             for position, sccp_line in model.sccp_lines.items():
                 sccp_line.config_id = model.config_id
                 sccp_line.position = int(position)

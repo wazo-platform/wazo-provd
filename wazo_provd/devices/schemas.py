@@ -275,6 +275,7 @@ ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
         "id": Field(regex=r'^[0-9a-z_-]+$'),
+        "raw_config": Field(default_factory=dict),
         "X_type": Field(alias="type"),
     },
     config=SchemaConfig,
