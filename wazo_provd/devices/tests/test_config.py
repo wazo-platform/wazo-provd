@@ -90,7 +90,7 @@ def test_raw_config_invalid() -> None:
             'type': 'value_error.str.regex',
         },
         {
-            'loc': ('funckeys', 'alpha', '__root__'),
+            'loc': ('function_keys', 'alpha', '__root__'),
             'msg': 'Value is required for BLF and Speed Dial types.',
             'type': 'value_error',
         },

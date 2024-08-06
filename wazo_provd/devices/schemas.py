@@ -57,6 +57,7 @@ class SchemaConfig:
     extra = "ignore"
     use_enum_values = True
     arbitrary_types_allowed = True
+    allow_population_by_field_name = True
 
 
 class SipLineDict(TypedDict):
@@ -114,8 +115,8 @@ def validate_type_if_required(
 
 FuncKeySchema = create_model_from_typeddict(
     FuncKeyDict,
-    {"type": Field(...)},
-    {'validate_type_if_required': validate_type_if_required},
+    field_options={"type": Field(...)},
+    validators={"validate_type_if_required": validate_type_if_required},
     config=SchemaConfig,
 )
 
@@ -275,7 +276,8 @@ ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
         "id": Field(regex=r'^[0-9a-z_-]+$'),
-        "raw_config": Field(default_factory=dict),
+        "parent_id": Field(...),
+        "raw_config": Field(...),
         "X_type": Field(alias="type"),
     },
     config=SchemaConfig,
