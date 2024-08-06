@@ -6,10 +6,12 @@ from wazo_provd_client.exceptions import ProvdError
 from wazo_test_helpers.hamcrest.raises import raises
 
 from .helpers.base import BaseIntegrationTest
+from .helpers.wait_strategy import EverythingOkWaitStrategy
 
 
 class TestAuthentication(BaseIntegrationTest):
     asset = 'base'
+    wait_strategy = EverythingOkWaitStrategy()
 
     def test_no_token(self) -> None:
         client = self.make_provd('')
