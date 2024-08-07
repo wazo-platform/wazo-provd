@@ -5,5 +5,6 @@ services:
       - provd
       - rabbitmq
       - pluginserver
+      - postgres
     environment:
-      TARGETS: "auth:9497,provd:8666,rabbitmq:5672,pluginserver:8080"
+      TARGETS: "auth:9497,provd:8666,rabbitmq:5672,pluginserver:8080,postgres:5432"

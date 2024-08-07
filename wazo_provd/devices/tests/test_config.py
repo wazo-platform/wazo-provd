@@ -30,7 +30,7 @@ def test_config_schema_empty() -> None:
     assert isinstance(error, ValidationError)
     assert error.errors() == [
         {
-            'loc': ('parent_ids',),
+            'loc': ('parent_id',),
             'msg': 'field required',
             'type': 'value_error.missing',
         },
@@ -89,7 +89,7 @@ def test_raw_config_invalid() -> None:
             'type': 'value_error.str.regex',
         },
         {
-            'loc': ('funckeys', 'alpha', '__root__'),
+            'loc': ('function_keys', 'alpha', '__root__'),
             'msg': 'Value is required for BLF and Speed Dial types.',
             'type': 'value_error',
         },
