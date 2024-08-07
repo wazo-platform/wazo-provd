@@ -8,16 +8,19 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install
-ADD . /usr/src/wazo-provd
+COPY requirements.txt /usr/src/wazo-provd/
 WORKDIR /usr/src/wazo-provd
 # incremental==24.7.0+ is downloaded automatically by twisted install
 # but this version is incompatible with setuptools 58.1 from python:3.9-slim-bullseye
 RUN pip install incremental==17.5.0
 RUN pip install -r requirements.txt
-RUN python setup.py install
 
+COPY setup.py /usr/src/wazo-provd/
+COPY wazo_provd /usr/src/wazo-provd/wazo_provd
+COPY twisted /usr/src/wazo-provd/twisted
 # Install compatibility module for old plugins
-RUN cp -r provd /opt/venv/lib/python3.9/site-packages/provd
+COPY provd /usr/src/wazo-provd/provd
+RUN python setup.py install
 
 FROM python:3.9-slim-bullseye AS build-image
 COPY --from=compile-image /opt/venv /opt/venv
