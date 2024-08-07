@@ -7,6 +7,8 @@ RUN python -m venv /opt/venv
 # Activate virtual env
 ENV PATH="/opt/venv/bin:$PATH"
 
+RUN echo "CHANGE SHOULD BE TAKEN FROM ZUUL"
+
 # Install
 COPY requirements.txt /usr/src/wazo-provd/
 WORKDIR /usr/src/wazo-provd
@@ -34,4 +36,4 @@ EXPOSE 69/udp
 
 # Activate virtual env
 ENV PATH="/opt/venv/bin:$PATH"
-CMD ["twistd", "--nodaemon", "--no_save", "--pidfile=", "wazo-provd", "--stderr", "--verbose"]
+CMD "bash -c 'echo \"SHOULD BE VISIBLE\" && twistd --nodaemon --no_save --pidfile= wazo-provd --stderr --verbose'"
