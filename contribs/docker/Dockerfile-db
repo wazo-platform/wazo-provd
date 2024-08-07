@@ -3,7 +3,7 @@ LABEL maintainer="Wazo Maintainers <dev@wazo.community>"
 
 COPY . /usr/src/wazo-provd
 WORKDIR /usr/src/wazo-provd
-ENV ALEMBIC_DB_URI postgresql://wazo-provd:Secr7t@localhost/wazo-provd
+ENV ALEMBIC_DB_URI=postgresql://wazo-provd:Secr7t@localhost/wazo-provd
 
 RUN true \
     && python3 setup.py install \
