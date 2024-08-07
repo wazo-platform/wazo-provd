@@ -1,6 +1,8 @@
 services:
   sync:
     depends_on:
+      - auth
       - provd
+      - postgres
     environment:
-      TARGETS: "provd:8666"
+      TARGETS: "auth:9497,postgres:5432,provd:8666"

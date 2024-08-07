@@ -7,8 +7,8 @@ from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
 
 from .helpers import fixtures
-from .helpers.base import INVALID_TOKEN, BaseIntegrationTest
-from .helpers.fixtures import LEGACY_PLUGIN_TO_INSTALL, PLUGIN_TO_INSTALL
+from .helpers.base import INVALID_TOKEN, PLUGIN_SERVER, BaseIntegrationTest
+from .helpers.fixtures.http import LEGACY_PLUGIN_TO_INSTALL, PLUGIN_TO_INSTALL
 from .helpers.operation import operation_successful
 from .helpers.wait_strategy import NoWaitStrategy
 
@@ -16,6 +16,9 @@ from .helpers.wait_strategy import NoWaitStrategy
 class TestPlugins(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
+
+    def setUp(self) -> None:
+        self._client.params.update('plugin_server', PLUGIN_SERVER)
 
     def test_install(self) -> None:
         with self._client.plugins.update() as operation_progress:
@@ -44,7 +47,7 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_uninstall(self) -> None:
-        with fixtures.Plugin(self._client, delete_on_exit=False):
+        with fixtures.http.Plugin(self._client, delete_on_exit=False):
             self._client.plugins.uninstall(PLUGIN_TO_INSTALL)
             assert_that(
                 self._client.plugins.list_installed()['pkgs'],
@@ -100,7 +103,7 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_get(self) -> None:
-        with fixtures.Plugin(self._client) as result:
+        with fixtures.http.Plugin(self._client) as result:
             assert_that(result, has_key('capabilities'))
 
     def test_get_errors(self) -> None:
@@ -111,7 +114,7 @@ class TestPlugins(BaseIntegrationTest):
 
     def test_get_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.get).with_args(PLUGIN_TO_INSTALL),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
@@ -124,13 +127,13 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_get_packages_installed(self) -> None:
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             result = self._client.plugins.get_packages_installed(PLUGIN_TO_INSTALL)
             assert_that(result, has_key('pkgs'))
 
     def test_get_packages_installed_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.get_packages_installed).with_args(
                     PLUGIN_TO_INSTALL
@@ -145,13 +148,13 @@ class TestPlugins(BaseIntegrationTest):
         )
 
     def test_get_packages_installable(self) -> None:
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             result = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)
             assert_that(result, has_key('pkgs'))
 
     def test_get_packages_installable_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.get_packages_installable).with_args(
                     PLUGIN_TO_INSTALL
@@ -160,7 +163,7 @@ class TestPlugins(BaseIntegrationTest):
             )
 
     def test_install_package(self) -> None:
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             results = self._client.plugins.get_packages_installable(PLUGIN_TO_INSTALL)[
                 'pkgs'
             ]
@@ -172,7 +175,7 @@ class TestPlugins(BaseIntegrationTest):
 
     def test_install_package_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Plugin(self._client):
+        with fixtures.http.Plugin(self._client):
             assert_that(
                 calling(provd.plugins.install_package).with_args(
                     PLUGIN_TO_INSTALL, 'whatever'
@@ -184,6 +187,9 @@ class TestPlugins(BaseIntegrationTest):
 class TestPluginsLegacy(BaseIntegrationTest):
     asset = 'base'
     wait_strategy = NoWaitStrategy()
+
+    def setUp(self) -> None:
+        self._client.params.update('plugin_server', PLUGIN_SERVER)
 
     def test_install_with_legacy_import(self) -> None:
         # Legacy plugin use module "provd" instead of "wazo_provd"

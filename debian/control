@@ -13,10 +13,14 @@ Depends:
     ${python3:Depends},
     ${misc:Depends},
     adduser,
+    python3-alembic,
     python3-jinja2,
     python3-kombu,
     python3-openssl,
+    python3-psycopg2,
     python3-pydantic,
+    python3-sqlalchemy,
+    python3-tenacity,
     python3-twisted,
     unar,
     unrar-free,
@@ -24,6 +28,7 @@ Depends:
     wazo-amid-client-python3,
     wazo-auth-client-python3,
     wazo-bus-python3,
+    wazo-dbms,
     xivo-lib-fetchfw-python3,
     xivo-lib-python-python3
 Description: Wazo provisioning daemon
