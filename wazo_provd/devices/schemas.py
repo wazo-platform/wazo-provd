@@ -61,6 +61,8 @@ class SchemaConfig:
 
 
 class SipLineDict(TypedDict):
+    uuid: Union[str, None]
+    config_id: Union[str, None]
     proxy_ip: Union[str, None]
     proxy_port: Union[int, None]
     backup_proxy_ip: Union[str, None]
@@ -81,20 +83,36 @@ class SipLineDict(TypedDict):
     voicemail: Union[str, None]
 
 
-SipLineSchema = create_model_from_typeddict(SipLineDict, config=SchemaConfig)
+SipLineSchema = create_model_from_typeddict(
+    SipLineDict,
+    {
+        "uuid": Field(exclude=True),
+        "config_id": Field(exclude=True),
+    },
+    config=SchemaConfig,
+)
 
 
 class CallManagerDict(TypedDict):
+    uuid: Union[str, None]
+    config_id: Union[str, None]
     ip: str
     port: Union[int, None]
 
 
 CallManagerSchema = create_model_from_typeddict(
-    CallManagerDict, {'ip': Field(...)}, config=SchemaConfig
+    CallManagerDict,
+    {
+        "uuid": Field(exclude=True),
+        "config_id": Field(exclude=True),
+    },
+    config=SchemaConfig,
 )
 
 
 class FuncKeyDict(TypedDict):
+    uuid: Union[str, None]
+    config_id: Union[str, None]
     type: FuncKeyType
     value: Union[str, None]
     label: Union[str, None]
@@ -115,13 +133,18 @@ def validate_type_if_required(
 
 FuncKeySchema = create_model_from_typeddict(
     FuncKeyDict,
-    field_options={"type": Field(...)},
+    {
+        "uuid": Field(exclude=True),
+        "config_id": Field(exclude=True),
+        "type": Field(...),
+    },
     validators={"validate_type_if_required": validate_type_if_required},
     config=SchemaConfig,
 )
 
 
 class RawConfigDict(TypedDict):
+    config_id: Union[str, None]
     ip: Union[str, None]
     http_port: Union[int, None]
     http_base_url: str
@@ -216,6 +239,7 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
 RawConfigSchema = create_model_from_typeddict(
     RawConfigDict,
     {
+        "config_id": Field(exclude=True),
         "ip": Field(),
         "funckeys": Field(default_factory=dict, alias="function_keys"),
         "locale": Field(regex=r'[a-z]{2}_[A-Z]{2}'),

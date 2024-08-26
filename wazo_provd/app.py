@@ -18,7 +18,6 @@ from uuid import UUID, uuid4
 from pydantic import ValidationError
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
-from xivo.chain_map import ChainMap
 
 from wazo_provd.database.exceptions import EntryNotFoundException
 from wazo_provd.database.models import (
@@ -33,6 +32,8 @@ from wazo_provd.devices.config import (
     build_autocreate_config,
     check_config_validity,
     config_types_fixes,
+    recurse_update_dict,
+    remove_none_values,
 )
 from wazo_provd.devices.device import check_device_validity, needs_reconfiguration
 from wazo_provd.localization import get_localization_service
@@ -385,11 +386,12 @@ class ProvisioningApplication:
             return self.pg_mgr.get(device['plugin'])
         return None
 
-    def _cfg_raw_create_dict_from_model(
-        self, raw_conf_model: DeviceRawConfig
-    ) -> RawConfigDict:
-        raw_conf_dict = raw_conf_model.as_dict(ignore_foreign_keys=True)
-        return cast(RawConfigDict, raw_conf_dict)
+    def _flatten_configs(self, configs: list[RawConfigDict]) -> RawConfigDict:
+        flat_config = remove_none_values(configs[0])
+        for config in configs[1:]:
+            no_null_raw_config = remove_none_values(config)
+            recurse_update_dict(flat_config, no_null_raw_config)
+        return cast(RawConfigDict, flat_config)
 
     @defer.inlineCallbacks
     def _get_flat_raw_config(self, config_id: str):
@@ -405,10 +407,8 @@ class ProvisioningApplication:
         for raw_config in raw_configs:
             raw_config_parents.appendleft(raw_config)
 
-        flat_raw_config: RawConfigDict = cast(
-            RawConfigDict, ChainMap(*raw_config_parents)
-        )
-        return flat_raw_config
+        flat_raw_config = self._flatten_configs(list(raw_config_parents))
+        defer.returnValue(flat_raw_config)
 
     def _dev_create_model_from_dict(self, device: DeviceDict) -> Device:
         auto_added = device.get('added') == "auto"
@@ -1163,7 +1163,8 @@ class ProvisioningApplication:
                 self.device_raw_config_dao.get(config_id)
             )
             raw_config_schema = RawConfigSchema.validate(raw_config_model.as_dict())
-            defer.returnValue(raw_config_schema.dict())
+            raw_config_dict = cast(RawConfigDict, raw_config_schema.dict(by_alias=True))
+            defer.returnValue(raw_config_dict)
         except EntryNotFoundException:
             raise
         except Exception as e:

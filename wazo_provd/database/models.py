@@ -90,7 +90,7 @@ class DeviceConfig(Model):
     def from_dict(cls, input_dict: dict[str, Any]) -> DeviceConfig:
         raw_config = None
         if raw_config_dict := input_dict.pop('raw_config', None):
-            raw_config_dict['config_id'] = input_dict.get('config_id', None)
+            raw_config_dict['config_id'] = input_dict.get('id', None)
             raw_config = DeviceRawConfig.from_dict(raw_config_dict)
         return cls(**input_dict, raw_config=raw_config)
 

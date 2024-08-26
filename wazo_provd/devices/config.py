@@ -32,12 +32,10 @@ import logging
 import uuid
 from typing import TYPE_CHECKING, Any, cast
 
-from wazo_provd.devices.schemas import ConfigSchema, SyslogLevel
+from wazo_provd.devices.schemas import ConfigDict, ConfigSchema, SyslogLevel
 
 if TYPE_CHECKING:
     from typing import ParamSpec, TypeVar
-
-    from wazo_provd.devices.schemas import ConfigDict
 
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -458,16 +456,16 @@ class RawConfigParamError(RawConfigError):
     pass
 
 
-def _rec_update_dict(base_dict, overlay_dict):
+def recurse_update_dict(base_dict, overlay_dict):
     # update a base dictionary from another dictionary
     for k, v in overlay_dict.items():
         if isinstance(v, dict):
             old_v = base_dict.get(k)
             if isinstance(old_v, dict):
-                _rec_update_dict(old_v, v)
+                recurse_update_dict(old_v, v)
             else:
                 base_dict[k] = {}
-                _rec_update_dict(base_dict[k], v)
+                recurse_update_dict(base_dict[k], v)
         else:
             base_dict[k] = v
 
@@ -508,11 +506,11 @@ def check_config_validity(config: ConfigDict) -> ConfigDict:
     return ConfigSchema.validate(config).dict(by_alias=True)
 
 
-def _remove_none_values(config):
+def remove_none_values(config):
     if isinstance(config, list):
-        return [_remove_none_values(x) for x in config]
+        return [remove_none_values(x) for x in config]
     if isinstance(config, dict):
-        return {k: _remove_none_values(v) for k, v in config.items() if v is not None}
+        return {k: remove_none_values(v) for k, v in config.items() if v is not None}
     return config
 
 
@@ -523,11 +521,24 @@ def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
         return None
 
     config_id = config['id'] or ''
+    raw_config = config.get('raw_config')
     new_suffix = str(uuid.uuid4())
-    full_config: ConfigDict = {
-        'id': config_id + new_suffix,
+    new_config_id = config_id + new_suffix
+    full_config = {
+        'id': new_config_id,
         'parent_id': config_id,
-        'raw_config': config['raw_config'],
+        'raw_config': raw_config,
         'transient': True,
     }
-    return full_config
+    if raw_config:
+        raw_config['config_id'] = new_config_id
+
+        sip_lines = raw_config.get('sip_lines') or {}
+        for _, sip_line in sip_lines.items():
+            sip_line['uuid'] = str(uuid.uuid4())
+
+        sccp_lines = raw_config.get('sccp_call_managers') or {}
+        for _, sccp_line in sccp_lines.items():
+            sccp_line['uuid'] = str(uuid.uuid4())
+
+    return cast(ConfigDict, full_config)

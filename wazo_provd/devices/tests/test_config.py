@@ -19,7 +19,7 @@ from hamcrest import (
 )
 from pydantic import ValidationError
 
-from ..config import _remove_none_values, build_autocreate_config
+from ..config import build_autocreate_config, remove_none_values
 from ..schemas import ConfigSchema, FuncKeyType, RawConfigSchema
 
 
@@ -144,7 +144,7 @@ class TestRemoveNoneValues(unittest.TestCase):
         empty_dict: dict[str, Any] = {}
         expected_result: dict[str, Any] = {}
 
-        result = _remove_none_values(empty_dict)
+        result = remove_none_values(empty_dict)
         assert_that(
             result,
             is_(equal_to(expected_result)),
@@ -164,7 +164,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             'key4': False,
         }
 
-        result = _remove_none_values(dict_with_nones)
+        result = remove_none_values(dict_with_nones)
         assert_that(
             result,
             is_(equal_to(expected_result)),
@@ -179,7 +179,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             'key1': {'nkey1': 123},
         }
 
-        result = _remove_none_values(dict_with_nones)
+        result = remove_none_values(dict_with_nones)
         assert_that(
             result,
             is_(equal_to(expected_result)),
@@ -194,7 +194,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             'key1': [123, None],
         }
 
-        result = _remove_none_values(dict_with_list)
+        result = remove_none_values(dict_with_list)
         assert_that(
             result,
             is_(equal_to(expected_result)),
@@ -209,7 +209,7 @@ class TestRemoveNoneValues(unittest.TestCase):
             'key1': [{'nkey1': 123}, {'nkey2': '123'}],
         }
 
-        result = _remove_none_values(dict_with_list)
+        result = remove_none_values(dict_with_list)
         assert_that(
             result,
             is_(equal_to(expected_result)),
