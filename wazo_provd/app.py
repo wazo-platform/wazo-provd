@@ -309,17 +309,18 @@ class ProvisioningApplication:
     def set_tenant_uuid(self, tenant_uuid: str) -> None:
         self._tenant_uuid = tenant_uuid
         if not self.tenants.get(tenant_uuid):
-            self.set_tenant_configuration(tenant_uuid, {})
-            initial_tenant = TenantModel(uuid=UUID(tenant_uuid))
-            create_init_tenant_d = defer.ensureDeferred(
-                self.tenant_dao.create(initial_tenant)
+            initial_tenant_d = defer.ensureDeferred(
+                self.tenant_dao.get_or_create(UUID(tenant_uuid))
             )
 
-            def on_callback(tenant):
-                logger.info('Initial tenant configuration created: %s', tenant)
+            def on_callback(tenant: TenantModel):
+                logger.info('Initial tenant: %s', tenant)
+                tenant_conf = tenant.as_dict()
+                del tenant_conf[tenant._meta['primary_key']]
+                self.set_tenant_configuration(str(tenant.uuid), tenant_conf)
 
-            create_init_tenant_d.addCallback(on_callback)
-            create_init_tenant_d.addErrback(self._handle_error)
+            initial_tenant_d.addCallback(on_callback)
+            initial_tenant_d.addErrback(self._handle_error)
 
     def set_tenant_configuration(
         self, tenant_uuid: str, config: dict[str, Any]
