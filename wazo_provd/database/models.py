@@ -129,6 +129,13 @@ class SIPLine(Model):
     def from_dict(cls, input_dict: dict[str, Any]) -> SIPLine:
         return cls(**input_dict)
 
+    def as_dict(
+        self, ignore_associations=False, ignore_foreign_keys=False
+    ) -> dict[str, Any]:
+        dict_output = super().as_dict(ignore_associations, ignore_foreign_keys)
+        dict_output['uuid'] = str(dict_output['uuid'])
+        return dict_output
+
 
 @dataclasses.dataclass
 class SCCPLine(Model):
@@ -143,6 +150,13 @@ class SCCPLine(Model):
     @classmethod
     def from_dict(cls, input_dict: dict[str, Any]) -> SCCPLine:
         return cls(**input_dict)
+
+    def as_dict(
+        self, ignore_associations=False, ignore_foreign_keys=False
+    ) -> dict[str, Any]:
+        dict_output = super().as_dict(ignore_associations, ignore_foreign_keys)
+        dict_output['uuid'] = str(dict_output['uuid'])
+        return dict_output
 
 
 @dataclasses.dataclass
@@ -160,6 +174,13 @@ class FunctionKey(Model):
     @classmethod
     def from_dict(cls, input_dict: dict[str, Any]) -> FunctionKey:
         return cls(**input_dict)
+
+    def as_dict(
+        self, ignore_associations=False, ignore_foreign_keys=False
+    ) -> dict[str, Any]:
+        dict_output = super().as_dict(ignore_associations, ignore_foreign_keys)
+        dict_output['uuid'] = str(dict_output['uuid'])
+        return dict_output
 
 
 @dataclasses.dataclass
