@@ -1,3 +1,4 @@
 etc/nginx/locations/* etc/nginx/locations
 etc/wazo-provd/*  etc/wazo-provd
+etc/rsyslog.d/*  etc/rsyslog.d
 debian/tmp/usr/lib usr/
