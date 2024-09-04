@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Provisioning server configuration module.
@@ -64,6 +64,7 @@ The following parameters are defined:
 # XXX there is some naming confusion between application configuration
 #     and device configuration, since both used the word 'config' and
 #     raw config, yet they mean different things
+
 from __future__ import annotations
 
 import json
