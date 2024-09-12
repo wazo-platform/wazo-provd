@@ -3,6 +3,8 @@
 
 import logging
 
+from psycopg2 import errorcodes
+from psycopg2.errors import OperationalError
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
 from twisted.enterprise import adbapi
 
@@ -11,8 +13,28 @@ logger = logging.getLogger(__name__)
 DATABASE_DRIVER = 'psycopg2'
 
 
+class ReconnectingConnectionPool(adbapi.ConnectionPool):
+    """
+    This connection pool will reconnect if the server goes away.  This idea was taken from:
+    http://www.gelens.org/2009/09/13/twisted-connectionpool-revisited/
+    """
+
+    def _runInteraction(self, interaction, *args, **kw):
+        try:
+            return adbapi.ConnectionPool._runInteraction(self, interaction, *args, **kw)
+        except OperationalError as e:
+            if e.pgcode not in (errorcodes.ADMIN_SHUTDOWN, errorcodes.CRASH_SHUTDOWN):
+                raise
+            logger.error(
+                "Lost connection to the database, retrying operation.  If no errors follow, retry was successful."
+            )
+            conn = self.connections.get(self.threadID())
+            self.disconnect(conn)
+            return adbapi.ConnectionPool._runInteraction(self, interaction, *args, **kw)
+
+
 def init_db(db_uri: str, pool_size=16) -> adbapi.ConnectionPool:
-    return adbapi.ConnectionPool(
+    return ReconnectingConnectionPool(
         DATABASE_DRIVER, db_uri, cp_max=pool_size, cp_reconnect=True, cp_noisy=True
     )
 
