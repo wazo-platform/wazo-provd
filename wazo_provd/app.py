@@ -386,7 +386,9 @@ class ProvisioningApplication:
             return self.pg_mgr.get(device['plugin'])
         return None
 
-    def _flatten_configs(self, configs: list[RawConfigDict]) -> RawConfigDict:
+    def _flatten_configs(self, configs: list[RawConfigDict]) -> RawConfigDict | None:
+        if not configs:
+            return
         flat_config = remove_none_values(configs[0])
         for config in configs[1:]:
             no_null_raw_config = remove_none_values(config)

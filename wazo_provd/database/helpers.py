@@ -12,7 +12,9 @@ DATABASE_DRIVER = 'psycopg2'
 
 
 def init_db(db_uri: str, pool_size=16) -> adbapi.ConnectionPool:
-    return adbapi.ConnectionPool(DATABASE_DRIVER, db_uri, cp_max=pool_size)
+    return adbapi.ConnectionPool(
+        DATABASE_DRIVER, db_uri, cp_max=pool_size, cp_reconnect=True, cp_noisy=True
+    )
 
 
 @retry(

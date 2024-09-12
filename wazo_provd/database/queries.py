@@ -423,6 +423,8 @@ class DeviceConfigDAO(BaseDAO):
 
         query += sql.SQL(';')
 
+        logger.critical('AFDEBUG: find query = %s', query)
+
         return query
 
     async def find(
@@ -433,7 +435,10 @@ class DeviceConfigDAO(BaseDAO):
         sort: tuple[str, Literal['ASC', 'DESC']] | None = None,
     ) -> list[DeviceConfig]:
         query = self._prepare_find_query(selectors, skip, limit, sort)
-        results = await self._db_connection.runQuery(query)
+        try:
+            results = await self._db_connection.runQuery(query)
+        except Exception as e:
+            logger.critical('AFDEBUG: uh-oh: %s', e.__class__)
 
         return [
             await self._load_associations(self.__model__(*result)) for result in results

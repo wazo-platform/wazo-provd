@@ -7,6 +7,7 @@ This is to avoid lazy evaluation of annotations in this file and simplify the lo
 of the `create_model_from_typeddict`. This can be remedied if we upgrade to
 pydantic 1.9+ and can use their more robust implementation.
 """
+import logging
 import re
 import uuid
 from enum import Enum
@@ -19,6 +20,7 @@ from pydantic import BaseModel, Field, root_validator, validator
 from wazo_provd.util import _NORMED_MAC, create_model_from_typeddict
 
 INTEGER_KEY_REGEX = re.compile(r"^[0-9]+$")
+logger = logging.getLogger(__name__)
 
 
 class SyslogLevel(str, Enum):
@@ -295,6 +297,19 @@ class ConfigDict(BaseConfigDict, total=False):
     proxy_backup: Union[str, None]
     proxy_backup_port: Union[int, None]
 
+# TODO(afournier): should add integration tests for this
+@root_validator(pre=True)
+def convert_parent_ids(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, Any]:
+    if 'parent_ids' in values:
+        logger.warning(
+            'Using `parent_ids` is deprecated. Using the last value provided as parent_id'
+        )
+        parent_ids: str = values.pop('parent_ids')
+        parent_id = parent_ids.split(',')[-1]
+        logger.debug('Using `parent_id` "%s"', parent_id)
+        values['parent_id'] = parent_id
+    return values
+
 
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
@@ -303,6 +318,9 @@ ConfigSchema = create_model_from_typeddict(
         "parent_id": Field(...),
         "raw_config": Field(...),
         "X_type": Field(alias="type"),
+    },
+    {
+        "convert_parent_ids": convert_parent_ids,
     },
     config=SchemaConfig,
     type_overrides={'raw_config': Union[RawConfigSchema, None]},  # type: ignore[valid-type]

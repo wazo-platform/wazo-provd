@@ -490,7 +490,7 @@ def check_config_validity(config: ConfigDict) -> ConfigDict:
     if 'parent_id' not in config:
         raise ValueError('missing "parent_id" field in config')
 
-    if not isinstance(config['parent_id'], str):
+    if config['parent_id'] is not None and not isinstance(config['parent_id'], str):
         raise ValueError(f'parent id must be a string; is {type(config["parent_id"])}')
 
     if 'raw_config' not in config:

@@ -268,16 +268,19 @@ class DeviceRawConfig(Model):
             function_keys = {}
             for position, function_key_dict in function_keys_dict.items():
                 function_key_dict['config_id'] = config_id
+                function_key_dict['position'] = position
                 function_keys[position] = FunctionKey.from_dict(function_key_dict)
         if sip_lines_dict := input_dict.pop('sip_lines', None):
             sip_lines = {}
             for position, sip_line_dict in sip_lines_dict.items():
                 sip_line_dict['config_id'] = config_id
+                sip_line_dict['position'] = position
                 sip_lines[position] = SIPLine.from_dict(sip_line_dict)
         if sccp_lines_dict := input_dict.pop('sccp_lines', None):
             sccp_lines = {}
             for position, sccp_line_dict in sccp_lines_dict.items():
                 sccp_line_dict['config_id'] = config_id
+                sccp_line_dict['position'] = position
                 sccp_lines[position] = SCCPLine.from_dict(sccp_line_dict)
 
         return cls(
