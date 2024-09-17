@@ -756,10 +756,15 @@ class ProvisioningApplication:
             # check if device was using a transient config that is no more in use
             if device.get('config'):
                 device_cfg_id = device['config']
-                device_cfg_model = yield defer.ensureDeferred(
-                    self.device_config_dao.get(device_cfg_id)
-                )
-                device_cfg = self._cfg_create_dict_from_model(device_cfg_model)
+                try:
+                    device_cfg_model = yield defer.ensureDeferred(
+                        self.device_config_dao.get(device_cfg_id)
+                    )
+                    device_cfg = self._cfg_create_dict_from_model(device_cfg_model)
+                except EntryNotFoundException:
+                    logger.debug('Device config "%s" not found', device_cfg_id)
+                    device_cfg = None
+
                 if device_cfg and device_cfg.get('transient'):
                     # if no devices are using this transient config, delete it
                     try:
@@ -768,7 +773,7 @@ class ProvisioningApplication:
                         )
                     except EntryNotFoundException:
                         yield defer.ensureDeferred(
-                            self.device_config_dao.delete(device_cfg_id)
+                            self.device_config_dao.delete(device_cfg_model)
                         )
             if device['configured']:
                 self._dev_deconfigure_if_possible(device)
