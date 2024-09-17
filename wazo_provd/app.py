@@ -700,8 +700,6 @@ class ProvisioningApplication:
                     yield defer.ensureDeferred(
                         self.tenant_dao.get_or_create(UUID(device['tenant_uuid']))
                     )
-                    device_model = self._dev_create_model_from_dict(device)
-                    yield defer.ensureDeferred(self.device_dao.update(device_model))
                     # check if old device was using a transient config that is
                     # no more in use
                     if old_device.get('config') != device.get('config'):
@@ -725,6 +723,8 @@ class ProvisioningApplication:
                                 yield defer.ensureDeferred(
                                     self.device_config_dao.delete(old_device_cfg_id)
                                 )
+                    device_model = self._dev_create_model_from_dict(device)
+                    yield defer.ensureDeferred(self.device_dao.update(device_model))
                 else:
                     logger.info('Not updating device %s: not changed', device_id)
         except Exception:
