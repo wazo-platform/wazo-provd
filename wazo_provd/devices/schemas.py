@@ -285,6 +285,7 @@ class ConfigDict(BaseConfigDict, total=False):
     deletable: bool
     X_type: Union[str, None]
     displayname: Union[str, None]
+    label: Union[str, None]
     role: Union[str, None]
     registrar_main: Union[str, None]
     registrar_main_port: Union[int, None]
@@ -312,6 +313,17 @@ def convert_parent_ids(cls: type[BaseModel], values: dict[str, Any]) -> dict[str
     return values
 
 
+@root_validator(pre=True)
+def convert_label_or_displayname(
+    cls: type[BaseModel], values: dict[str, Any]
+) -> dict[str, Any]:
+    value_to_use = values.get('label', None) or values.get('displayname')
+    values['label'] = value_to_use
+    values['displayname'] = value_to_use
+
+    return values
+
+
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
@@ -323,6 +335,7 @@ ConfigSchema = create_model_from_typeddict(
     },
     {
         "convert_parent_ids": convert_parent_ids,
+        "convert_label_or_displayname": convert_label_or_displayname,
     },
     config=SchemaConfig,
     type_overrides={'raw_config': Union[RawConfigSchema, None]},  # type: ignore[valid-type]
