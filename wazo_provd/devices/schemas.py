@@ -284,7 +284,7 @@ class ConfigDict(BaseConfigDict, total=False):
     transient: bool
     deletable: bool
     X_type: Union[str, None]
-    label: Union[str, None]
+    displayname: Union[str, None]
     role: Union[str, None]
     registrar_main: Union[str, None]
     registrar_main_port: Union[int, None]
@@ -296,6 +296,7 @@ class ConfigDict(BaseConfigDict, total=False):
     registrar_backup_port: Union[int, None]
     proxy_backup: Union[str, None]
     proxy_backup_port: Union[int, None]
+
 
 # TODO(afournier): should add integration tests for this
 @root_validator(pre=True)
@@ -318,6 +319,7 @@ ConfigSchema = create_model_from_typeddict(
         "parent_id": Field(...),
         "raw_config": Field(...),
         "X_type": Field(alias="type"),
+        "displayname": Field(alias="label"),
     },
     {
         "convert_parent_ids": convert_parent_ids,
