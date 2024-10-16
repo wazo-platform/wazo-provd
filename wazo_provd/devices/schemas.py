@@ -7,7 +7,9 @@ This is to avoid lazy evaluation of annotations in this file and simplify the lo
 of the `create_model_from_typeddict`. This can be remedied if we upgrade to
 pydantic 1.9+ and can use their more robust implementation.
 """
+import logging
 import re
+import uuid
 from enum import Enum
 from ipaddress import IPv4Address
 from typing import Any, Literal, TypedDict, Union
@@ -18,6 +20,7 @@ from pydantic import BaseModel, Field, root_validator, validator
 from wazo_provd.util import _NORMED_MAC, create_model_from_typeddict
 
 INTEGER_KEY_REGEX = re.compile(r"^[0-9]+$")
+logger = logging.getLogger(__name__)
 
 
 class SyslogLevel(str, Enum):
@@ -53,12 +56,15 @@ class FuncKeyType(str, Enum):
 
 
 class SchemaConfig:
-    extra = "allow"
+    extra = "ignore"
     use_enum_values = True
     arbitrary_types_allowed = True
+    allow_population_by_field_name = True
 
 
 class SipLineDict(TypedDict):
+    uuid: Union[str, None]
+    config_id: Union[str, None]
     proxy_ip: Union[str, None]
     proxy_port: Union[int, None]
     backup_proxy_ip: Union[str, None]
@@ -79,18 +85,36 @@ class SipLineDict(TypedDict):
     voicemail: Union[str, None]
 
 
-SipLineSchema = create_model_from_typeddict(SipLineDict, config=SchemaConfig)
+SipLineSchema = create_model_from_typeddict(
+    SipLineDict,
+    {
+        "uuid": Field(exclude=True),
+        "config_id": Field(exclude=True),
+    },
+    config=SchemaConfig,
+)
 
 
 class CallManagerDict(TypedDict):
+    uuid: Union[str, None]
+    config_id: Union[str, None]
     ip: str
     port: Union[int, None]
 
 
-CallManagerSchema = create_model_from_typeddict(CallManagerDict, {'ip': Field(...)})
+CallManagerSchema = create_model_from_typeddict(
+    CallManagerDict,
+    {
+        "uuid": Field(exclude=True),
+        "config_id": Field(exclude=True),
+    },
+    config=SchemaConfig,
+)
 
 
 class FuncKeyDict(TypedDict):
+    uuid: Union[str, None]
+    config_id: Union[str, None]
     type: FuncKeyType
     value: Union[str, None]
     label: Union[str, None]
@@ -111,12 +135,18 @@ def validate_type_if_required(
 
 FuncKeySchema = create_model_from_typeddict(
     FuncKeyDict,
-    {"type": Field(...)},
-    {'validate_type_if_required': validate_type_if_required},
+    {
+        "uuid": Field(exclude=True),
+        "config_id": Field(exclude=True),
+        "type": Field(...),
+    },
+    validators={"validate_type_if_required": validate_type_if_required},
+    config=SchemaConfig,
 )
 
 
 class RawConfigDict(TypedDict):
+    config_id: Union[str, None]
     ip: Union[str, None]
     http_port: Union[int, None]
     http_base_url: str
@@ -131,8 +161,8 @@ class RawConfigDict(TypedDict):
     vlan_pc_port_id: Union[int, None]
     syslog_enabled: Union[bool, None]
     syslog_ip: Union[str, None]
-    syslog_port: int
-    syslog_level: SyslogLevel
+    syslog_port: Union[int, None]
+    syslog_level: Union[int, None]
     admin_username: Union[str, None]
     admin_password: Union[str, None]
     user_username: Union[str, None]
@@ -158,8 +188,8 @@ class RawConfigDict(TypedDict):
     sip_local_certificate: Union[str, None]
     sip_local_key: Union[str, None]
     sip_subscribe_mwi: Union[bool, None]
-    sip_lines: dict[str, SipLineDict]
-    sccp_call_managers: dict[str, CallManagerDict]
+    sip_lines: Union[dict[str, SipLineDict], None]
+    sccp_call_managers: Union[dict[str, CallManagerDict], None]
     exten_dnd: Union[str, None]
     exten_fwd_unconditional: Union[str, None]
     exten_fwd_no_answer: Union[str, None]
@@ -169,11 +199,10 @@ class RawConfigDict(TypedDict):
     exten_pickup_group: Union[str, None]
     exten_pickup_call: Union[str, None]
     exten_voicemail: Union[str, None]
-    funckeys: FuncKeyDict
+    funckeys: Union[dict[str, FuncKeyDict], None]
     X_xivo_phonebook_ip: Union[str, None]
-    config_version: Union[
-        int, None
-    ]  # NOTE(afournier): this variable is unused. See WAZO-3619
+    X_xivo_phonebook_profile: Union[str, None]
+    X_xivo_user_uuid: Union[str, None]
 
 
 @validator('timezone', allow_reuse=True)
@@ -185,8 +214,10 @@ def validate_timezone(
 
 @validator('sccp_call_managers', 'funckeys', allow_reuse=True)
 def validate_numeric_keys(
-    cls: type[BaseModel], value: dict[str, Any]
-) -> dict[str, Any]:
+    cls: type[BaseModel], value: Union[dict[str, Any], None]
+) -> Union[dict[str, Any], None]:
+    if not value:
+        return None
     if not all(INTEGER_KEY_REGEX.match(k) for k in value):
         raise ValueError("Dictionary keys must be a positive integer in string format.")
     return value
@@ -204,33 +235,28 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
         if not values.get(f'{field}_{name}') and values.get(f'{field}_enabled'):
             raise ValueError(f'Field `{name}_{field}` is required if {name} is enabled')
 
-    custom_fields = set(values) - {field.alias for field in cls.__fields__.values()}
-    invalid_custom_fields = [
-        custom_field
-        for custom_field in custom_fields
-        if not custom_field.startswith('X_')
-    ]
-    if any(invalid_custom_fields):
-        raise ValueError('Custom fields must start with `X_`', invalid_custom_fields)
-
     return values
 
 
 RawConfigSchema = create_model_from_typeddict(
     RawConfigDict,
     {
+        "config_id": Field(exclude=True),
         "ip": Field(),
-        "funckeys": Field(default_factory=dict),
+        "funckeys": Field(default_factory=dict, alias="function_keys"),
         "locale": Field(regex=r'[a-z]{2}_[A-Z]{2}'),
         "syslog_port": Field(514),
         "syslog_level": Field(SyslogLevel.WARNING),
         "sip_srtp_mode": Field(SrtpMode.DISABLED),
         "sip_transport": Field(Transport.UDP),
         "sip_lines": Field(default_factory=dict),
-        "sccp_call_managers": Field(default_factory=dict),
+        "sccp_call_managers": Field(default_factory=dict, alias="sccp_lines"),
         "vlan_id": Field(gte=0, lte=4094),
         "vlan_priority": Field(gte=0, lte=7),
         "vlan_pc_port_id": Field(gte=0, lte=4094),
+        "X_xivo_phonebook_ip": Field(alias="phonebook_ip"),
+        "X_xivo_phonebook_profile": Field(alias="phonebook_profile"),
+        "X_xivo_user_uuid": Field(alias="user_uuid"),
     },
     {
         "validate_timezone": validate_timezone,
@@ -239,40 +265,87 @@ RawConfigSchema = create_model_from_typeddict(
     },
     config=SchemaConfig,
     type_overrides={
-        'funckeys': dict[str, FuncKeySchema],  # type: ignore[valid-type]
-        'sip_lines': dict[str, SipLineSchema],  # type: ignore[valid-type]
-        'sccp_call_managers': dict[str, CallManagerSchema],  # type: ignore[valid-type]
+        'funckeys': Union[dict[str, FuncKeySchema], None],  # type: ignore[valid-type]
+        'sip_lines': Union[dict[str, SipLineSchema], None],  # type: ignore[valid-type]
+        'sccp_call_managers': (
+            Union[dict[str, CallManagerSchema], None]  # type: ignore[valid-type]
+        ),
     },
 )
 
 
 class BaseConfigDict(TypedDict):
     id: Union[str, None]
-    parent_ids: list[str]
-    raw_config: RawConfigDict
+    parent_id: Union[str, None]
+    raw_config: Union[RawConfigDict, None]
 
 
 class ConfigDict(BaseConfigDict, total=False):
     transient: bool
     deletable: bool
-    role: str
+    X_type: Union[str, None]
+    displayname: Union[str, None]
+    label: Union[str, None]
+    role: Union[str, None]
+    registrar_main: Union[str, None]
+    registrar_main_port: Union[int, None]
+    proxy_main: Union[str, None]
+    proxy_main_port: Union[int, None]
+    proxy_outbound: Union[str, None]
+    proxy_outbound_port: Union[int, None]
+    registrar_backup: Union[str, None]
+    registrar_backup_port: Union[int, None]
+    proxy_backup: Union[str, None]
+    proxy_backup_port: Union[int, None]
+
+
+# TODO(afournier): should add integration tests for this
+@root_validator(pre=True)
+def convert_parent_ids(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, Any]:
+    if 'parent_ids' in values:
+        logger.warning(
+            'Using `parent_ids` is deprecated. Using the last value provided as parent_id'
+        )
+        parent_ids: str = values.pop('parent_ids')
+        parent_id = parent_ids.split(',')[-1]
+        logger.debug('Using `parent_id` "%s"', parent_id)
+        values['parent_id'] = parent_id
+    return values
+
+
+@root_validator(pre=True)
+def convert_label_or_displayname(
+    cls: type[BaseModel], values: dict[str, Any]
+) -> dict[str, Any]:
+    value_to_use = values.get('label', None) or values.get('displayname')
+    values['label'] = value_to_use
+    values['displayname'] = value_to_use
+
+    return values
 
 
 ConfigSchema = create_model_from_typeddict(
     ConfigDict,
     {
-        "id": Field(),
-        "parent_ids": Field(...),
+        "id": Field(regex=r'^[0-9a-z_-]+$'),
+        "parent_id": Field(...),
         "raw_config": Field(...),
+        "X_type": Field(alias="type"),
+        "displayname": Field(alias="label"),
     },
-    type_overrides={'raw_config': RawConfigSchema},  # type: ignore[valid-type]
+    {
+        "convert_parent_ids": convert_parent_ids,
+        "convert_label_or_displayname": convert_label_or_displayname,
+    },
+    config=SchemaConfig,
+    type_overrides={'raw_config': Union[RawConfigSchema, None]},  # type: ignore[valid-type]
 )
 
 
 class BaseDeviceDict(TypedDict, total=False):
     id: Union[str, None]
     mac: Union[str, None]
-    ip: Union[IPv4Address, str]
+    ip: Union[str, None]
     config: Union[str, None]
     model: Union[str, None]
     plugin: Union[str, None]
@@ -285,11 +358,32 @@ class BaseDeviceDict(TypedDict, total=False):
 
 class DeviceDict(BaseDeviceDict, total=False):
     tenant_uuid: str
+    added: str
+
+
+@validator('tenant_uuid', pre=True)
+def validate_tenant_uuid(
+    cls: type[BaseModel], value: Union[uuid.UUID, None]
+) -> Union[str, None]:
+    return str(value) if value else None
+
+
+@validator('ip')
+def validate_ip(cls: type[BaseModel], value: Union[str, None]) -> Union[str, None]:
+    return str(IPv4Address(value)) if value else None
 
 
 DeviceSchema = create_model_from_typeddict(
     DeviceDict,
     {
+        "id": Field(regex=r'^[0-9a-z]+$'),
         "mac": Field(regex=_NORMED_MAC.pattern),
+        "config": Field(alias="config_id"),
+        "added": Field(default="auto"),
     },
+    {
+        "validate_tenant_uuid": validate_tenant_uuid,
+        "validate_ip": validate_ip,
+    },
+    config=SchemaConfig,
 )

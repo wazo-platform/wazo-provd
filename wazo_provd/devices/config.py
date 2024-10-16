@@ -30,24 +30,12 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections import defaultdict
-from collections.abc import Callable, Generator
-from copy import deepcopy
-from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from twisted.internet import defer
-from twisted.internet.defer import Deferred
-
-from wazo_provd.devices.schemas import ConfigSchema
-from wazo_provd.persist.common import ID_KEY
-from wazo_provd.persist.util import ForwardingDocumentCollection
-from wazo_provd.util import decode_bytes
+from wazo_provd.devices.schemas import ConfigDict, ConfigSchema, SyslogLevel
 
 if TYPE_CHECKING:
-    from typing import Concatenate, ParamSpec, TypeVar
-
-    from wazo_provd.devices.schemas import ConfigDict
+    from typing import ParamSpec, TypeVar
 
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -468,254 +456,62 @@ class RawConfigParamError(RawConfigError):
     pass
 
 
-def _rec_update_dict(base_dict, overlay_dict):
+def recurse_update_dict(base_dict, overlay_dict):
     # update a base dictionary from another dictionary
     for k, v in overlay_dict.items():
         if isinstance(v, dict):
             old_v = base_dict.get(k)
             if isinstance(old_v, dict):
-                _rec_update_dict(old_v, v)
+                recurse_update_dict(old_v, v)
             else:
                 base_dict[k] = {}
-                _rec_update_dict(base_dict[k], v)
+                recurse_update_dict(base_dict[k], v)
         else:
             base_dict[k] = v
 
 
-def _check_config_validity(config: ConfigDict) -> None:
-    if 'parent_ids' not in config:
-        raise ValueError('missing "parent_ids" field in config')
-    if not isinstance(config['parent_ids'], list):
-        raise ValueError(
-            f'"parent_ids" field must be a list; is {type(config["parent_ids"])}'
-        )
-    for parent_id in config['parent_ids']:
-        if not isinstance(parent_id, str):
-            raise ValueError(f'parent id must be a string; is {type(parent_id)}')
+def config_types_fixes(config: ConfigDict) -> dict[str, Any]:
+    syslog_map = {
+        SyslogLevel.DEBUG: 4,
+        SyslogLevel.INFO: 3,
+        SyslogLevel.WARNING: 2,
+        SyslogLevel.ERROR: 1,
+        SyslogLevel.CRITICAL: 0,
+    }
+    new_config = cast(dict[str, Any], config)
+    if new_raw_config := new_config.get('raw_config', None):
+        if syslog_level := new_raw_config.get('syslog_level', None):
+            new_config['raw_config']['syslog_level'] = syslog_map.get(syslog_level)
+
+    return new_config
+
+
+def check_config_validity(config: ConfigDict) -> ConfigDict:
+    if 'parent_id' not in config:
+        raise ValueError('missing "parent_id" field in config')
+
+    if config['parent_id'] is not None and not isinstance(config['parent_id'], str):
+        raise ValueError(f'parent id must be a string; is {type(config["parent_id"])}')
 
     if 'raw_config' not in config:
         raise ValueError('missing "raw_config" field in config')
 
-    raw_config = config['raw_config']
+    raw_config: dict[str, Any] = cast(dict[str, Any], config['raw_config']) or {}
     if not isinstance(raw_config, dict):
         raise ValueError(
             f'"raw_config" field must be a dict; is {type(config["raw_config"])}'
         )
     # This also does the same as all the validations above and more,
     # the others were only left since apparently we want the same messages.
-    ConfigSchema.validate(config)
+    return ConfigSchema.validate(config).dict(by_alias=True)
 
 
-def _needs_child_and_parent_indexes(
-    fun: Callable[Concatenate[ConfigCollection, P], R]
-) -> Callable[Concatenate[ConfigCollection, P], Deferred]:
-    # Method wrapped by this decorator will return a deferred.
-    # Note: to be used only with method on a ConfigCollection.
-    @wraps(fun)
-    def aux(self: ConfigCollection, *args: P.args, **kwargs: P.kwargs) -> Deferred:
-        if self._has_child_and_parent_indexes():
-            return defer.maybeDeferred(fun, self, *args, **kwargs)
-        else:
-
-            def callback(_: Any) -> Deferred:
-                assert self._has_child_and_parent_indexes()
-                return fun(self, *args, **kwargs)
-
-            deferred = self._build_child_and_parent_indexes()
-            deferred.addCallback(callback)
-            return deferred
-
-    return aux
-
-
-# This method is for compatibility reasons for the following provisioning plugins:
-# wazo-htek, xivo-aastra, xivo-alcatel, xivo-avaya, xivo-cisco-sccp, xivo-cisco-spa, xivo-fanvil,
-# xivo-grandstream, xivo-jitsi, xivo-panasonic, xivo-patton, xivo-polycom, xivo-snom,
-# xivo-technicolor, xivo-yealink, xivo-zenitel
-# These plugins assume that because a key exists (with the in operator), the value is valid.
-# However, sometimes the value is None and this causes issues.
-def _remove_none_values_for_device(config):
-    if config.get('X_type') == 'device':
-        return _remove_none_values(config)
-    return config
-
-
-def _remove_none_values(config):
+def remove_none_values(config):
     if isinstance(config, list):
-        return [_remove_none_values(x) for x in config]
+        return [remove_none_values(x) for x in config]
     if isinstance(config, dict):
-        return {k: _remove_none_values(v) for k, v in config.items() if v is not None}
+        return {k: remove_none_values(v) for k, v in config.items() if v is not None}
     return config
-
-
-class ConfigCollection(ForwardingDocumentCollection):
-    @defer.inlineCallbacks
-    def _build_child_and_parent_indexes(
-        self,
-    ) -> Generator[None, list[ConfigDict], None]:
-        # XXX it's possible to have this method executed twice, for example
-        #     if during the time to yield another methods call this method,
-        #     etc, we should use a lock, twisted is such a pain sometimes,
-        #     but then it's only about efficiency (doing the same job twice
-        #     is less efficient than only once...)
-        logger.debug('Building child and parent indexes')
-        child_idx = defaultdict(list)
-        parent_idx = {}
-        configs = yield self._collection.find({})
-        for config in configs:
-            config_id = config[ID_KEY]  # type: ignore
-            parent_ids = config['parent_ids']
-            for parent_id in parent_ids:
-                child_idx[parent_id].append(config_id)
-            # update parent_idx
-            parent_idx[config_id] = list(parent_ids)
-        self._child_idx = child_idx
-        self._parent_idx = parent_idx
-
-    def _has_child_and_parent_indexes(self):
-        return hasattr(self, '_child_idx') and hasattr(self, '_parent_idx')
-
-    @_needs_child_and_parent_indexes
-    def insert(self, config: ConfigDict) -> Deferred:
-        config = _remove_none_values_for_device(config)
-        _check_config_validity(config)
-
-        def callback(config_id: str) -> str:
-            config_id = decode_bytes(config_id)
-            parent_ids = config['parent_ids']
-            # update child idx
-            for parent_id in parent_ids:
-                if parent_id in self._child_idx:
-                    self._child_idx[parent_id].append(config_id)
-                else:
-                    self._child_idx[parent_id] = [config_id]
-            # update parent idx
-            self._parent_idx[config_id] = list(parent_ids)
-            return config_id
-
-        deferred = self._collection.insert(config)
-        deferred.addCallback(callback)
-        return deferred
-
-    @_needs_child_and_parent_indexes
-    def update(self, config: ConfigDict) -> Deferred:
-        config = _remove_none_values_for_device(config)
-        _check_config_validity(config)
-
-        def callback(_: Any) -> None:
-            config_id = decode_bytes(config[ID_KEY])  # type: ignore
-            new_parent_ids = config['parent_ids']
-            old_parent_ids = self._parent_idx[config_id]
-            if new_parent_ids != old_parent_ids:
-                # update idx of children
-                for parent_id in old_parent_ids:
-                    children = self._child_idx[parent_id]
-                    children.remove(config_id)
-                    if not children:
-                        del self._child_idx[parent_id]
-                for parent_id in new_parent_ids:
-                    if parent_id in self._child_idx:
-                        self._child_idx[parent_id].append(config_id)
-                    else:
-                        self._child_idx[parent_id] = [config_id]
-                # update parent idx
-                self._parent_idx[config_id] = list(new_parent_ids)
-
-        deferred = self._collection.update(config)
-        deferred.addCallback(callback)
-        return deferred
-
-    @_needs_child_and_parent_indexes
-    def delete(self, config_id: str) -> Deferred:
-        config_id = decode_bytes(config_id)
-
-        def callback(_: Any) -> None:
-            # update idx of children
-            old_parent_ids = self._parent_idx[config_id]
-            for parent_id in old_parent_ids:
-                children = self._child_idx[parent_id]
-                children.remove(config_id)
-                if not children:
-                    del self._child_idx[parent_id]
-            # update parent idx
-            del self._parent_idx[config_id]
-
-        deferred = self._collection.delete(config_id)
-        deferred.addCallback(callback)
-        return deferred
-
-    @_needs_child_and_parent_indexes
-    def get_ancestors(self, config_id: str) -> set[str]:
-        """Return a deferred that will fire with the set of ancestors of the
-        config with the given ID, i.e. the set of config ID that the given
-        config depends on, directly or indirectly, or fire with an empty set
-        if id is unknown.
-
-        """
-        visited = set()
-
-        def aux(cur_id: str) -> None:
-            if cur_id in self._parent_idx:
-                for parent_id in self._parent_idx[cur_id]:
-                    if parent_id not in visited:
-                        visited.add(parent_id)
-                        aux(parent_id)
-
-        aux(decode_bytes(config_id))
-        return visited
-
-    @_needs_child_and_parent_indexes
-    def get_descendants(self, config_id: str):
-        """Return a deferred that will fire with the set of descendants of the
-        config with the given ID, i.e. the set of config ID that depends on
-        this config, directly or indirectly, or fire with an empty set if id
-        is unknown.
-
-        """
-        visited = set()
-
-        def aux(cur_id: str) -> None:
-            if cur_id in self._child_idx:
-                for child_id in self._child_idx[cur_id]:
-                    if child_id and child_id not in visited:
-                        visited.add(child_id)
-                        aux(child_id)
-
-        aux(decode_bytes(config_id))
-        return visited
-
-    def get_raw_config(
-        self, config_id: str, base_raw_config: dict[str, Any] | None = None
-    ) -> Deferred:
-        """Return a deferred that will fire with a raw config with every
-        parameter from its ancestors' config, or fire with None if id is not
-        a known ID.
-
-        """
-        # flattened_raw_config is set to a copy of base_raw_config only once
-        # we know that the id is valid. This is a bit ugly, but it's the
-        # simplest thing to do.
-        flattened_raw_config: dict[str, Any] | None = None
-        visited = {config_id}
-        if base_raw_config is None:
-            base_raw_config = {}
-
-        @defer.inlineCallbacks
-        def aux(cur_id: str) -> Generator[None, None, None]:
-            nonlocal flattened_raw_config
-            config = yield self._collection.retrieve(cur_id)
-            if config is not None:
-                if flattened_raw_config is None:
-                    flattened_raw_config = deepcopy(base_raw_config)
-                for parent_id in config['parent_ids']:
-                    if parent_id not in visited:
-                        visited.add(parent_id)
-                        yield aux(parent_id)
-                _rec_update_dict(flattened_raw_config, config['raw_config'])
-
-        d = aux(decode_bytes(config_id))
-        d.addCallback(lambda _: flattened_raw_config)
-        return d
 
 
 def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
@@ -725,11 +521,24 @@ def build_autocreate_config(config: ConfigDict) -> ConfigDict | None:
         return None
 
     config_id = config['id'] or ''
+    raw_config = config.get('raw_config')
     new_suffix = str(uuid.uuid4())
-    full_config: ConfigDict = {
-        'id': config_id + new_suffix,
-        'parent_ids': [config_id],
-        'raw_config': config['raw_config'],
+    new_config_id = config_id + new_suffix
+    full_config = {
+        'id': new_config_id,
+        'parent_id': config_id,
+        'raw_config': raw_config,
         'transient': True,
     }
-    return full_config
+    if raw_config:
+        raw_config['config_id'] = new_config_id
+
+        sip_lines = raw_config.get('sip_lines') or {}
+        for _, sip_line in sip_lines.items():
+            sip_line['uuid'] = str(uuid.uuid4())
+
+        sccp_lines = raw_config.get('sccp_call_managers') or {}
+        for _, sccp_line in sccp_lines.items():
+            sccp_line['uuid'] = str(uuid.uuid4())
+
+    return cast(ConfigDict, full_config)

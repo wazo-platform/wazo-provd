@@ -216,14 +216,14 @@ def create_model_from_typeddict(
     field_options: dict[str, type] | None = None,
     validators: dict[str, Callable[..., Any]] | None = None,
     config: type | None = None,
-    type_overrides: dict[str, type] | None = None,
+    type_overrides: dict[str, Any] | None = None,
 ) -> type[BaseModel]:
     """
     This is a helper that creates a pydantic model from a TypedDict definition.
     It allows us to define a TypedDict we can use for typing our dictionaries and
     build a pydantic schema from that which can be used for validation.
     It gives the same result as the built-in `create_model_from_typeddict`` in pydantic 1.9+.
-    **Note**: If your using lazy annotations in the file where this is called,
+    **Note**: If you are using lazy annotations in the file where this is called,
     you will need to manually call `update_forward_refs` on the resulting class.
 
     If we updated to pydantic >=1.9,<2.0 we can replace this with the built-in version.
@@ -232,7 +232,11 @@ def create_model_from_typeddict(
     """
     schema_name = typed_dict.__name__.rstrip('Dict') + 'Schema'
     type_overrides = type_overrides or {}
-    attrs: dict[str, Any] = {'__annotations__': typed_dict.__annotations__}
+    attrs: dict[str, Any] = {
+        '__annotations__': typed_dict.__annotations__,
+        '__module__': typed_dict.__module__,
+    }
+
     for field_name, field_annotation in typed_dict.__annotations__.items():
         attrs[field_name] = (
             field_options.get(field_name, None) if field_options else None

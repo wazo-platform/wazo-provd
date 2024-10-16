@@ -29,6 +29,7 @@ from .helpers import fixtures
 from .helpers.base import (
     INVALID_TOKEN,
     MAIN_TENANT,
+    PLUGIN_SERVER,
     SUB_TENANT_1,
     SUB_TENANT_2,
     VALID_TOKEN,
@@ -81,10 +82,10 @@ class TestDevices(BaseIntegrationTest):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.wait_strategy.wait(cls)
         cls.setup_token()
-        setup_bus(host='localhost', port=cls.service_port(5672, 'rabbitmq'))
+        setup_bus(host='127.0.0.1', port=cls.service_port(5672, 'rabbitmq'))
         cls.filesystem = cls.make_filesystem()
+        cls._client.params.update('plugin_server', PLUGIN_SERVER)
 
     @classmethod
     def setup_token(cls) -> None:
@@ -102,10 +103,6 @@ class TestDevices(BaseIntegrationTest):
         )
         cls.mock_auth.set_token(token)
         cls._reset_auth_tenants()
-
-    @classmethod
-    def _create_auth_tenant(cls) -> None:
-        cls.mock_auth.set_tenants(*DEFAULT_TENANTS)
 
     @classmethod
     def _delete_auth_tenant(cls) -> None:
@@ -208,34 +205,46 @@ class TestDevices(BaseIntegrationTest):
         )
 
     def test_update(self) -> None:
-        with fixtures.Device(self._client) as device:
-            device |= {'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}  # type: ignore
-            self._client.devices.update(device)
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                device |= {'ip': '5.6.7.8', 'mac': 'aa:bb:cc:dd:ee:ff'}  # type: ignore
+                self._client.devices.update(device)
 
-            result = self._client.devices.get(device['id'])
-            assert_that(result['ip'], is_(equal_to('5.6.7.8')))
-            assert_that(
-                result, has_entry('is_new', True)
-            )  # Still in master tenant, so still new
+                result = self._client.devices.get(device['id'])
+                assert_that(result['ip'], is_(equal_to('5.6.7.8')))
+                assert_that(
+                    result, has_entry('is_new', True)
+                )  # Still in master tenant, so still new
 
     def test_update_errors(self) -> None:
-        with fixtures.Device(self._client) as device:
-            assert_that(
-                calling(self._client.devices.update).with_args(
-                    {'id': 'invalid_id', 'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
-            assert_that(
-                calling(self._client.devices.update).with_args(
-                    {'id': device['id'], 'ip': '10.0.1.1', 'mac': '00:11:22:33:44:xx'}
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 500)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                assert_that(
+                    calling(self._client.devices.update).with_args(
+                        {
+                            'id': 'invalid_id',
+                            'ip': '1.2.3.4',
+                            'mac': '00:11:22:33:44:55',
+                        }
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
+                assert_that(
+                    calling(self._client.devices.update).with_args(
+                        {
+                            'id': device['id'],
+                            'ip': '10.0.1.1',
+                            'mac': '00:11:22:33:44:xx',
+                        }
+                    ),
+                    raises(ProvdError).matching(
+                        has_properties('status_code', 500)
+                    ),  # FIXME(afournier): should be 400
+                )
 
     def test_update_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Device(self._client):
+        with fixtures.http.Device(self._client):
             assert_that(
                 calling(provd.devices.update).with_args(
                     {'ip': '1.2.3.4', 'mac': '00:11:22:33:44:55'}
@@ -244,43 +253,47 @@ class TestDevices(BaseIntegrationTest):
             )
 
     def test_update_change_tenant_from_main_to_subtenant(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            self._client.devices.update(device, tenant_uuid=SUB_TENANT_1)
-            device_result = self._client.devices.get(device['id'])
-            assert_that(device_result, has_entry('tenant_uuid', SUB_TENANT_1))
-            assert_that(device_result, has_entry('is_new', False))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+                self._client.devices.update(device, tenant_uuid=SUB_TENANT_1)
+                device_result = self._client.devices.get(device['id'])
+                assert_that(device_result, has_entry('tenant_uuid', SUB_TENANT_1))
+                assert_that(device_result, has_entry('is_new', False))
 
     def test_update_change_tenant_to_main_tenant_does_not_change_tenant_but_update_anyway(
         self,
     ) -> None:
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            device['ip'] = '10.10.10.10'
-            self._client.devices.update(device, tenant_uuid=MAIN_TENANT)
-            device_result = self._client.devices.get(device['id'])
-            assert_that(device_result, has_entries(**device))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                device['ip'] = '10.10.10.10'
+                self._client.devices.update(device, tenant_uuid=MAIN_TENANT)
+                device_result = self._client.devices.get(device['id'])
+                assert_that(device_result, has_entries(**device))
 
     def test_update_change_tenant_to_other_subtenant_error(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            assert_that(
-                calling(self._client.devices.update).with_args(
-                    device, tenant_uuid=SUB_TENANT_2
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                assert_that(
+                    calling(self._client.devices.update).with_args(
+                        device, tenant_uuid=SUB_TENANT_2
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
 
     def test_update_multitenant_wrong_token_errors(self) -> None:
         provd = self.make_provd(VALID_TOKEN)
-        with fixtures.Device(self._client) as device:
-            assert_that(
-                calling(provd.devices.update).with_args(
-                    device, tenant_uuid=MAIN_TENANT
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 401)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                assert_that(
+                    calling(provd.devices.update).with_args(
+                        device, tenant_uuid=MAIN_TENANT
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 401)),
+                )
 
     def test_synchronize(self) -> None:
-        with fixtures.Plugin(self._client, bool(fixtures.PLUGIN_TO_INSTALL)):
-            with fixtures.Device(self._client) as device:
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
                 with self._client.devices.synchronize(
                     device['id']
                 ) as operation_progress:
@@ -290,52 +303,64 @@ class TestDevices(BaseIntegrationTest):
 
     def test_synchronize_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Device(self._client) as device:
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                assert_that(
+                    calling(provd.devices.synchronize).with_args(device['id']),
+                    raises(ProvdError).matching(has_properties('status_code', 401)),
+                )
             assert_that(
-                calling(provd.devices.synchronize).with_args(device['id']),
+                calling(provd.devices.synchronize).with_args('invalid_id'),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
             )
-        assert_that(
-            calling(provd.devices.synchronize).with_args('invalid_id'),
-            raises(ProvdError).matching(has_properties('status_code', 401)),
-        )
 
     def test_synchronize_subtenant_from_main(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            self._client.devices.synchronize(device['id'], tenant_uuid=MAIN_TENANT)
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                with self._client.devices.synchronize(
+                    device['id'],
+                    tenant_uuid=MAIN_TENANT,
+                ) as operation_progress:
+                    until.assert_(
+                        operation_successful, operation_progress, tries=20, interval=0.5
+                    )
 
     def test_synchronize_main_from_subtenant(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            assert_that(
-                calling(self._client.devices.synchronize).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_1
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+                assert_that(
+                    calling(self._client.devices.synchronize).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_1
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
 
     def test_synchronize_subtenant_from_another_subtenant(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            assert_that(
-                calling(self._client.devices.synchronize).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_2
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                assert_that(
+                    calling(self._client.devices.synchronize).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_2
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
 
     def test_synchronize_multitenant_wrong_token_errors(self) -> None:
         provd = self.make_provd(VALID_TOKEN)
-        with fixtures.Device(self._client) as device:
-            assert_that(
-                calling(provd.devices.synchronize).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_1
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 401)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                assert_that(
+                    calling(provd.devices.synchronize).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_1
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 401)),
+                )
 
     def test_get(self) -> None:
-        with fixtures.Device(self._client) as device:
-            result = self._client.devices.get(device['id'])
-            assert_that(result['id'], is_(equal_to(device['id'])))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                result = self._client.devices.get(device['id'])
+                assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_errors(self) -> None:
         assert_that(
@@ -345,37 +370,41 @@ class TestDevices(BaseIntegrationTest):
 
     def test_get_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Device(self._client) as device:
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                assert_that(
+                    calling(provd.devices.get).with_args(device['id']),
+                    raises(ProvdError).matching(has_properties('status_code', 401)),
+                )
             assert_that(
-                calling(provd.devices.get).with_args(device['id']),
+                calling(provd.devices.get).with_args('unknown_id'),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
             )
-        assert_that(
-            calling(provd.devices.get).with_args('unknown_id'),
-            raises(ProvdError).matching(has_properties('status_code', 401)),
-        )
 
     def test_get_subtenant_from_main_tenant(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
-            assert_that(result['id'], is_(equal_to(device['id'])))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
+                assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_get_main_tenant_from_subtenant_errors(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            assert_that(
-                calling(self._client.devices.get).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_1
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+                assert_that(
+                    calling(self._client.devices.get).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_1
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
 
     def test_delete(self) -> None:
-        with fixtures.Device(self._client, delete_on_exit=False) as device:
-            self._client.devices.delete(device['id'])
-            assert_that(
-                calling(self._client.devices.get).with_args(device['id']),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, delete_on_exit=False) as device:
+                self._client.devices.delete(device['id'])
+                assert_that(
+                    calling(self._client.devices.get).with_args(device['id']),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
 
     def test_delete_errors(self) -> None:
         assert_that(
@@ -385,40 +414,43 @@ class TestDevices(BaseIntegrationTest):
 
     def test_delete_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Device(self._client) as device:
+        with fixtures.http.Device(self._client) as device:
             assert_that(
                 calling(provd.devices.delete).with_args(device['id']),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
             )
 
     def test_delete_subtenant_from_main_tenant(self) -> None:
-        with fixtures.Device(
-            self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1
-        ) as device:
-            self._client.devices.delete(device['id'], tenant_uuid=MAIN_TENANT)
-            assert_that(
-                calling(self._client.devices.get).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_1
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(
+                self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1
+            ) as device:
+                self._client.devices.delete(device['id'], tenant_uuid=MAIN_TENANT)
+                assert_that(
+                    calling(self._client.devices.get).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_1
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
 
     def test_delete_main_tenant_from_subtenant(self) -> None:
-        with fixtures.Device(
-            self._client, delete_on_exit=False, tenant_uuid=MAIN_TENANT
-        ) as device:
-            assert_that(
-                calling(self._client.devices.delete).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_1
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
-            result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
-            assert_that(result['id'], is_(equal_to(device['id'])))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(
+                self._client, delete_on_exit=False, tenant_uuid=MAIN_TENANT
+            ) as device:
+                assert_that(
+                    calling(self._client.devices.delete).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_1
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
+                result = self._client.devices.get(device['id'], tenant_uuid=MAIN_TENANT)
+                assert_that(result['id'], is_(equal_to(device['id'])))
 
     def test_reconfigure(self) -> None:
-        with fixtures.Device(self._client) as device:
-            self._client.devices.reconfigure(device['id'])
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                self._client.devices.reconfigure(device['id'])
 
     def test_reconfigure_errors(self) -> None:
         assert_that(
@@ -428,28 +460,31 @@ class TestDevices(BaseIntegrationTest):
 
     def test_reconfigure_error_invalid_token(self) -> None:
         provd = self.make_provd(INVALID_TOKEN)
-        with fixtures.Device(self._client) as device:
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client) as device:
+                assert_that(
+                    calling(provd.devices.reconfigure).with_args(device['id']),
+                    raises(ProvdError).matching(has_properties('status_code', 401)),
+                )
             assert_that(
-                calling(provd.devices.reconfigure).with_args(device['id']),
+                calling(provd.devices.reconfigure).with_args('unknown_id'),
                 raises(ProvdError).matching(has_properties('status_code', 401)),
             )
-        assert_that(
-            calling(provd.devices.reconfigure).with_args('unknown_id'),
-            raises(ProvdError).matching(has_properties('status_code', 401)),
-        )
 
     def test_reconfigure_subtenant_from_main_tenant(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
-            self._client.devices.reconfigure(device['id'], tenant_uuid=MAIN_TENANT)
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=SUB_TENANT_1) as device:
+                self._client.devices.reconfigure(device['id'], tenant_uuid=MAIN_TENANT)
 
     def test_reconfigure_main_tenant_from_subtenant(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            assert_that(
-                calling(self._client.devices.reconfigure).with_args(
-                    device['id'], tenant_uuid=SUB_TENANT_1
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 400)),
-            )
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+                assert_that(
+                    calling(self._client.devices.reconfigure).with_args(
+                        device['id'], tenant_uuid=SUB_TENANT_1
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 400)),
+                )
 
     def test_dhcp(self) -> None:
         self._client.devices.create_from_dhcp(
@@ -499,45 +534,52 @@ class TestDevices(BaseIntegrationTest):
         assert_that(find_results['devices'][0], has_entry('ip', '10.10.0.1'))
 
     def test_modify_tenant_in_device_remain_unchanged(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            self._client.devices.update(
-                {'id': device['id'], 'tenant_uuid': SUB_TENANT_1}
-            )
-            result = self._client.devices.get(device['id'])
-            assert_that(result, has_entry('tenant_uuid', MAIN_TENANT))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+                self._client.devices.update(
+                    {'id': device['id'], 'tenant_uuid': SUB_TENANT_1}
+                )
+                result = self._client.devices.get(device['id'])
+                assert_that(result, has_entry('tenant_uuid', MAIN_TENANT))
 
     def test_modify_is_new_in_device_remain_unchanged(self) -> None:
-        with fixtures.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
-            self._client.devices.update({'id': device['id'], 'is_new': False})
-            result = self._client.devices.get(device['id'])
-            assert_that(result, has_entry('is_new', True))
+        with fixtures.http.Plugin(self._client):
+            with fixtures.http.Device(self._client, tenant_uuid=MAIN_TENANT) as device:
+                self._client.devices.update({'id': device['id'], 'is_new': False})
+                result = self._client.devices.get(device['id'])
+                assert_that(result, has_entry('is_new', True))
 
     def test_delete_when_tenant_deleted_event(self) -> None:
         with (
-            fixtures.Device(
+            fixtures.http.Plugin(self._client),
+            fixtures.http.Device(
                 self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT
             ) as device1,
-            fixtures.Device(
+            fixtures.http.Device(
                 self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT
             ) as device2,
-            fixtures.Device(
+            fixtures.http.Device(
                 self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1
             ) as device3,
         ):
             BusClient.send_tenant_deleted(DELETED_TENANT, 'slug')
 
-            assert_that(
-                calling(self._client.devices.get).with_args(
-                    device1['id'], tenant_uuid=DELETED_TENANT
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
-            assert_that(
-                calling(self._client.devices.get).with_args(
-                    device2['id'], tenant_uuid=DELETED_TENANT
-                ),
-                raises(ProvdError).matching(has_properties('status_code', 404)),
-            )
+            def devices_deleted():
+                assert_that(
+                    calling(self._client.devices.get).with_args(
+                        device1['id'], tenant_uuid=DELETED_TENANT
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
+                assert_that(
+                    calling(self._client.devices.get).with_args(
+                        device2['id'], tenant_uuid=DELETED_TENANT
+                    ),
+                    raises(ProvdError).matching(has_properties('status_code', 404)),
+                )
+
+            until.assert_(devices_deleted, tries=20, interval=0.5)
+
             result = self._client.devices.get(device3['id'])
             assert_that(result, has_entry('id', device3['id']))
 
@@ -546,39 +588,33 @@ class TestDevices(BaseIntegrationTest):
             '/etc/wazo-provd/conf.d/01-syncdb.yml',
             content='general: {syncdb: {start_sec: 0, interval_sec: 0.1}}',
         )
-        self.restart_service('provd')
-        self.set_client()
-        self.wait_strategy.wait(self)
 
         with (
-            fixtures.Device(
+            fixtures.http.Device(
                 self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT
             ) as device1,
-            fixtures.Device(
+            fixtures.http.Device(
                 self._client, delete_on_exit=False, tenant_uuid=DELETED_TENANT
             ) as device2,
-            fixtures.Device(
+            fixtures.http.Device(
                 self._client, delete_on_exit=False, tenant_uuid=SUB_TENANT_1
             ) as device3,
         ):
+            self.restart_service('provd')
+            self.set_client()
+            self.wait_strategy.wait(self)
 
             def test_devices() -> None:
                 with TestDevices.delete_auth_tenant(DELETED_TENANT):
-                    # to be able to access to the provd API, the auth tenants are recreated
-                    TestDevices._reset_auth_tenants()
                     assert_that(
-                        calling(self._client.devices.get).with_args(
-                            device1['id'], tenant_uuid=DELETED_TENANT
-                        ),
+                        calling(self._client.devices.get).with_args(device1['id']),
                         raises(ProvdError).matching(has_properties('status_code', 404)),
                     )
                     assert_that(
-                        calling(self._client.devices.get).with_args(
-                            device2['id'], tenant_uuid=DELETED_TENANT
-                        ),
+                        calling(self._client.devices.get).with_args(device2['id']),
                         raises(ProvdError).matching(has_properties('status_code', 404)),
                     )
                     result = self._client.devices.get(device3['id'])
                     assert_that(result, has_entry('id', device3['id']))
 
-            until.assert_(test_devices, tries=10, interval=5)
+            until.assert_(test_devices, tries=20, interval=0.5)

@@ -20,6 +20,7 @@ from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import ErrorPage, NoResource, Resource
 
 from wazo_provd.devices.device import copy as copy_device
+from wazo_provd.devices.schemas import DeviceDict
 from wazo_provd.plugins import BasePluginManagerObserver, PluginManager
 from wazo_provd.security import log_security_msg
 from wazo_provd.servers.http import BaseHTTPHookService
@@ -352,10 +353,12 @@ class SearchDeviceRetriever(AbstractDeviceRetriever):
         self._app = app
         self._key = key
 
-    def retrieve(self, dev_info) -> Deferred:
+    @defer.inlineCallbacks
+    def retrieve(self, dev_info):
         if self._key in dev_info:
-            return self._app.dev_find_one({self._key: dev_info[self._key]})
-        return defer.succeed(None)
+            device = yield self._app.dev_find_one({self._key: dev_info[self._key]})
+            defer.returnValue(device)
+        defer.returnValue(None)
 
 
 class IpDeviceRetriever(AbstractDeviceRetriever):
@@ -548,11 +551,12 @@ class AutocreateConfigDeviceUpdater(AbstractDeviceUpdater):
         self._app = app
 
     @defer.inlineCallbacks
-    def update(self, device, dev_info, request, request_type):
+    def update(self, device: DeviceDict, dev_info, request, request_type):
         if 'config' not in device:
             new_config_id = yield self._app.cfg_create_new()
             if new_config_id is not None:
                 device['config'] = new_config_id
+                yield self._app.dev_update(device)
         defer.returnValue(None)
 
 
@@ -563,11 +567,12 @@ class RemoveOutdatedIpDeviceUpdater(AbstractDeviceUpdater):
     @defer.inlineCallbacks
     def update(self, device, dev_info, request, request_type):
         if not self._app.nat and 'ip' in dev_info:
-            selector = {'ip': dev_info['ip'], 'id': {'$ne': device['id']}}
-            outdated_devices = yield self._app.dev_find(selector)
-            for outdated_device in outdated_devices:
-                del outdated_device['ip']
-                self._app.dev_update(outdated_device)
+            selector = {'ip': dev_info['ip']}
+            possibly_outdated_devices = yield self._app.dev_find(selector)
+            for possibly_outdated_device in possibly_outdated_devices:
+                if possibly_outdated_device['id'] != device['id']:
+                    del possibly_outdated_device['ip']
+                    yield self._app.dev_update(possibly_outdated_device)
 
 
 class CompositeDeviceUpdater(AbstractDeviceUpdater):
@@ -671,7 +676,7 @@ class _RequestHelper:
             yield self._update_device_on_change(device)
 
     @defer.inlineCallbacks
-    def _update_device_on_no_change(self, device):
+    def _update_device_on_no_change(self, device: DeviceDict):
         if not device.get('configured'):
             defer.returnValue(None)
 
@@ -977,10 +982,10 @@ class DHCPRequestProcessingService(Resource):
 
     """
 
-    def __init__(self, process_service):
+    def __init__(self, process_service: RequestProcessingService):
         self._process_service = process_service
 
-    def handle_dhcp_request(self, request: DHCPRequest):
+    def handle_dhcp_request(self, request: DHCPRequest) -> Deferred:
         """Handle DHCP request.
 
         DHCP requests are dictionary objects with the following keys:
@@ -1000,3 +1005,4 @@ class DHCPRequestProcessingService(Resource):
 
         d = self._process_service.process(request, RequestType.DHCP)
         d.addErrback(errback)
+        return d

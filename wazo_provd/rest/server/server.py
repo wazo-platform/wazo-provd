@@ -22,6 +22,7 @@ from binascii import a2b_base64
 from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from twisted.internet import defer
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
@@ -34,6 +35,7 @@ from wazo_provd.app import (
     ProvisioningApplication,
     TenantInvalidForDeviceError,
 )
+from wazo_provd.database.exceptions import EntryNotFoundException
 from wazo_provd.localization import get_locale_and_language
 from wazo_provd.operation import (
     OperationInProgress,
@@ -52,6 +54,8 @@ from wazo_provd.util import decode_bytes, decode_value, norm_ip, norm_mac
 from .auth import get_auth_verifier, required_acl
 
 if TYPE_CHECKING:
+    from twisted.python.failure import Failure
+
     from wazo_provd.devices.ident import DHCPRequest, DHCPRequestProcessingService
 
 R = TypeVar('R')
@@ -284,15 +288,11 @@ def _add_sort_parameters(args: dict[str, list[str]], result: dict[str, Any]) -> 
     # sort=mac&sort_ord=ASC
     if 'sort' in args:
         key = args['sort'][0]
-        direction = 1
         if 'sort_ord' in args:
-            raw_direction = args['sort_ord'][0]
-            if raw_direction == 'ASC':
-                direction = 1
-            elif raw_direction == 'DESC':
-                direction = -1
-            else:
-                logger.warning('Invalid sort_ord value: %s', raw_direction)
+            direction = args['sort_ord'][0]
+            if direction != 'ASC' and direction != 'DESC':
+                logger.warning('Invalid sort_ord value: %s', direction)
+                direction = 'ASC'
         result['sort'] = (key, direction)
 
 
@@ -303,7 +303,7 @@ def find_arguments_from_request(request: Request) -> dict[str, Any]:
     result: dict[str, Any] = {}
     args: dict[str, list[str]] = decode_value(request.args)
     _add_selector_parameter(args, result)
-    _add_fields_parameter(args, result)
+    # _add_fields_parameter(args, result)
     _add_skip_parameter(args, result)
     _add_limit_parameters(args, result)
     _add_sort_parameters(args, result)
@@ -450,21 +450,32 @@ class ConfigureServiceResource(AuthResource):
 
     @required_acl('provd.configure.read')
     @json_response_entity
-    def render_GET(self, request: Request):
+    def render_GET(self, request: Request) -> NOT_DONE_YET:
         description_list = self._get_localized_description_list()
-        params = []
-        for key, description in description_list:
-            value = self._cfg_srv.get(key, tenant_uuid=self.tenant_uuid)
-            href = uri_append_path(request.path, key)
-            params.append(
-                {
-                    'id': key,
-                    'description': description,
-                    'value': value,
-                    'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}],
-                }
-            )
-        return json_response({'params': params})
+        all_deferreds = []
+
+        for key, _ in description_list:
+            all_deferreds.append(self._cfg_srv.get(key, tenant_uuid=self.tenant_uuid))
+
+        def set_and_return_results(values):
+            params = []
+            key_values = zip(description_list, values)
+            for (key, description), value in key_values:
+                href = uri_append_path(request.path, key)
+                params.append(
+                    {
+                        'id': key,
+                        'description': description,
+                        'value': value,
+                        'links': [{'rel': REL_CONFIGURE_PARAM, 'href': href}],
+                    }
+                )
+            data = json_dumps({'params': params})
+            deferred_respond_ok(request, data)
+
+        deferred_results = defer.gatherResults(all_deferreds, consumeErrors=True)
+        deferred_results.addCallback(set_and_return_results)
+        return NOT_DONE_YET
 
 
 class PluginConfigureServiceResource(ConfigureServiceResource):
@@ -487,31 +498,49 @@ class ConfigureParameterResource(AuthResource):
 
     @required_acl('provd.configure.{tenant_uuid}.{param_id}.read')
     @json_response_entity
-    def render_GET(self, request: Request):
-        try:
-            value = self._cfg_srv.get(self.param_id, tenant_uuid=self.tenant_uuid)
-        except KeyError:
-            logger.info('Invalid/unknown key: %s', self.param_id)
-            return respond_no_resource(request)
-        return json_response({'param': {'value': value}})
+    def render_GET(self, request: Request) -> NOT_DONE_YET:
+        def on_callback(value):
+            data = json_dumps({'param': {'value': value}})
+            deferred_respond_ok(request, data)
+
+        def on_errback(failure: Failure):
+            if failure.check(KeyError):
+                logger.info('Invalid/unknown key: %s', self.param_id)
+                deferred_respond_no_resource(request)
+
+        d = self._cfg_srv.get(self.param_id, tenant_uuid=self.tenant_uuid)
+        d.addCallbacks(on_callback, on_errback)
+        return NOT_DONE_YET
 
     @required_acl('provd.configure.{tenant_uuid}.{param_id}.update')
     @json_request_entity
-    def render_PUT(self, request: Request, content: dict[str, Any]):
+    def render_PUT(self, request: Request, content: dict[str, Any]) -> NOT_DONE_YET:
         try:
             value = content['param']['value']
+            logger.debug('Trying to set %s to %s', self.param_id, value)
         except KeyError:
-            return respond_error(request, 'Wrong information in entity')
+            deferred_respond_error(request, 'Wrong information in entity')
 
-        try:
-            self._cfg_srv.set(self.param_id, value, tenant_uuid=self.tenant_uuid)
-        except InvalidParameterError as e:
-            logger.info('Invalid value for key %s: %r', self.param_id, value)
-            return respond_error(request, e)
-        except KeyError:
-            logger.info('Invalid/unknown key: %s', self.param_id)
-            return respond_no_resource(request)
-        return respond_no_content(request)
+        def on_callback(_):
+            deferred_respond_no_content(request)
+
+        def on_errback(failure: Failure):
+            if failure.check(InvalidParameterError):
+                e = failure.value
+                logger.info('Invalid value for key %s: %r', self.param_id, value)
+                deferred_respond_error(request, e)
+            elif failure.check(KeyError):
+                logger.info('Invalid/unknown key: %s', self.param_id)
+                deferred_respond_no_resource(request)
+            else:
+                logger.error('Unknown error: %s', failure)
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
+
+        d = self._cfg_srv.set(self.param_id, value, tenant_uuid=self.tenant_uuid)
+        d.addCallbacks(on_callback, on_errback)
+        return NOT_DONE_YET
 
 
 class PluginInstallServiceResource(IntermediaryResource):
@@ -787,7 +816,8 @@ class DeviceSynchronizeResource(_OipInstallResource):
             def on_tenant_valid_for_device(tenant_uuid):
                 deferred = self._app.dev_synchronize(device_id)
                 oip = operation_in_progres_from_deferred(deferred)
-                _ignore_deferred_error(deferred)
+                # _ignore_deferred_error(deferred)
+                deferred.addErrback(self._app._handle_error)
                 location = self._add_new_oip(oip, request)
                 return respond_created_no_content(request, location)
 
@@ -795,6 +825,7 @@ class DeviceSynchronizeResource(_OipInstallResource):
                 if failure.check(
                     InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
                 ):
+                    logger.debug('Failure while synchronizing: %s', failure)
                     deferred_respond_no_resource(request)
                 else:
                     deferred_respond_error(
@@ -880,8 +911,13 @@ class DeviceDHCPInfoResource(AuthResource):
 
         if op == 'commit':
             dhcp_request: DHCPRequest = {'ip': ip, 'mac': mac, 'options': options}  # type: ignore
-            self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
-            return respond_no_content(request)
+            d = self._dhcp_req_processing_srv.handle_dhcp_request(dhcp_request)
+
+            def on_callback(ign):
+                deferred_respond_no_content(request)
+
+            d.addCallbacks(on_callback)
+            return NOT_DONE_YET
         if op == 'expiry' or op == 'release':
             # we are keeping this only for compatibility -- release and
             # expiry event doesn't interest us anymore
@@ -908,16 +944,17 @@ class DevicesResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(devices):
+            logger.debug('On devices callback: %s', devices)
             data = json_dumps({'devices': list(devices)})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
+            logger.debug('On devices errback: %s', failure)
             deferred_respond_error(request, failure.value)
 
         recurse = self._extract_recurse(request)
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=recurse)
-        find_arguments['selector']['tenant_uuid'] = {'$in': tenant_uuids}
-        d = self._app.dev_find(**find_arguments)
+        d = self._app.dev_find(**find_arguments, tenant_uuids=tenant_uuids)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
 
@@ -960,19 +997,22 @@ class DeviceResource(AuthResource):
     @required_acl('provd.dev_mgr.devices.{device_id}.read')
     def render_GET(self, request: Request):
         def on_callback(device):
-            if device is None:
-                deferred_respond_no_resource(request)
-            else:
-                data = json_dumps({'device': device})
-                deferred_respond_ok(request, data)
+            logger.debug('On callback for device %s', device)
+            data = json_dumps({'device': device})
+            deferred_respond_ok(request, data)
 
         def on_error(failure):
-            deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+            logger.debug('On errback for device: %s', failure)
+            if failure.check(EntryNotFoundException):
+                logger.debug('Errback is an EntryNotFoundException')
+                deferred_respond_no_resource(request)
+            else:
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         tenant_uuids = self._build_tenant_list_from_request(request, recurse=True)
-        d = self._app.dev_find_one(
-            {'id': self.device_id, 'tenant_uuid': {'$in': tenant_uuids}}
-        )
+        d = self._app.dev_get(self.device_id, tenant_uuids=tenant_uuids)
         d.addCallbacks(on_callback, on_error)
         return NOT_DONE_YET
 
@@ -1008,7 +1048,10 @@ class DeviceResource(AuthResource):
 
         def on_errback(failure):
             if failure.check(
-                InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+                EntryNotFoundException,
+                InvalidIdError,
+                TenantInvalidForDeviceError,
+                UnauthorizedTenant,
             ):
                 deferred_respond_no_resource(request)
             else:
@@ -1039,7 +1082,10 @@ class DeviceResource(AuthResource):
 
         def on_errback(failure):
             if failure.check(
-                InvalidIdError, TenantInvalidForDeviceError, UnauthorizedTenant
+                EntryNotFoundException,
+                InvalidIdError,
+                TenantInvalidForDeviceError,
+                UnauthorizedTenant,
             ):
                 deferred_respond_no_resource(request)
             else:
@@ -1103,10 +1149,12 @@ class ConfigsResource(AuthResource):
         find_arguments = find_arguments_from_request(request)
 
         def on_callback(configs):
-            data = json_dumps({'configs': list(configs)})
+            logger.debug('In callback of configs, configs: %s', configs)
+            data = json_dumps({'configs': configs})
             deferred_respond_ok(request, data)
 
         def on_errback(failure):
+            logger.debug('On errback of configs, failure = %s', failure)
             deferred_respond_error(request, failure.value)
 
         d = self._app.cfg_find(**find_arguments)
@@ -1148,14 +1196,16 @@ class ConfigResource(AuthResource):
     @required_acl('provd.cfg_mgr.configs.{config_id}.read')
     def render_GET(self, request: Request) -> NOT_DONE_YET:
         def on_callback(config):
-            if config is None:
-                deferred_respond_no_resource(request)
-            else:
-                data = json_dumps({'config': config})
-                deferred_respond_ok(request, data)
+            data = json_dumps({'config': config})
+            deferred_respond_ok(request, data)
 
         def on_error(failure):
-            deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
+            if failure.check(EntryNotFoundException):
+                deferred_respond_no_resource(request)
+            else:
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._app.cfg_retrieve(self.config_id)
         d.addCallbacks(on_callback, on_error)
@@ -1180,6 +1230,7 @@ class ConfigResource(AuthResource):
                     request, failure.value, http.INTERNAL_SERVER_ERROR
                 )
 
+        logger.debug('Config pre-update: %s', config)
         d = self._app.cfg_update(config)
         d.addCallbacks(on_callback, on_errback)
         return NOT_DONE_YET
@@ -1221,8 +1272,12 @@ class RawConfigResource(AuthResource):
                 deferred_respond_ok(request, data)
 
         def on_errback(failure):
-            deferred_respond_error(request, failure.value, http.INTERNAL_SERVER_ERROR)
-            return failure
+            if failure.check(EntryNotFoundException):
+                deferred_respond_no_resource(request)
+            else:
+                deferred_respond_error(
+                    request, failure.value, http.INTERNAL_SERVER_ERROR
+                )
 
         d = self._app.cfg_retrieve_raw_config(self.config_id)
         d.addCallbacks(on_callback, on_errback)

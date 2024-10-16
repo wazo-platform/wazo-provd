@@ -3,14 +3,38 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import os
 
-from wazo_provd_client import Client
-from wazo_test_helpers.asset_launching_test_case import AssetLaunchingTestCase
+from wazo_provd_client import Client as ProvdClient
+from wazo_test_helpers import until
+from wazo_test_helpers.asset_launching_test_case import (
+    AssetLaunchingTestCase,
+    NoSuchPort,
+    NoSuchService,
+    WrongClient,
+)
 
-from .wait_strategy import WaitStrategy
+from wazo_provd.database.queries import (
+    DeviceConfigDAO,
+    DeviceDAO,
+    DeviceRawConfigDAO,
+    FunctionKeyDAO,
+    SCCPLineDAO,
+    ServiceConfigurationDAO,
+    SIPLineDAO,
+    TenantDAO,
+)
+
+from .bus import BusClient
+from .database import DatabaseClient
+from .wait_strategy import NoWaitStrategy, WaitStrategy
 
 API_VERSION = '0.2'
+
+PLUGIN_SERVER = 'http://pluginserver:8080/'
+DB_URI = 'postgresql://wazo-provd:Secr7t@127.0.0.1:{port}'
 
 VALID_TOKEN = 'valid-token'
 INVALID_TOKEN = 'invalid-token'
@@ -19,31 +43,102 @@ VALID_TOKEN_MULTITENANT = 'valid-token-multitenant'
 MAIN_TENANT = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1'
 SUB_TENANT_1 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2'
 SUB_TENANT_2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3'
+INVALID_RESOURCE_UUID = '88888888-0000-4000-8000-999999999999'
 
 
-class BaseIntegrationTest(AssetLaunchingTestCase):
+def asyncio_run(async_func):
+    def wrapper(*args, **kwargs):
+        return asyncio.run(async_func(*args, **kwargs))
+
+    # without this, fixtures are not injected
+    wrapper.__signature__ = inspect.signature(async_func)  # type: ignore
+    return wrapper
+
+
+class _BaseIntegrationTest(AssetLaunchingTestCase):
     assets_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), '..', '..', 'assets')
     )
-    service = 'provd'
-    wait_strategy = WaitStrategy()
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.set_client()
+        cls.start_postgres_service()
+        cls.wait_strategy.wait(cls)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        # FIXME: Refactor this global client to be used like others clients (i.e. by class)
+        BusClient._reset_bus()
 
     @classmethod
     def set_client(cls):
         cls._client = cls.make_provd(VALID_TOKEN_MULTITENANT)
 
     @classmethod
-    def make_provd(cls, token: str) -> Client:
-        return Client(
+    def make_provd(cls, token: str) -> ProvdClient:
+        try:
+            port = cls.service_port(8666, 'provd')
+        except (NoSuchService, NoSuchPort):
+            return WrongClient('postgres')
+        return ProvdClient(
             '127.0.0.1',
-            port=cls.service_port(8666, 'provd'),
+            port=port,
             version=API_VERSION,
             prefix=None,
             https=False,
             token=token,
         )
+
+    @classmethod
+    def make_db(cls) -> DatabaseClient | WrongClient:
+        try:
+            port = cls.service_port(5432, 'postgres')
+        except (NoSuchService, NoSuchPort):
+            return WrongClient('postgres')
+        return DatabaseClient(DB_URI.format(port=port))
+
+    @classmethod
+    def start_postgres_service(cls) -> None:
+        cls.start_service('postgres')
+        cls.db = cls.make_db()
+
+        def db_is_up() -> bool:
+            try:
+                cls.db.runOperation('SELECT 1')
+            except Exception:
+                return False
+            return True
+
+        until.true(db_is_up, tries=60)
+
+    @classmethod
+    def stop_postgres_service(cls) -> None:
+        cls.stop_service('postgres')
+
+
+class BaseIntegrationTest(_BaseIntegrationTest):
+    asset = 'base'
+    service = 'provd'
+    wait_strategy = WaitStrategy()
+
+
+class DBIntegrationTest(_BaseIntegrationTest):
+    asset = 'database'
+    service = 'postgres'
+    wait_strategy: WaitStrategy = NoWaitStrategy()
+
+    def setUp(self):
+        self.db = self.make_db()
+        self.tenant_dao = TenantDAO(self.db)
+        self.service_configuration_dao = ServiceConfigurationDAO(self.db)
+        self.device_dao = DeviceDAO(self.db)
+        self.sip_line_dao = SIPLineDAO(self.db)
+        self.sccp_line_dao = SCCPLineDAO(self.db)
+        self.function_key_dao = FunctionKeyDAO(self.db)
+        self.device_raw_config_dao = DeviceRawConfigDAO(
+            self.db, self.function_key_dao, self.sip_line_dao, self.sccp_line_dao
+        )
+        self.device_config_dao = DeviceConfigDAO(self.db, self.device_raw_config_dao)

@@ -137,9 +137,7 @@ class TestRemoveOutdatedIpDeviceUpdater(unittest.TestCase):
 
         yield self.dev_updater.update(device, dev_info, 'http', Mock())
 
-        self.app.dev_find.assert_called_once_with(
-            {'ip': '1.1.1.1', 'id': {'$ne': 'abc'}}
-        )
+        self.app.dev_find.assert_called_once_with({'ip': '1.1.1.1'})
 
     @defer.inlineCallbacks
     def test_nat_enabled(self) -> Generator[Deferred, None, None]:

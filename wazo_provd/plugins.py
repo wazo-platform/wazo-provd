@@ -58,6 +58,7 @@ from wazo_provd.services import (
 )
 
 from .abstract_plugin import AbstractPlugin
+from .devices.schemas import BaseDeviceDict, DeviceDict, RawConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -322,7 +323,7 @@ class Plugin(AbstractPlugin):
 
     # Methods for device configuration
 
-    def configure_common(self, raw_config: dict[str, Any]) -> None:
+    def configure_common(self, raw_config: RawConfigDict) -> None:
         """Apply a non-device specific configuration to the plugin. In typical
         case, this will configure the 'common files' shared by all the devices.
 
@@ -340,7 +341,9 @@ class Plugin(AbstractPlugin):
         """
         pass
 
-    def configure(self, device: dict[str, str], raw_config: dict[str, Any]) -> None:
+    def configure(
+        self, device: DeviceDict | BaseDeviceDict, raw_config: RawConfigDict
+    ) -> None:
         """Configure the plugin so that the raw config is applied to the
         device. This method MUST not synchronize the configuration between
         the phone and the provisioning server. This method is called only to
@@ -376,7 +379,7 @@ class Plugin(AbstractPlugin):
         """
         pass
 
-    def deconfigure(self, device: dict[str, str]) -> None:
+    def deconfigure(self, device: DeviceDict | BaseDeviceDict) -> None:
         """De-configure the plugin so that the plugin won't configure the
         device.
 
@@ -415,7 +418,7 @@ class Plugin(AbstractPlugin):
         pass
 
     def synchronize(
-        self, device: dict[str, str], raw_config: dict[str, Any]
+        self, device: DeviceDict | BaseDeviceDict, raw_config: RawConfigDict
     ) -> Deferred:
         """Force the device to synchronize its configuration so that it's the
         same as the one in the raw config object.
@@ -446,7 +449,9 @@ class Plugin(AbstractPlugin):
         """
         return defer.fail(Exception("Re-synchronization is not supported"))
 
-    def get_remote_state_trigger_filename(self, device: dict[str, str]) -> str | None:
+    def get_remote_state_trigger_filename(
+        self, device: DeviceDict | BaseDeviceDict
+    ) -> str | None:
         """Return the name of the filename for the given device that,
         when the device retrieve this file, implies that the configuration of
         the device is the same as the one in the plugin (i.e. the device
