@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright 2011-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2025 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Small utility to download and update the configuration files of the DHCP
@@ -147,6 +147,7 @@ def read_config() -> dict[str, Any]:
     _update_config(config, cli_config)
     _update_config(config, _read_config_from_file(config))
     _update_config(config, cli_config)
+    config['proxy'] = config['proxy'] or None  # empty dict means ignore all proxies
     return config
 
 
