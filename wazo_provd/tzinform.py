@@ -1,4 +1,4 @@
-# Copyright 2010-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2025 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 """
 Return the current UTC offset and DST rules of arbitrary timezones.
@@ -6,7 +6,11 @@ Return the current UTC offset and DST rules of arbitrary timezones.
 from __future__ import annotations
 
 import os.path
+import zoneinfo
+from datetime import datetime
+from pathlib import Path
 from typing import TypedDict, Union
+from zoneinfo._zoneinfo import _parse_tz_str, _TZStr
 
 
 class DSTChangeDict(TypedDict):
@@ -73,6 +77,12 @@ class Time:
     def _compute_positive_hms(self) -> list[int]:
         seconds = abs(self._raw_seconds)
         return [seconds // 3600, seconds // 60 % 60, seconds % 60]
+
+    def __eq__(self, other: object):
+        return (
+            isinstance(other, self.__class__)
+            and self._raw_seconds == other._raw_seconds
+        )
 
 
 class TextTimezoneInfoDB:
@@ -165,7 +175,64 @@ class DefaultTimezoneInfoDB:
             return self.default
 
 
-get_timezone_info = TextTimezoneInfoDB().get_timezone_info
+class NativeTimezoneInfoDB:
+    """Instances of NativeTimeZoneInfoDB return timezone information from the native
+    Python ZoneInfo module.
+    """
+
+    def __init__(self) -> None:
+        self._native_offsets: dict[str, _TZStr] = {}
+
+        available_zones = zoneinfo.available_timezones()
+        for tz_path in zoneinfo.TZPATH:
+            basepath = Path(tz_path)
+            if not basepath.exists():
+                continue
+
+        for z in available_zones:
+            try:
+                with open(basepath / z, "rb") as zobj:
+                    content = zobj.readlines()
+            except OSError:
+                continue
+            try:
+                self._native_offsets[z] = _parse_tz_str(
+                    content[-1].decode("ascii").strip("\n")
+                )
+            except (ValueError, IndexError):
+                continue
+
+    def get_timezone_info(self, timezone_name: str) -> TimeZoneInfoDict:
+        zone = self._native_offsets.get(timezone_name)
+        if not zone:
+            raise TimezoneNotFoundError(timezone_name)
+
+        return {
+            'utcoffset': zone.utcoffset(datetime.now()),
+            'dst': DSTRuleDict(
+                start=DSTChangeDict(
+                    month=zone.start.m,
+                    day=zone.start.d,
+                    time=Time(
+                        zone.start.second
+                        + 60 * zone.start.minute
+                        + 3600 * zone.start.hour
+                    ),
+                ),
+                end=DSTChangeDict(
+                    month=zone.end.m,
+                    day=zone.end.d,
+                    time=Time(
+                        zone.end.second + 60 * zone.end.minute + 3600 * zone.end.hour
+                    ),
+                ),
+                save=Time(zone.dst.dstoff.seconds),
+                as_string=str(zone),
+            ),
+        }
+
+
+get_timezone_info = NativeTimezoneInfoDB().get_timezone_info
 
 
 def week_start_on_monday(weekday: int) -> int:
