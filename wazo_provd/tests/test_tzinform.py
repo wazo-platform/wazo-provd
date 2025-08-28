@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime
 from unittest.mock import MagicMock, call, mock_open, patch
 
 from hamcrest import assert_that, calling, empty, has_entries, not_, raises
@@ -24,7 +25,7 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
         mock_zoneinfo_available_timezones.return_value = ['test1', 'test2']
         mock_path.return_value.__truediv__.side_effect = lambda file: f'path/{file}'
         mock_path.return_value.exists = MagicMock()
-        mock_path.return_value.exists.return_value = True
+        mock_path.return_value.exists.side_effect = [False, True]
         mock_value = b'l1\nl2\nl3\nl4\n'
         with patch(
             'wazo_provd.tzinform.open', mock_open(read_data=mock_value)
@@ -120,18 +121,12 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
             'wazo_provd.tzinform.open', mock_open(read_data=mock_value)
         ) as m_patch:
             mock_tz_result = MagicMock()
-            mock_tz_result.start.m = 1
-            mock_tz_result.start.d = 2
-            mock_tz_result.start.hour = 3
-            mock_tz_result.start.minute = 4
-            mock_tz_result.start.second = 5
-            mock_tz_result.end.m = 6
-            mock_tz_result.end.d = 7
-            mock_tz_result.end.hour = 8
-            mock_tz_result.end.minute = 9
-            mock_tz_result.end.second = 10
-            mock_tz_result.dst.dstoff.seconds = 11
-            mock_tz_result.utcoffset.return_value = 12
+            mock_tz_result.transitions.return_value = (
+                datetime(2025, 1, 2, 3, 4, 5).timestamp(),
+                datetime(2025, 6, 7, 8, 9, 10).timestamp(),
+            )
+            mock_tz_result.dst.dstoff.total_seconds.return_value = 11
+            mock_tz_result.std.utcoff.total_seconds.return_value = 12
             mock_parse_tz_str.return_value = mock_tz_result
 
             native_tz_db = NativeTimezoneInfoDB()
@@ -144,16 +139,16 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
             assert_that(
                 result,
                 has_entries(
-                    utcoffset=12,
+                    utcoffset=Time(12),
                     dst=has_entries(
                         start=has_entries(
                             month=1,
-                            day=2,
+                            day="D2",
                             time=Time(3 * 3600 + 4 * 60 + 5),
                         ),
                         end=has_entries(
                             month=6,
-                            day=7,
+                            day="D7",
                             time=Time(8 * 3600 + 9 * 60 + 10),
                         ),
                         save=Time(11),
@@ -169,6 +164,7 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
         mock_zoneinfo_available_timezones.return_value = []
 
         native_tz_db = NativeTimezoneInfoDB()
+        native_tz_db._native_offsets = {}
         assert_that(
             calling(native_tz_db.get_timezone_info).with_args('test1'),
             raises(TimezoneNotFoundError),

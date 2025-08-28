@@ -5,12 +5,15 @@ Return the current UTC offset and DST rules of arbitrary timezones.
 """
 from __future__ import annotations
 
+import logging
 import os.path
 import zoneinfo
 from datetime import datetime
 from pathlib import Path
 from typing import TypedDict, Union
 from zoneinfo._zoneinfo import _parse_tz_str, _TZStr
+
+logger = logging.getLogger(__name__)
 
 
 class DSTChangeDict(TypedDict):
@@ -180,53 +183,59 @@ class NativeTimezoneInfoDB:
     Python ZoneInfo module.
     """
 
-    def __init__(self) -> None:
-        self._native_offsets: dict[str, _TZStr] = {}
+    _native_offsets: dict[str, _TZStr] = {}
 
+    def __init__(self) -> None:
         available_zones = zoneinfo.available_timezones()
         for tz_path in zoneinfo.TZPATH:
             basepath = Path(tz_path)
-            if not basepath.exists():
-                continue
+            if basepath.exists():
+                break
 
         for z in available_zones:
+            filename = basepath / z
             try:
-                with open(basepath / z, "rb") as zobj:
+                with open(filename, "rb") as zobj:
                     content = zobj.readlines()
             except OSError:
+                logger.error('Could not read file %s', filename)
                 continue
             try:
                 self._native_offsets[z] = _parse_tz_str(
                     content[-1].decode("ascii").strip("\n")
                 )
-            except (ValueError, IndexError):
+            except (ValueError, IndexError) as e:
+                logger.error('Could not parse tz: %s', e)
                 continue
 
     def get_timezone_info(self, timezone_name: str) -> TimeZoneInfoDict:
         zone = self._native_offsets.get(timezone_name)
         if not zone:
+            logger.debug('Could not find zone for %s', timezone_name)
             raise TimezoneNotFoundError(timezone_name)
 
+        seconds = int(zone.std.utcoff.total_seconds())
+        transitions = zone.transitions(datetime.now().year)
+        dst_start = datetime.fromtimestamp(transitions[0])
+        dst_end = datetime.fromtimestamp(transitions[1])
         return {
-            'utcoffset': zone.utcoffset(datetime.now()),
+            'utcoffset': Time(seconds),
             'dst': DSTRuleDict(
                 start=DSTChangeDict(
-                    month=zone.start.m,
-                    day=zone.start.d,
+                    month=dst_start.month,
+                    day=f"D{dst_start.day}",
                     time=Time(
-                        zone.start.second
-                        + 60 * zone.start.minute
-                        + 3600 * zone.start.hour
+                        dst_start.second + 60 * dst_start.minute + 3600 * dst_start.hour
                     ),
                 ),
                 end=DSTChangeDict(
-                    month=zone.end.m,
-                    day=zone.end.d,
+                    month=dst_end.month,
+                    day=f"D{dst_end.day}",
                     time=Time(
-                        zone.end.second + 60 * zone.end.minute + 3600 * zone.end.hour
+                        dst_end.second + 60 * dst_end.minute + 3600 * dst_end.hour
                     ),
                 ),
-                save=Time(zone.dst.dstoff.seconds),
+                save=Time(zone.dst.dstoff.total_seconds()),
                 as_string=str(zone),
             ),
         }
