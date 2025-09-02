@@ -7,3 +7,4 @@ pycodestyle.txt
 pylint.txt
 twisted/plugins/dropin.cache
 unit-tests.xml
+build/
