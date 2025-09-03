@@ -17,7 +17,7 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.web import rewrite
 from twisted.web.http import INTERNAL_SERVER_ERROR
-from twisted.web.resource import ErrorPage, NoResource, Resource
+from twisted.web.resource import ErrorPage, NoResource, Resource  # Deprecated in Bookworm, see changelog
 
 from wazo_provd.devices.device import copy as copy_device
 from wazo_provd.plugins import BasePluginManagerObserver, PluginManager

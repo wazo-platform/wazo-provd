@@ -94,7 +94,7 @@ class HTTPNoListingFileService(static.File):
     content of directories, it returns a 403 Forbidden.
     """
 
-    _FORBIDDEN_RESOURCE = resource.ErrorPage(
+    _FORBIDDEN_RESOURCE = resource.ErrorPage(  # FIXME: deprecated in bookworm see changelog
         http.FORBIDDEN, 'Forbidden', 'Directory listing not permitted.'
     )
     _NOT_ALLOWED_RESOURCE = resource.ErrorPage(
