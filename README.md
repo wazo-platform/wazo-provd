@@ -34,7 +34,7 @@ wazo-provd is written in Python 3 ported from Python 2 using the Twisted network
 ```bash
 apt-get install python3-dev libffi-dev libssl-dev
 pip install tox
-tox --recreate -e py39
+tox --recreate -e py311
 ```
 
 ### Running integration tests
