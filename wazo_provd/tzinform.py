@@ -6,7 +6,6 @@ Return the current UTC offset and DST rules of arbitrary timezones.
 from __future__ import annotations
 
 import logging
-import os.path
 import zoneinfo
 from datetime import datetime
 from pathlib import Path
@@ -86,75 +85,6 @@ class Time:
             isinstance(other, self.__class__)
             and self._raw_seconds == other._raw_seconds
         )
-
-
-class LegacyTextTimezoneInfoDB:
-    """Instances of TextTimeZoneInfoDB return timezone information read from a
-    text file. The file format is the same as the one created by default for
-    the tzdataexport tool.
-    """
-
-    _TZ_DEFAULT_FILENAME = os.path.join(os.path.dirname(__file__), 'tzinform/tzdatax')
-    _db: dict[str, TimeZoneInfoDict] = {}
-
-    def __init__(self, filename: str | None = None) -> None:
-        if filename is None:
-            filename = self._TZ_DEFAULT_FILENAME
-        self._read_file(filename)
-
-    def _read_file(self, filename: str) -> None:
-        fobj = open(filename)
-        try:
-            self._db = {}
-            for line in fobj:
-                if line and not line.startswith('#'):
-                    name, offset, dst_rule = line.rstrip().split()
-                    self._db[name] = {
-                        'utcoffset': Time(int(offset)),
-                        'dst': self._parse_dst_rule(dst_rule),
-                    }
-        finally:
-            fobj.close()
-
-    @classmethod
-    def _parse_dst_rule(cls, string: str) -> DSTRuleDict | None:
-        if string == '-':
-            return None
-
-        tokens = string.split(';')
-        return {
-            'start': cls._parse_dst_change(tokens[0]),
-            'end': cls._parse_dst_change(tokens[1]),
-            'save': Time(int(tokens[2])),
-            'as_string': string,
-        }
-
-    @classmethod
-    def _parse_dst_change(cls, string: str) -> DSTChangeDict:
-        tokens = string.split('/')
-        return {'month': int(tokens[0]), 'day': tokens[1], 'time': Time(int(tokens[2]))}
-
-    def get_timezone_info(self, timezone_name: str) -> TimeZoneInfoDict:
-        """Return timezone information for the timezone named timezone_name.
-
-        The method returns a dictionary with the following key:
-        - 'utcoffset':    the offset from UTC as a Time object
-        - 'dst':          a dictionary containing the DST rules, or None if the timezone has no DST
-          - 'start'       a dictionary containing the DST start rule
-            - 'month'     the month number
-            - 'day'       the day. Can be either something like 'D24' or 'W1.6'
-            - 'time'      the time of the day, as a Time object
-          - 'end'         a dictionary containing the DST end rule
-          - 'save'        an offset from standard time as a Time object
-          - 'as_string'   the original DST string
-
-        Raise a TimezoneNotFoundError is no information for the timezone is
-        found.
-        """
-        try:
-            return self._db[timezone_name]
-        except KeyError:
-            raise TimezoneNotFoundError(timezone_name)
 
 
 class DefaultTimezoneInfoDB:
@@ -242,6 +172,8 @@ class NativeTimezoneInfoDB:
 
 
 get_timezone_info = NativeTimezoneInfoDB().get_timezone_info
+# NOTE(afournier): remove in Jan 2028
+# Compatibility layer, since some plugins used directly TextTimezoneInfoDB
 TextTimezoneInfoDB = NativeTimezoneInfoDB
 
 
