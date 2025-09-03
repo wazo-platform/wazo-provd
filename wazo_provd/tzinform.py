@@ -88,7 +88,7 @@ class Time:
         )
 
 
-class TextTimezoneInfoDB:
+class LegacyTextTimezoneInfoDB:
     """Instances of TextTimeZoneInfoDB return timezone information read from a
     text file. The file format is the same as the one created by default for
     the tzdataexport tool.
@@ -242,6 +242,7 @@ class NativeTimezoneInfoDB:
 
 
 get_timezone_info = NativeTimezoneInfoDB().get_timezone_info
+TextTimezoneInfoDB = NativeTimezoneInfoDB
 
 
 def week_start_on_monday(weekday: int) -> int:
