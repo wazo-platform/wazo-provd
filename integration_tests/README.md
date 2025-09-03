@@ -7,7 +7,7 @@ this project.
 
 ```bash
 # Create a new virtual environment
-python3.9 -m venv provd_tests
+python3 -m venv provd_tests
 # activate virtual environement
 . ./provd_tests/bin/activate
 # Install the requirements
