@@ -1,7 +1,7 @@
 https://github.com/wazo-platform/wazo-lib-rest-client/archive/master.zip
 https://github.com/wazo-platform/wazo-amid-client/archive/master.zip
 https://github.com/wazo-platform/wazo-auth-client/archive/master.zip
-https://github.com/wazo-platform/wazo-bus/archive/master.zip
+https://github.com/wazo-platform/wazo-bus/archive/refs/heads/bookworm.zip
 https://github.com/wazo-platform/xivo-fetchfw/archive/master.zip
 https://github.com/wazo-platform/xivo-lib-python/archive/master.zip
 jinja2==3.1.2
