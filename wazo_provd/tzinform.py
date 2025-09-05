@@ -171,7 +171,7 @@ class NativeTimezoneInfoDB:
                         dst_end.second + 60 * dst_end.minute + 3600 * dst_end.hour
                     ),
                 ),
-                save=Time(zone.dst.dstoff.total_seconds()),
+                save=Time(int(zone.dst.dstoff.total_seconds())),
                 as_string=str(zone),
             ),
         }
