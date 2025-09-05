@@ -117,10 +117,16 @@ class NativeTimezoneInfoDB:
 
     def __init__(self) -> None:
         available_zones = zoneinfo.available_timezones()
+        basepath = None
         for tz_path in zoneinfo.TZPATH:
-            basepath = Path(tz_path)
-            if basepath.exists():
+            tmp_basepath = Path(tz_path)
+            if tmp_basepath.exists():
+                basepath = tmp_basepath
                 break
+
+        if not basepath:
+            logger.error('No timezone available')
+            return
 
         for z in available_zones:
             filename = basepath / z
