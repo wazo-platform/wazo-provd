@@ -150,13 +150,29 @@ class NativeTimezoneInfoDB:
             logger.debug('Could not find zone for %s', timezone_name)
             raise TimezoneNotFoundError(timezone_name)
 
-        seconds = int(zone.std.utcoff.total_seconds())
-        transitions = zone.transitions(datetime.now().year)
-        dst_start = datetime.fromtimestamp(transitions[0])
-        dst_end = datetime.fromtimestamp(transitions[1])
-        return {
-            'utcoffset': Time(seconds),
-            'dst': DSTRuleDict(
+        if hasattr(zone, "std"):
+            seconds = int(zone.std.utcoff.total_seconds())
+        else:
+            seconds = 0
+
+        if hasattr(zone, "dst"):
+            save = int(zone.dst.dstoff.total_seconds())
+        else:
+            save = 0
+
+        if hasattr(zone, "transitions"):
+            transitions = zone.transitions(datetime.now().year)
+            dst_start = datetime.fromtimestamp(transitions[0])
+            dst_end = datetime.fromtimestamp(transitions[1])
+        else:
+            transitions = None
+            dst_start = None
+            dst_end = None
+
+        tz_info = TimeZoneInfoDict(utcoffset=Time(seconds), dst=None)
+
+        if transitions and dst_start and dst_end:
+            tz_info['dst'] = DSTRuleDict(
                 start=DSTChangeDict(
                     month=dst_start.month,
                     day=f"D{dst_start.day}",
@@ -171,10 +187,11 @@ class NativeTimezoneInfoDB:
                         dst_end.second + 60 * dst_end.minute + 3600 * dst_end.hour
                     ),
                 ),
-                save=Time(int(zone.dst.dstoff.total_seconds())),
+                save=Time(save),
                 as_string=str(zone),
-            ),
-        }
+            )
+
+        return tz_info
 
 
 get_timezone_info = NativeTimezoneInfoDB().get_timezone_info

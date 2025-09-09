@@ -158,6 +158,94 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
             )
 
     @patch('wazo_provd.tzinform.zoneinfo.available_timezones')
+    @patch('wazo_provd.tzinform.Path')
+    @patch('wazo_provd.tzinform._parse_tz_str')
+    def test_get_timezone_info_no_dst_no_std(
+        self,
+        mock_parse_tz_str: MagicMock,
+        mock_path: MagicMock,
+        mock_zoneinfo_available_timezones: MagicMock,
+    ):
+        mock_zoneinfo_available_timezones.return_value = ['test1', 'test2']
+        mock_path.return_value.__truediv__.side_effect = lambda file: f'path/{file}'
+
+        mock_path.return_value.exists = MagicMock()
+        mock_path.return_value.exists.return_value = True
+        mock_value = b'l1\nl2\nl3\nl4\n'
+        with patch(
+            'wazo_provd.tzinform.open', mock_open(read_data=mock_value)
+        ) as m_patch:
+            mock_tz_result = MagicMock(spec=['transitions'])
+            mock_tz_result.transitions.return_value = (
+                datetime(2025, 1, 2, 3, 4, 5).timestamp(),
+                datetime(2025, 6, 7, 8, 9, 10).timestamp(),
+            )
+            mock_parse_tz_str.return_value = mock_tz_result
+
+            native_tz_db = NativeTimezoneInfoDB()
+
+            assert m_patch.call_args_list == [
+                call('path/test1', 'rb'),
+                call('path/test2', 'rb'),
+            ]
+            result = native_tz_db.get_timezone_info('test1')
+            assert_that(
+                result,
+                has_entries(
+                    utcoffset=Time(0),
+                    dst=has_entries(
+                        start=has_entries(
+                            month=1,
+                            day="D2",
+                            time=Time(3 * 3600 + 4 * 60 + 5),
+                        ),
+                        end=has_entries(
+                            month=6,
+                            day="D7",
+                            time=Time(8 * 3600 + 9 * 60 + 10),
+                        ),
+                        save=Time(0),
+                        as_string=not_(empty()),
+                    ),
+                ),
+            )
+
+    @patch('wazo_provd.tzinform.zoneinfo.available_timezones')
+    @patch('wazo_provd.tzinform.Path')
+    @patch('wazo_provd.tzinform._parse_tz_str')
+    def test_get_timezone_info_no_transitions(
+        self,
+        mock_parse_tz_str: MagicMock,
+        mock_path: MagicMock,
+        mock_zoneinfo_available_timezones: MagicMock,
+    ):
+        mock_zoneinfo_available_timezones.return_value = ['test1', 'test2']
+        mock_path.return_value.__truediv__.side_effect = lambda file: f'path/{file}'
+
+        mock_path.return_value.exists = MagicMock()
+        mock_path.return_value.exists.return_value = True
+        mock_value = b'l1\nl2\nl3\nl4\n'
+        with patch(
+            'wazo_provd.tzinform.open', mock_open(read_data=mock_value)
+        ) as m_patch:
+            mock_tz_result = MagicMock(spec=[])
+            mock_parse_tz_str.return_value = mock_tz_result
+
+            native_tz_db = NativeTimezoneInfoDB()
+
+            assert m_patch.call_args_list == [
+                call('path/test1', 'rb'),
+                call('path/test2', 'rb'),
+            ]
+            result = native_tz_db.get_timezone_info('test1')
+            assert_that(
+                result,
+                has_entries(
+                    utcoffset=Time(0),
+                ),
+            )
+
+    @patch('wazo_provd.tzinform.zoneinfo.available_timezones')
     def test_get_timezone_info_tz_not_found(
         self, mock_zoneinfo_available_timezones: MagicMock
     ):
