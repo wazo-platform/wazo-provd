@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, call, mock_open, patch
 
 from hamcrest import assert_that, calling, empty, has_entries, not_, raises
@@ -122,8 +122,12 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
         ) as m_patch:
             mock_tz_result = MagicMock()
             mock_tz_result.transitions.return_value = (
-                datetime(2025, 1, 2, 3, 4, 5).timestamp(),
-                datetime(2025, 6, 7, 8, 9, 10).timestamp(),
+                datetime(
+                    2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc
+                ).timestamp(),  # Thursday, Jan 2 2025 03:04:05 (W1.4)
+                datetime(
+                    2025, 6, 7, 8, 9, 10, tzinfo=timezone.utc
+                ).timestamp(),  # Saturday, Jun 7 2025 08:09:10 (W2.6)
             )
             mock_tz_result.dst.dstoff.total_seconds.return_value = 11
             mock_tz_result.std.utcoff.total_seconds.return_value = 12
@@ -143,12 +147,12 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
                     dst=has_entries(
                         start=has_entries(
                             month=1,
-                            day="D2",
+                            day="W1.4",
                             time=Time(3 * 3600 + 4 * 60 + 5),
                         ),
                         end=has_entries(
                             month=6,
-                            day="D7",
+                            day="W2.6",
                             time=Time(8 * 3600 + 9 * 60 + 10),
                         ),
                         save=Time(11),
@@ -177,8 +181,12 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
         ) as m_patch:
             mock_tz_result = MagicMock(spec=['transitions'])
             mock_tz_result.transitions.return_value = (
-                datetime(2025, 1, 2, 3, 4, 5).timestamp(),
-                datetime(2025, 6, 7, 8, 9, 10).timestamp(),
+                datetime(
+                    2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc
+                ).timestamp(),  # Thursday, Jan 2 2025 03:04:05 (W1.4)
+                datetime(
+                    2025, 6, 7, 8, 9, 10, tzinfo=timezone.utc
+                ).timestamp(),  # Saturday, Jun 7 2025 08:09:10 (W2.6)
             )
             mock_parse_tz_str.return_value = mock_tz_result
 
@@ -196,12 +204,12 @@ class TestNativeTimezoneInfoDB(unittest.TestCase):
                     dst=has_entries(
                         start=has_entries(
                             month=1,
-                            day="D2",
+                            day="W1.4",
                             time=Time(3 * 3600 + 4 * 60 + 5),
                         ),
                         end=has_entries(
                             month=6,
-                            day="D7",
+                            day="W2.6",
                             time=Time(8 * 3600 + 9 * 60 + 10),
                         ),
                         save=Time(0),

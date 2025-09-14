@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import zoneinfo
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict, Union
 from zoneinfo._zoneinfo import _parse_tz_str, _TZStr
@@ -144,6 +144,12 @@ class NativeTimezoneInfoDB:
                 logger.error('Could not parse tz: %s', e)
                 continue
 
+    def _get_month_week_number(self, dt: datetime):
+        week_of_year = int(dt.strftime("%W"))
+        date_at_month_start = dt.replace(day=1)
+        month_start_week_of_year = int(date_at_month_start.strftime("%W"))
+        return week_of_year - month_start_week_of_year + 1
+
     def get_timezone_info(self, timezone_name: str) -> TimeZoneInfoDict:
         zone = self._native_offsets.get(timezone_name)
         if not zone:
@@ -153,17 +159,23 @@ class NativeTimezoneInfoDB:
         if hasattr(zone, "std"):
             seconds = int(zone.std.utcoff.total_seconds())
         else:
-            seconds = 0
+            if hasattr(zone, "utcoff"):
+                seconds = int(zone.utcoff.total_seconds())
+            else:
+                seconds = 0
 
         if hasattr(zone, "dst"):
             save = int(zone.dst.dstoff.total_seconds())
         else:
-            save = 0
+            if hasattr(zone, "dstoff"):
+                save = int(zone.dstoff.total_seconds())
+            else:
+                save = 0
 
         if hasattr(zone, "transitions"):
-            transitions = zone.transitions(datetime.now().year)
-            dst_start = datetime.fromtimestamp(transitions[0])
-            dst_end = datetime.fromtimestamp(transitions[1])
+            transitions = zone.transitions(datetime.now(tz=timezone.utc).year)
+            dst_start = datetime.fromtimestamp(transitions[0], tz=timezone.utc)
+            dst_end = datetime.fromtimestamp(transitions[1], tz=timezone.utc)
         else:
             transitions = None
             dst_start = None
@@ -172,17 +184,22 @@ class NativeTimezoneInfoDB:
         tz_info = TimeZoneInfoDict(utcoffset=Time(seconds), dst=None)
 
         if transitions and dst_start and dst_end:
+            start_month_week = self._get_month_week_number(dst_start)
+            end_month_week = self._get_month_week_number(dst_end)
+            start_day_str = f"W{start_month_week}.{dst_start.isoweekday()}"
+            end_day_str = f"W{end_month_week}.{dst_end.isoweekday()}"
+
             tz_info['dst'] = DSTRuleDict(
                 start=DSTChangeDict(
                     month=dst_start.month,
-                    day=f"D{dst_start.day}",
+                    day=start_day_str,
                     time=Time(
                         dst_start.second + 60 * dst_start.minute + 3600 * dst_start.hour
                     ),
                 ),
                 end=DSTChangeDict(
                     month=dst_end.month,
-                    day=f"D{dst_end.day}",
+                    day=end_day_str,
                     time=Time(
                         dst_end.second + 60 * dst_end.minute + 3600 * dst_end.hour
                     ),
