@@ -9,7 +9,7 @@ import os.path
 import re
 from collections.abc import Callable, Generator
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 from pydantic import ValidationError
@@ -220,7 +220,7 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat: int = 0
         self.tenants: dict[str, dict] = self._split_config.get('tenants', {})
-        self.http_auth_strategy: Union[Literal['url_key'], None] = self._split_config[
+        self.http_auth_strategy: Literal['url_key'] | None = self._split_config[
             'general'
         ].get('http_auth_strategy')
         self.use_provisioning_key: bool = self.http_auth_strategy == 'url_key'

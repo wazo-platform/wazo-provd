@@ -4,7 +4,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, BinaryIO, Callable, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, BinaryIO, Union
 
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
