@@ -9,7 +9,7 @@ import logging
 import zoneinfo
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TypedDict, Union
+from typing import TypedDict
 from zoneinfo._zoneinfo import _parse_tz_str, _TZStr
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class DSTRuleDict(TypedDict):
 
 class TimeZoneInfoDict(TypedDict):
     utcoffset: Time
-    dst: Union[DSTRuleDict, None]
+    dst: DSTRuleDict | None
 
 
 class TimezoneNotFoundError(Exception):
