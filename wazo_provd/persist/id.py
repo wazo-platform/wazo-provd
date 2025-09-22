@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import binascii
 import uuid
-from collections.abc import Generator
-from typing import Callable, Literal
+from collections.abc import Callable, Generator
+from typing import Literal
 
 GeneratorFactory = Callable[..., Generator[str, None, None]]
 

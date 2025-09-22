@@ -10,7 +10,7 @@ pydantic 1.9+ and can use their more robust implementation.
 import re
 from enum import Enum
 from ipaddress import IPv4Address
-from typing import Any, Literal, TypedDict, Union
+from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, root_validator, validator
@@ -59,24 +59,24 @@ class SchemaConfig:
 
 
 class SipLineDict(TypedDict):
-    proxy_ip: Union[str, None]
-    proxy_port: Union[int, None]
-    backup_proxy_ip: Union[str, None]
-    backup_proxy_port: Union[int, None]
-    registrar_ip: Union[str, None]
-    registrar_port: Union[int, None]
-    backup_registrar_ip: Union[str, None]
-    backup_registrar_port: Union[int, None]
-    outbound_proxy_ip: Union[str, None]
-    outbound_proxy_port: Union[int, None]
-    username: Union[str, None]
-    password: Union[str, None]
-    auth_username: Union[str, None]
-    display_name: Union[str, None]
-    number: Union[str, None]
-    dtmf_mode: Union[DtmfMode, None]
-    srtp_mode: Union[SrtpMode, None]
-    voicemail: Union[str, None]
+    proxy_ip: str | None
+    proxy_port: int | None
+    backup_proxy_ip: str | None
+    backup_proxy_port: int | None
+    registrar_ip: str | None
+    registrar_port: int | None
+    backup_registrar_ip: str | None
+    backup_registrar_port: int | None
+    outbound_proxy_ip: str | None
+    outbound_proxy_port: int | None
+    username: str | None
+    password: str | None
+    auth_username: str | None
+    display_name: str | None
+    number: str | None
+    dtmf_mode: DtmfMode | None
+    srtp_mode: SrtpMode | None
+    voicemail: str | None
 
 
 SipLineSchema = create_model_from_typeddict(SipLineDict, config=SchemaConfig)
@@ -84,7 +84,7 @@ SipLineSchema = create_model_from_typeddict(SipLineDict, config=SchemaConfig)
 
 class CallManagerDict(TypedDict):
     ip: str
-    port: Union[int, None]
+    port: int | None
 
 
 CallManagerSchema = create_model_from_typeddict(CallManagerDict, {'ip': Field(...)})
@@ -92,9 +92,9 @@ CallManagerSchema = create_model_from_typeddict(CallManagerDict, {'ip': Field(..
 
 class FuncKeyDict(TypedDict):
     type: FuncKeyType
-    value: Union[str, None]
-    label: Union[str, None]
-    line: Union[str, None]
+    value: str | None
+    label: str | None
+    line: str | None
 
 
 @root_validator(allow_reuse=True)
@@ -117,69 +117,67 @@ FuncKeySchema = create_model_from_typeddict(
 
 
 class RawConfigDict(TypedDict):
-    ip: Union[str, None]
-    http_port: Union[int, None]
+    ip: str | None
+    http_port: int | None
     http_base_url: str
-    tftp_port: Union[int, None]
-    dns_enabled: Union[bool, None]
-    dns_ip: Union[str, None]
-    ntp_enabled: Union[bool, None]
-    ntp_ip: Union[str, None]
-    vlan_enabled: Union[bool, None]
-    vlan_id: Union[int, None]
-    vlan_priority: Union[int, None]
-    vlan_pc_port_id: Union[int, None]
-    syslog_enabled: Union[bool, None]
-    syslog_ip: Union[str, None]
+    tftp_port: int | None
+    dns_enabled: bool | None
+    dns_ip: str | None
+    ntp_enabled: bool | None
+    ntp_ip: str | None
+    vlan_enabled: bool | None
+    vlan_id: int | None
+    vlan_priority: int | None
+    vlan_pc_port_id: int | None
+    syslog_enabled: bool | None
+    syslog_ip: str | None
     syslog_port: int
     syslog_level: SyslogLevel
-    admin_username: Union[str, None]
-    admin_password: Union[str, None]
-    user_username: Union[str, None]
-    user_password: Union[str, None]
-    timezone: Union[ZoneInfo, str, None]
-    locale: Union[str, None]
-    protocol: Union[Literal['SIP', 'SCCP'], None]
-    sip_proxy_ip: Union[str, None]
-    sip_proxy_port: Union[int, None]
-    sip_backup_proxy_ip: Union[str, None]
-    sip_backup_proxy_port: Union[int, None]
-    sip_registrar_ip: Union[str, None]
-    sip_registrar_port: Union[int, None]
-    sip_backup_registrar_ip: Union[str, None]
-    sip_backup_registrar_port: Union[int, None]
-    sip_outbound_proxy_ip: Union[str, None]
-    sip_outbound_proxy_port: Union[int, None]
-    sip_dtmf_mode: Union[DtmfMode, None]
-    sip_srtp_mode: Union[SrtpMode, None]
-    sip_transport: Union[Transport, None]
-    sip_servers_root_and_intermediate_certificates: Union[list[str], None]
-    sip_local_root_and_intermediate_certificates: Union[list[str], None]
-    sip_local_certificate: Union[str, None]
-    sip_local_key: Union[str, None]
-    sip_subscribe_mwi: Union[bool, None]
+    admin_username: str | None
+    admin_password: str | None
+    user_username: str | None
+    user_password: str | None
+    timezone: ZoneInfo | str | None
+    locale: str | None
+    protocol: Literal['SIP', 'SCCP'] | None
+    sip_proxy_ip: str | None
+    sip_proxy_port: int | None
+    sip_backup_proxy_ip: str | None
+    sip_backup_proxy_port: int | None
+    sip_registrar_ip: str | None
+    sip_registrar_port: int | None
+    sip_backup_registrar_ip: str | None
+    sip_backup_registrar_port: int | None
+    sip_outbound_proxy_ip: str | None
+    sip_outbound_proxy_port: int | None
+    sip_dtmf_mode: DtmfMode | None
+    sip_srtp_mode: SrtpMode | None
+    sip_transport: Transport | None
+    sip_servers_root_and_intermediate_certificates: list[str] | None
+    sip_local_root_and_intermediate_certificates: list[str] | None
+    sip_local_certificate: str | None
+    sip_local_key: str | None
+    sip_subscribe_mwi: bool | None
     sip_lines: dict[str, SipLineDict]
     sccp_call_managers: dict[str, CallManagerDict]
-    exten_dnd: Union[str, None]
-    exten_fwd_unconditional: Union[str, None]
-    exten_fwd_no_answer: Union[str, None]
-    exten_fwd_busy: Union[str, None]
-    exten_fwd_disable_all: Union[str, None]
-    exten_park: Union[str, None]
-    exten_pickup_group: Union[str, None]
-    exten_pickup_call: Union[str, None]
-    exten_voicemail: Union[str, None]
+    exten_dnd: str | None
+    exten_fwd_unconditional: str | None
+    exten_fwd_no_answer: str | None
+    exten_fwd_busy: str | None
+    exten_fwd_disable_all: str | None
+    exten_park: str | None
+    exten_pickup_group: str | None
+    exten_pickup_call: str | None
+    exten_voicemail: str | None
     funckeys: FuncKeyDict
-    X_xivo_phonebook_ip: Union[str, None]
-    config_version: Union[
-        int, None
-    ]  # NOTE(afournier): this variable is unused. See WAZO-3619
+    X_xivo_phonebook_ip: str | None
+    config_version: (
+        int | None
+    )  # NOTE(afournier): this variable is unused. See WAZO-3619
 
 
 @validator('timezone', allow_reuse=True)
-def validate_timezone(
-    cls: type[BaseModel], value: Union[str, None]
-) -> Union[ZoneInfo, None]:
+def validate_timezone(cls: type[BaseModel], value: str | None) -> ZoneInfo | None:
     return ZoneInfo(value) if value else None
 
 
@@ -247,7 +245,7 @@ RawConfigSchema = create_model_from_typeddict(
 
 
 class BaseConfigDict(TypedDict):
-    id: Union[str, None]
+    id: str | None
     parent_ids: list[str]
     raw_config: RawConfigDict
 
@@ -270,17 +268,17 @@ ConfigSchema = create_model_from_typeddict(
 
 
 class BaseDeviceDict(TypedDict, total=False):
-    id: Union[str, None]
-    mac: Union[str, None]
-    ip: Union[IPv4Address, str]
-    config: Union[str, None]
-    model: Union[str, None]
-    plugin: Union[str, None]
-    description: Union[str, None]
+    id: str | None
+    mac: str | None
+    ip: IPv4Address | str
+    config: str | None
+    model: str | None
+    plugin: str | None
+    description: str | None
     configured: bool
     is_new: bool
-    vendor: Union[str, None]
-    version: Union[str, None]
+    vendor: str | None
+    version: str | None
 
 
 class DeviceDict(BaseDeviceDict, total=False):

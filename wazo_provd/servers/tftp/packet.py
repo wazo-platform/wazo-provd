@@ -31,7 +31,7 @@ class AckPacket(BasePacket):
 
 
 class OptionAckPacket(BasePacket):
-    options: dict[bytes, Union[bytes, int]]
+    options: dict[bytes, bytes | int]
 
 
 class ByteOptionAckPacket(BasePacket):
