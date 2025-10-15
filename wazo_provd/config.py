@@ -70,7 +70,7 @@ from __future__ import annotations
 import json
 import logging
 import os.path
-from typing import Any, Literal, TypedDict, Union, cast
+from typing import Any, Literal, TypedDict, cast
 from urllib.parse import urlparse
 
 from twisted.python import usage
@@ -79,8 +79,8 @@ from xivo.config_helper import parse_config_file, read_config_file_hierarchy
 
 
 class AuthCredentialDict(TypedDict):
-    username: Union[str, None]
-    password: Union[str, None]
+    username: str | None
+    password: str | None
 
 
 class AuthKeyFileDict(TypedDict):
@@ -96,7 +96,7 @@ class GeneralConfig(TypedDict):
     http_proxied_listen_interface: str
     http_proxied_listen_port: int
     http_proxied_trusted_proxies_count: int
-    advertised_http_url: Union[str, None]
+    advertised_http_url: str | None
     base_raw_config: dict[str, Any]
     base_raw_config_file: str
     request_config_dir: str
@@ -113,21 +113,21 @@ class GeneralConfig(TypedDict):
     verbose: bool
     sync_service_type: str
     syncdb: SyncDbConfigDict
-    http_auth_strategy: Union[Literal['url_key'], None]
+    http_auth_strategy: Literal['url_key'] | None
 
 
 class RestApiConfigDict(TypedDict):
     ip: str
     port: int
     ssl: bool
-    ssl_certfile: Union[str, None]
-    ssl_keyfile: Union[str, None]
+    ssl_certfile: str | None
+    ssl_keyfile: str | None
 
 
 class AuthConfigDict(TypedDict):
     host: str
     port: int
-    prefix: Union[str, None]
+    prefix: str | None
     https: bool
     key_file: str
 
@@ -142,7 +142,7 @@ class DatabaseConfigDict(TypedDict):
 class AmidConfigDict(TypedDict):
     host: str
     port: int
-    prefix: Union[str, None]
+    prefix: str | None
     https: bool
 
 

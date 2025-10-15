@@ -14,7 +14,7 @@ repos:
     rev: v3.15.0
     hooks:
       - id: pyupgrade
-        args: [--py39-plus, --keep-runtime-typing]
+        args: [--py311-plus, --keep-runtime-typing]
   - repo: https://github.com/PyCQA/flake8
     rev: '6.1.0'
     hooks:
@@ -34,7 +34,7 @@ repos:
     rev: v1.7.1
     hooks:
       - id: mypy
-        language_version: "3.10"
+        language_version: "3.11"
         additional_dependencies:
           - "types-pyyaml"
           - "types-requests"

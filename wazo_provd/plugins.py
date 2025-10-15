@@ -12,7 +12,8 @@ import shutil
 import tarfile
 from abc import ABCMeta, abstractmethod
 from binascii import a2b_hex
-from typing import Any, Callable, TypedDict
+from collections.abc import Callable
+from typing import Any, TypedDict
 from weakref import WeakKeyDictionary
 
 from jinja2.environment import Environment, Template
