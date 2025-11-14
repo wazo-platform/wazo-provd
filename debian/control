@@ -35,9 +35,6 @@ Description: Wazo provisioning daemon
 
 Package: wazo-dhcpd-update
 Architecture: all
-Provides: xivo-dhcpd-update
-Conflicts: xivo-dhcpd-update
-Replaces: xivo-dhcpd-update
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${python3:Depends}, ${misc:Depends}
 Description: Wazo dhcpd configuration file for Wazo
