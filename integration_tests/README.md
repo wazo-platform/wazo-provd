@@ -16,7 +16,7 @@ make test-setup
 # Run the tests
 make test
 # or
-nosetests -x
+pytest -x
 ```
 
 ## assets/provd/plugins/pkgs/test-plugin
