@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Wazo Maintainers <dev@wazo.community>
 Build-Depends: debhelper (>= 12), dh-python, python3-all, python3-setuptools
 Standards-Version: 3.9.6
-X-Python3-Version: >= 3.9
+X-Python3-Version: >= 3.11
 
 Package: wazo-provd
 Architecture: all
@@ -35,9 +35,6 @@ Description: Wazo provisioning daemon
 
 Package: wazo-dhcpd-update
 Architecture: all
-Provides: xivo-dhcpd-update
-Conflicts: xivo-dhcpd-update
-Replaces: xivo-dhcpd-update
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${python3:Depends}, ${misc:Depends}
 Description: Wazo dhcpd configuration file for Wazo
