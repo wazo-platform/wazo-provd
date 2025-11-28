@@ -1,3 +1,0 @@
-# see: dh_installdeb(1)
-
-rm_conffile /etc/nginx/sites-available/wazo-provd 23.16
