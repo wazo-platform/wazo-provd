@@ -11,7 +11,7 @@ from collections.abc import Callable
 from enum import Enum
 from operator import itemgetter
 from os.path import basename
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
@@ -59,7 +59,7 @@ class DeviceInfoDict(TypedDict, total=False):
     mac: str
 
 
-DeviceInfo = Union[DeviceInfoDict, dict[str, Any]]
+DeviceInfo = DeviceInfoDict | dict[str, Any]
 
 
 class RequestType(Enum):

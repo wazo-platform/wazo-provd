@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, BinaryIO, Union
+from typing import TYPE_CHECKING, BinaryIO
 
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
@@ -29,8 +29,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-AcceptCallback = Callable[[Union[BinaryIO]], None]
-RejectCallback = Callable[[bytes, Union[str, bytes]], None]
+AcceptCallback = Callable[[BinaryIO], None]
+RejectCallback = Callable[[bytes, str | bytes], None]
 
 
 class _Response:

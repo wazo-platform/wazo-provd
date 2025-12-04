@@ -9,11 +9,11 @@ A packet is a dictionary object. A dgram (datagram) is a string object.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypedDict, Union
+from typing import TypedDict
 
 from wazo_provd.app import logger
 
-PacketOptions = dict[bytes, Union[bytes, int]]
+PacketOptions = dict[bytes, bytes | int]
 
 
 class BasePacket(TypedDict):
@@ -48,7 +48,7 @@ class ErrorPacket(BasePacket):
     errmsg: bytes
 
 
-Packet = Union[AckPacket, DataPacket, ErrorPacket, OptionAckPacket, RequestPacket]
+Packet = AckPacket | DataPacket | ErrorPacket | OptionAckPacket | RequestPacket
 
 OP_RRQ = b'\x00\x01'
 OP_WRQ = b'\x00\x02'
@@ -222,11 +222,11 @@ def _build_oack(packet: ByteOptionAckPacket) -> bytes:
     )
 
 
-BuildCallbacks = Union[
-    Callable[[DataPacket], bytes],
-    Callable[[ErrorPacket], bytes],
-    Callable[[ByteOptionAckPacket], bytes],
-]
+BuildCallbacks = (
+    Callable[[DataPacket], bytes]
+    | Callable[[ErrorPacket], bytes]
+    | Callable[[ByteOptionAckPacket], bytes]
+)
 
 _BUILD_MAP: dict[bytes, BuildCallbacks] = {
     OP_DATA: _build_data,
