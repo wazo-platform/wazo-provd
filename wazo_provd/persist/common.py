@@ -46,7 +46,7 @@ Here's examples of valid selector and the documents the selector will match:
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, Literal, TypedDict, Union
+from typing import Any, Literal, TypedDict
 
 from twisted.internet.defer import Deferred
 
@@ -57,7 +57,7 @@ class BaseDocumentDict(TypedDict):
     id: str
 
 
-Document = Union[BaseDocumentDict, dict[str, Any]]
+Document = BaseDocumentDict | dict[str, Any]
 
 
 class InvalidIdError(Exception):
