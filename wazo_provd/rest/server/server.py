@@ -1,4 +1,4 @@
-# Copyright 2011-2024 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2011-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Module that defines the REST server for the provisioning server
@@ -213,7 +213,7 @@ def json_request_entity(
                 http.UNSUPPORTED_MEDIA_TYPE,
             )
         try:
-            content = json.loads(request.content.getvalue())
+            content = json.loads(request.content.read())
         except ValueError as e:
             logger.info('Received invalid JSON document: %s', e)
             return respond_error(request, f'Invalid JSON document: {e}'.encode())
