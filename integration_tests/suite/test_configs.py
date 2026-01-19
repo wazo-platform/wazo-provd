@@ -1,5 +1,7 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
+
+from typing import Any
 
 from hamcrest import (
     assert_that,
@@ -134,6 +136,36 @@ class TestConfigs(BaseIntegrationTest):
             calling(provd.configs.create).with_args(config),
             raises(ProvdError).matching(has_properties('status_code', 401)),
         )
+
+    def test_create_when_max_buffer_length_exceeded_succeeds(self) -> None:
+        config: dict[str, Any] = {
+            'id': 'test1',
+            'parent_ids': ['base'],
+            'deletable': True,
+            'X_type': 'internal',
+            'raw_config': {
+                'ip': '127.0.0.1',
+                'http_port': 8667,
+                'ntp_ip': '127.0.0.1',
+                'X_xivo_phonebook_ip': '127.0.0.1',
+                'ntp_enabled': True,
+                'sip_lines': dict(),
+            },
+        }
+        for i in range(1024):
+            config['raw_config']['sip_lines'] |= {
+                str(i): {
+                    'username': f'test{i}',
+                    'password': f'test{i}',
+                    'display_name': f'test{i}',
+                    'number': f'test{i}',
+                    'proxy_ip': '127.0.0.1',
+                    'registrar_ip': '127.0.0.1',
+                },
+            }
+        result = self._client.configs.create(config)
+        assert_that(result['id'], is_(equal_to(config['id'])))
+        self._client.configs.delete(config['id'])
 
     def test_update(self) -> None:
         with fixtures.Configuration(self._client) as config:
