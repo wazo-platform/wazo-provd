@@ -9,6 +9,7 @@ X-Python3-Version: >= 3.11
 Package: wazo-provd
 Architecture: all
 Pre-Depends: ${misc:Pre-Depends}
+# python3-packaging: used by wazo-provd-plugins
 Depends:
     ${python3:Depends},
     ${misc:Depends},
@@ -16,6 +17,7 @@ Depends:
     python3-jinja2,
     python3-kombu,
     python3-openssl,
+    python3-packaging,
     python3-pydantic,
     python3-twisted,
     unar,
