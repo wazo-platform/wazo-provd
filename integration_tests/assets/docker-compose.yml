@@ -10,7 +10,7 @@ services:
       - "9497"
 
   rabbitmq:
-    image: rabbitmq
+    image: rabbitmq:3
     container_name: rabbitmq
     ports:
       - "5672"
