@@ -5,8 +5,7 @@ After=network.target wazo-confgend.service
 Before=monit.service
 
 [Service]
-ExecStartPre=/usr/bin/install -d -o wazo-provd -g wazo-provd /run/wazo-provd
-ExecStart=/usr/bin/twistd3 --nodaemon --pidfile=/run/wazo-provd/wazo-provd.pid --rundir=/ --uid=wazo-provd --gid=wazo-provd --no_save --logger wazo_provd.main.twistd_logs wazo-provd
+ExecStart=/usr/bin/twistd3 --nodaemon --rundir=/ --uid=wazo-provd --gid=wazo-provd --no_save --logger wazo_provd.main.twistd_logs wazo-provd
 UMask=0077
 Restart=on-failure
 RestartSec=5
