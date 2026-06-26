@@ -1,3 +1,12 @@
+wazo-provd (26.06) wazo-dev-bookworm; urgency=medium
+
+  * Run the service in the foreground (twistd --nodaemon) under systemd so its
+    logs are captured by journald; switch service Type from forking to simple.
+    File logging to /var/log/wazo-provd.log is unchanged. The PID file is still
+    written for monit.
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Tue, 23 Jun 2026 20:06:19 -0400
+
 wazo-provd (21.14~20211018.112050) wazo-dev-buster; urgency=medium
 
   * Refactor syntax to be python2.7 and python3 compatible
