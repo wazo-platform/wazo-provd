@@ -18,4 +18,9 @@ setup(
         'twisted': ['.noinit'],
         'twisted.plugins': ['provd_plugins.py', '.noinit'],
     },
+    entry_points={
+        'console_scripts': [
+            'wazo-provd-wait=wazo_provd.wait:main',
+        ],
+    },
 )

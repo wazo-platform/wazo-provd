@@ -2,10 +2,12 @@
 Description=wazo-provd server
 ConditionPathExists=!/var/lib/wazo/disabled
 After=network.target wazo-confgend.service
-Before=monit.service
+StartLimitBurst=15
+StartLimitIntervalSec=150
 
 [Service]
 ExecStart=/usr/bin/twistd3 --nodaemon --rundir=/ --uid=wazo-provd --gid=wazo-provd --no_save --logger wazo_provd.main.twistd_logs wazo-provd
+ExecStartPost=/usr/bin/wazo-provd-wait
 UMask=0077
 Restart=on-failure
 RestartSec=5
