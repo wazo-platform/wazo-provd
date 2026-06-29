@@ -2,7 +2,6 @@
 Description=wazo-provd server
 ConditionPathExists=!/var/lib/wazo/disabled
 After=network.target wazo-confgend.service
-Before=monit.service
 StartLimitBurst=15
 StartLimitIntervalSec=150
 
