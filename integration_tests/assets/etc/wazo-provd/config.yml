@@ -6,5 +6,7 @@ rest_api:
   ip: 0.0.0.0
 auth:
   host: auth
+  port: 9497
+  prefix: null
 bus:
     host: rabbitmq

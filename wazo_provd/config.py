@@ -1,4 +1,4 @@
-# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Provisioning server configuration module.
@@ -70,7 +70,7 @@ from __future__ import annotations
 import json
 import logging
 import os.path
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, NotRequired, TypedDict, cast
 from urllib.parse import urlparse
 
 from twisted.python import usage
@@ -127,7 +127,7 @@ class RestApiConfigDict(TypedDict):
 class AuthConfigDict(TypedDict):
     host: str
     port: int
-    prefix: str | None
+    prefix: NotRequired[str | None]
     https: bool
     key_file: str
 
@@ -208,8 +208,7 @@ _DEFAULT_CONFIG: ProvdConfigDict = {
     },
     'auth': {
         'host': 'localhost',
-        'port': 9497,
-        'prefix': None,
+        'port': 80,
         'https': False,
         'key_file': '/var/lib/wazo-auth-keys/wazo-provd-key.yml',
     },

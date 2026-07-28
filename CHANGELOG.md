@@ -1,5 +1,9 @@
 # Changelog
 
+## 26.09
+
+* Requests to wazo-auth now default to `localhost:80`, through nginx.
+
 ## 23.17
 
 * The following configurations have been removed in favor of
