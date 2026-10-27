@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+* With `http_auth_strategy: url_key`, invalid and empty provisioning keys are
+  now logged with the client IP in `/var/log/wazo-provd-fail2ban.log`
+  (`Invalid provisioning key from <ip>` / `Empty provisioning key from <ip>`).
+  The provisioning key is no longer written to `/var/log/wazo-provd.log`.
+* HTTPS provisioning requests (`/device/provisioning/`) are now rate limited by
+  nginx (`provd_provisioning` zone, 5 r/s per IP, burst 50, HTTP 429 when
+  exceeded).
+
 ## 26.09
 
 * Requests to wazo-auth now default to `localhost:80`, through nginx.

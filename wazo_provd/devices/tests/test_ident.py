@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
+from io import BytesIO
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -11,12 +13,14 @@ from hamcrest import assert_that, equal_to, has_entry
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
+from twisted.web.test.requesthelper import DummyChannel
 
 from wazo_provd.devices import ident
 from wazo_provd.devices.ident import (
     AddDeviceRetriever,
     DHCPRequest,
     HTTPKeyVerifyingHook,
+    HTTPRequestProcessingService,
     LastSeenUpdater,
     RemoveOutdatedIpDeviceUpdater,
     Request,
@@ -24,7 +28,9 @@ from wazo_provd.devices.ident import (
     VotingUpdater,
     _get_ip_from_http_request_with_proxies,
     _RequestHelper,
+    redact_provisioning_key,
 )
+from wazo_provd.servers.http_site import Site
 from wazo_provd.servers.tftp import TFTPRequest
 
 
@@ -461,3 +467,173 @@ class TestHTTPKeyVerifyingHook(unittest.TestCase):
         assert path == ''
         assert self.request.prepath == ['']
         assert self.request.postpath == []
+
+    def _new_hook(self, tenant_uuid=None, trusted_proxies_count=0):
+        app = Mock()
+        app.configure_service.get_tenant_from_provisioning_key.return_value = (
+            tenant_uuid
+        )
+        return HTTPKeyVerifyingHook(app, Mock(), trusted_proxies_count)
+
+    def _new_request(self, client_ip='169.254.0.1', forwarded_for=None):
+        request = Mock()
+        request.getClientIP.return_value = client_ip
+        request.getHeader.return_value = forwarded_for
+        request.prepath = [b'INVALIDKEY000']
+        request.postpath = [b'test.cfg']
+        return request
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_invalid_key_without_proxy(self, mock_log_security_msg):
+        hook = self._new_hook()
+        request = self._new_request(forwarded_for='10.0.0.1')
+
+        resource = hook.getChild(b'INVALIDKEY000', request)
+
+        assert resource is HTTPKeyVerifyingHook.unauthorized_resource
+        mock_log_security_msg.assert_called_once_with(
+            'Invalid provisioning key from %s', '169.254.0.1'
+        )
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_invalid_key_with_one_proxy(self, mock_log_security_msg):
+        hook = self._new_hook(trusted_proxies_count=1)
+        request = self._new_request(client_ip='127.0.0.1', forwarded_for='10.0.0.1')
+
+        resource = hook.getChild(b'INVALIDKEY000', request)
+
+        assert resource is HTTPKeyVerifyingHook.unauthorized_resource
+        mock_log_security_msg.assert_called_once_with(
+            'Invalid provisioning key from %s', '10.0.0.1'
+        )
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_empty_key_without_proxy(self, mock_log_security_msg):
+        hook = self._new_hook()
+        request = self._new_request()
+
+        resource = hook.getChild(b'', request)
+
+        assert resource is HTTPKeyVerifyingHook.unauthorized_resource
+        mock_log_security_msg.assert_called_once_with(
+            'Empty provisioning key from %s', '169.254.0.1'
+        )
+        hook._app.configure_service.get_tenant_from_provisioning_key.assert_not_called()
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_empty_key_with_one_proxy(self, mock_log_security_msg):
+        hook = self._new_hook(trusted_proxies_count=1)
+        request = self._new_request(client_ip='127.0.0.1', forwarded_for='10.0.0.1')
+
+        resource = hook.getChild(b'', request)
+
+        assert resource is HTTPKeyVerifyingHook.unauthorized_resource
+        mock_log_security_msg.assert_called_once_with(
+            'Empty provisioning key from %s', '10.0.0.1'
+        )
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_invalid_key_with_invalid_forwarded_for(self, mock_log_security_msg):
+        hook = self._new_hook(trusted_proxies_count=1)
+        request = self._new_request(client_ip='127.0.0.1', forwarded_for='')
+
+        resource = hook.getChild(b'INVALIDKEY000', request)
+
+        assert resource is HTTPKeyVerifyingHook.unauthorized_resource
+        mock_log_security_msg.assert_called_once_with(
+            'Invalid provisioning key from %s', 'unknown'
+        )
+
+    def test_valid_key_routes_to_next_service(self):
+        hook = self._new_hook(tenant_uuid='tenant-uuid')
+        hook._service.isLeaf = False
+        request = self._new_request()
+        request.prepath = [b'validkey-123']
+
+        hook.getChild(b'validkey-123', request)
+
+        assert request.tenant_uuid == 'tenant-uuid'
+        assert request.prepath == [b'test.cfg']
+        hook._service.getChildWithDefault.assert_called_once_with(b'test.cfg', request)
+
+
+class _RecordingHandler(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(level=logging.DEBUG)
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
+
+
+class TestProvisioningKeyNotLogged(unittest.TestCase):
+    """Drive full requests through the provd Site and check every log record."""
+
+    def setUp(self) -> None:
+        self.handler = _RecordingHandler()
+        self.root_logger = logging.getLogger()
+        self.previous_level = self.root_logger.level
+        self.root_logger.setLevel(logging.DEBUG)
+        self.root_logger.addHandler(self.handler)
+
+        self.app = Mock()
+        self.app.configure_service.get_tenant_from_provisioning_key.side_effect = (
+            lambda key: 'tenant-uuid' if key == 'validkey-123' else None
+        )
+        self.process_service = Mock()
+        self.process_service.process.return_value = defer.succeed(({}, None))
+        processing_service = HTTPRequestProcessingService(
+            self.process_service, {}, 0, provisioning_key_in_url=True
+        )
+        hook = HTTPKeyVerifyingHook(self.app, processing_service, 0)
+        self.site = Site(hook, logFormatter=ident.redacted_combined_log_formatter)
+        self.site.startFactory()
+        self.access_log = BytesIO()
+        self.site.logFile = self.access_log
+
+    def tearDown(self) -> None:
+        self.site.stopFactory()
+        self.root_logger.removeHandler(self.handler)
+        self.root_logger.setLevel(self.previous_level)
+
+    def _get(self, uri: bytes) -> Request:
+        channel = DummyChannel()
+        channel.site = self.site
+        channel.factory = self.site
+        request = self.site.requestFactory(channel)
+        request.gotLength(0)
+        request.requestReceived(b'GET', uri, b'HTTP/1.1')
+        return request
+
+    def _all_logs(self) -> str:
+        return '\n'.join(self.handler.messages) + self.access_log.getvalue().decode()
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_invalid_key_is_not_logged(self, mock_log_security_msg):
+        request = self._get(b'/INVALIDKEY000/test.cfg')
+
+        assert request.code == 404
+        mock_log_security_msg.assert_called_once_with(
+            'Invalid provisioning key from %s', '192.168.1.1'
+        )
+        assert 'INVALIDKEY000' not in self._all_logs()
+        assert '/XXXXXXXX/test.cfg' in self.access_log.getvalue().decode()
+
+    def test_valid_key_is_routed_and_not_logged(self):
+        request = self._get(b'/validkey-123/test.cfg')
+
+        self.process_service.process.assert_called_once()
+        assert request.tenant_uuid == 'tenant-uuid'
+        # twisted only pops prepath: uri and path still contain the key
+        assert b'validkey-123' in request.uri
+        assert b'validkey-123' in request.path
+        assert 'validkey-123' not in self._all_logs()
+        assert 'Processing HTTP request: ' in self._all_logs()
+
+
+class TestRedactProvisioningKey(unittest.TestCase):
+    def test_redact(self):
+        assert redact_provisioning_key(b'/validkey-123/a/b.cfg') == b'/XXXXXXXX/a/b.cfg'
+        assert redact_provisioning_key(b'/validkey-123') == b'/XXXXXXXX'
+        assert redact_provisioning_key(b'/validkey-123?x=1') == b'/XXXXXXXX?x=1'
+        assert redact_provisioning_key(b'/') == b'/XXXXXXXX'

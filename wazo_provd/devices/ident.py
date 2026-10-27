@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable
@@ -15,9 +16,11 @@ from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
-from twisted.web import rewrite
+from twisted.web import http, rewrite
 from twisted.web.http import INTERNAL_SERVER_ERROR
+from twisted.web.iweb import IAccessLogFormatter
 from twisted.web.resource import ErrorPage, NoResource, Resource
+from zope.interface import provider
 
 from wazo_provd.devices.device import copy as copy_device
 from wazo_provd.plugins import BasePluginManagerObserver, PluginManager
@@ -771,6 +774,32 @@ class _RequestHelper:
         return device.get('plugin')
 
 
+_PROVISIONING_KEY_IN_URI = re.compile(rb'^/[^/?]*')
+
+
+def redact_provisioning_key(uri: bytes) -> bytes:
+    """Replace the first path segment (the provisioning key) of a URI."""
+    return _PROVISIONING_KEY_IN_URI.sub(b'/XXXXXXXX', uri, count=1)
+
+
+class _RedactedURIRequest:
+    def __init__(self, request: Request) -> None:
+        self._request = request
+
+    @property
+    def uri(self) -> bytes:
+        return redact_provisioning_key(self._request.uri)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._request, name)
+
+
+@provider(IAccessLogFormatter)
+def redacted_combined_log_formatter(timestamp: str, request: Request) -> str:
+    """Twisted access log formatter hiding the provisioning key of the URI."""
+    return http.combinedLogFormatter(timestamp, _RedactedURIRequest(request))
+
+
 def _null_service_factory(pg_id: str, pg_service):
     return pg_service
 
@@ -809,20 +838,30 @@ class HTTPRequestProcessingService(Resource):
 
     default_service = NoResource('Nowhere to route this request.')
 
-    def __init__(self, process_service, pg_mgr, num_http_proxies) -> None:
+    def __init__(
+        self, process_service, pg_mgr, num_http_proxies, provisioning_key_in_url=False
+    ) -> None:
         super().__init__()
         self._process_service = process_service
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
         self._num_http_proxies = num_http_proxies
+        # When the HTTPKeyVerifyingHook is in front of this service, the
+        # request URI and path still contain the provisioning key
+        self._provisioning_key_in_url = provisioning_key_in_url
 
     @defer.inlineCallbacks
     def getChild(self, path: bytes, request: Request):
-        logger.info('Processing HTTP request: %s', request.uri)
-        logger.debug('HTTP request: %s', request)
+        if self._provisioning_key_in_url:
+            logger.info(
+                'Processing HTTP request: %s', redact_provisioning_key(request.uri)
+            )
+        else:
+            logger.info('Processing HTTP request: %s', request.uri)
+            logger.debug('HTTP request: %s', request)
+            logger.debug('path = %s', request.path)
         logger.debug('prepath: %s', request.prepath)
         logger.debug('postpath: %s', request.postpath)
-        logger.debug('path = %s', request.path)
 
         # Inject the number of trusted HTTP proxies
         request.num_http_proxies = self._num_http_proxies
@@ -865,38 +904,34 @@ class HTTPRequestProcessingService(Resource):
 class HTTPKeyVerifyingHook(BaseHTTPHookService):
     unauthorized_resource = NoResource('Nowhere to route this request.')
 
-    def __init__(self, app, *args, **kwargs):
+    def __init__(self, app, service, trusted_proxies_count: int = 0) -> None:
         self._app = app
-        super().__init__(*args, **kwargs)
+        self._trusted_proxies_count = trusted_proxies_count
+        super().__init__(service)
 
     def getChild(self, path: bytes, request: Request):
-        logger.debug(
-            'URL key verifying hook, path = "%s", request = "%s"', path, request
-        )
+        # Never log the key: neither path nor the request (its repr has the URI)
+        logger.debug('URL key verifying hook')
 
         prov_key = path.decode('utf-8')
-        logger.debug('Prov key = "%s"', prov_key)
 
         if not prov_key:
-            logger.info('Empty provisioning key. Denying request.')
+            ip = self._get_client_ip(request)
+            logger.info('Empty provisioning key from %s. Denying request.', ip)
+            log_security_msg('Empty provisioning key from %s', ip)
             return self.unauthorized_resource
 
         tenant_uuid = self._app.configure_service.get_tenant_from_provisioning_key(
             prov_key
         )
         if not tenant_uuid:
-            logger.info('Invalid URL key. Denying request.')
+            ip = self._get_client_ip(request)
+            logger.info('Invalid provisioning key from %s. Denying request.', ip)
+            log_security_msg('Invalid provisioning key from %s', ip)
             return self.unauthorized_resource
 
         # Inject tenant_uuid in request object
         request.tenant_uuid = tenant_uuid
-
-        logger.debug(
-            'Received request: path = %s, prepath = %s, postpath = %s',
-            path,
-            request.prepath,
-            request.postpath,
-        )
 
         path = self._strip_key_from_request(path, request)
 
@@ -907,6 +942,18 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
             request.postpath,
         )
         return self._next_service(path, request)
+
+    def _get_client_ip(self, request: Request) -> str:
+        # request.num_http_proxies is only set later, by
+        # HTTPRequestProcessingService, so _get_ip_from_request can't be used
+        if not self._trusted_proxies_count:
+            return request.getClientIP() or 'unknown'
+        try:
+            return _get_ip_from_http_request_with_proxies(
+                request, self._trusted_proxies_count
+            )
+        except RuntimeError:
+            return 'unknown'
 
     @staticmethod
     def _strip_key_from_request(path, request):
