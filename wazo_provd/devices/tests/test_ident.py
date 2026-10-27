@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 from hamcrest import assert_that, equal_to, has_entry
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
+from twisted.logger import formatEvent, globalLogPublisher
 from twisted.trial import unittest
 from twisted.web.test.requesthelper import DummyChannel
 
@@ -575,6 +576,9 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
         self.previous_level = self.root_logger.level
         self.root_logger.setLevel(logging.DEBUG)
         self.root_logger.addHandler(self.handler)
+        # twisted's own log events reach wazo-provd.log through STDLibLogObserver
+        self.twisted_messages: list[str] = []
+        globalLogPublisher.addObserver(self._observe_twisted)
 
         self.app = Mock()
         self.app.configure_service.get_tenant_from_provisioning_key.side_effect = (
@@ -586,27 +590,36 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
             self.process_service, {}, 0, provisioning_key_in_url=True
         )
         hook = HTTPKeyVerifyingHook(self.app, processing_service, 0)
-        self.site = Site(hook, logFormatter=ident.redacted_combined_log_formatter)
+        self.site = Site(
+            hook,
+            requestFactory=ident.ProvisioningKeyRequest,
+            logFormatter=ident.redacted_combined_log_formatter,
+        )
         self.site.startFactory()
         self.access_log = BytesIO()
         self.site.logFile = self.access_log
 
     def tearDown(self) -> None:
+        globalLogPublisher.removeObserver(self._observe_twisted)
         self.site.stopFactory()
         self.root_logger.removeHandler(self.handler)
         self.root_logger.setLevel(self.previous_level)
 
-    def _get(self, uri: bytes) -> Request:
+    def _observe_twisted(self, event) -> None:
+        self.twisted_messages.append(formatEvent(event))
+
+    def _get(self, uri: bytes, method: bytes = b'GET') -> Request:
         channel = DummyChannel()
         channel.site = self.site
         channel.factory = self.site
         request = self.site.requestFactory(channel)
         request.gotLength(0)
-        request.requestReceived(b'GET', uri, b'HTTP/1.1')
+        request.requestReceived(method, uri, b'HTTP/1.1')
         return request
 
     def _all_logs(self) -> str:
-        return '\n'.join(self.handler.messages) + self.access_log.getvalue().decode()
+        messages = self.handler.messages + self.twisted_messages
+        return '\n'.join(messages) + self.access_log.getvalue().decode()
 
     @patch('wazo_provd.devices.ident.log_security_msg')
     def test_invalid_key_is_not_logged(self, mock_log_security_msg):
@@ -630,6 +643,30 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
         assert 'validkey-123' not in self._all_logs()
         assert 'Processing HTTP request: ' in self._all_logs()
 
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_invalid_key_head_request_is_not_logged(self, mock_log_security_msg):
+        request = self._get(b'/INVALIDKEY000/test.cfg', method=b'HEAD')
+
+        assert request.code == 404
+        mock_log_security_msg.assert_called_once()
+        assert 'INVALIDKEY000' not in self._all_logs()
+
+    def test_valid_key_head_request_is_not_logged(self):
+        request = self._get(b'/validkey-123/missing.cfg', method=b'HEAD')
+
+        assert request.code == 404
+        assert 'validkey-123' not in self._all_logs()
+
+    @patch('wazo_provd.devices.ident.log_security_msg')
+    def test_non_utf8_key_is_an_invalid_key(self, mock_log_security_msg):
+        request = self._get(b'/%FFINVALIDKEY000/test.cfg')
+
+        assert request.code == 404
+        mock_log_security_msg.assert_called_once_with(
+            'Invalid provisioning key from %s', '192.168.1.1'
+        )
+        assert 'INVALIDKEY000' not in self._all_logs()
+
 
 class TestRedactProvisioningKey(unittest.TestCase):
     def test_redact(self):
@@ -639,3 +676,16 @@ class TestRedactProvisioningKey(unittest.TestCase):
         assert redact_provisioning_key(b'/') == b'/XXXXXXXX'
         assert redact_provisioning_key(b'//validkey-123/a.cfg') == b'/XXXXXXXX/a.cfg'
         assert redact_provisioning_key(b'/%41validkey/a.cfg') == b'/XXXXXXXX/a.cfg'
+        assert (
+            redact_provisioning_key(b'http://host:18667/validkey-123/a.cfg')
+            == b'/XXXXXXXX/a.cfg'
+        )
+
+    def test_request_repr(self):
+        request = ident.ProvisioningKeyRequest(DummyChannel())
+        request.method = b'GET'
+        request.uri = b'/validkey-123/a.cfg'
+        request.clientproto = b'HTTP/1.1'
+
+        assert 'validkey-123' not in repr(request)
+        assert 'uri=/XXXXXXXX/a.cfg' in repr(request)

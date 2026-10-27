@@ -216,6 +216,7 @@ class HTTPProxiedProcessService(Service):
                 app, http_process_service, trusted_proxies_count
             )
             site_kwargs['logFormatter'] = ident.redacted_combined_log_formatter
+            site_kwargs['requestFactory'] = ident.ProvisioningKeyRequest
         site = Site(http_process_service, **site_kwargs)
         interface = config['http_proxied_listen_interface']
         port = config['http_proxied_listen_port']

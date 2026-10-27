@@ -774,12 +774,30 @@ class _RequestHelper:
         return device.get('plugin')
 
 
-_PROVISIONING_KEY_IN_URI = re.compile(rb'^/+[^/?]*')
+# optional scheme and authority (absolute-form request target), then the key
+_PROVISIONING_KEY_IN_URI = re.compile(rb'^(?:[a-zA-Z][a-zA-Z0-9+.-]*://[^/]*)?/+[^/?]*')
 
 
 def redact_provisioning_key(uri: bytes) -> bytes:
     """Replace the first path segment (the provisioning key) of a URI."""
     return _PROVISIONING_KEY_IN_URI.sub(b'/XXXXXXXX', uri, count=1)
+
+
+class ProvisioningKeyRequest(Request):
+    """Request whose repr hides the provisioning key.
+
+    Twisted logs the request repr on its own, e.g. when a HEAD request
+    resource returns a body.
+    """
+
+    def __repr__(self) -> str:
+        return '<{} at 0x{:x} method={} uri={} clientproto={}>'.format(
+            self.__class__.__name__,
+            id(self),
+            self.method.decode('ascii', 'backslashreplace'),
+            redact_provisioning_key(self.uri).decode('ascii', 'backslashreplace'),
+            self.clientproto.decode('ascii', 'backslashreplace'),
+        )
 
 
 class _RedactedURIRequest:
@@ -913,7 +931,13 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
         # Never log the key: neither path nor the request (its repr has the URI)
         logger.debug('URL key verifying hook')
 
-        prov_key = path.decode('utf-8')
+        try:
+            prov_key = path.decode('utf-8')
+        except UnicodeDecodeError:
+            log_security_msg(
+                'Invalid provisioning key from %s', self._get_client_ip(request)
+            )
+            return self.unauthorized_resource
 
         if not prov_key:
             log_security_msg(
