@@ -774,7 +774,7 @@ class _RequestHelper:
         return device.get('plugin')
 
 
-_PROVISIONING_KEY_IN_URI = re.compile(rb'^/[^/?]*')
+_PROVISIONING_KEY_IN_URI = re.compile(rb'^/+[^/?]*')
 
 
 def redact_provisioning_key(uri: bytes) -> bytes:
@@ -916,18 +916,18 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
         prov_key = path.decode('utf-8')
 
         if not prov_key:
-            ip = self._get_client_ip(request)
-            logger.info('Empty provisioning key from %s. Denying request.', ip)
-            log_security_msg('Empty provisioning key from %s', ip)
+            log_security_msg(
+                'Empty provisioning key from %s', self._get_client_ip(request)
+            )
             return self.unauthorized_resource
 
         tenant_uuid = self._app.configure_service.get_tenant_from_provisioning_key(
             prov_key
         )
         if not tenant_uuid:
-            ip = self._get_client_ip(request)
-            logger.info('Invalid provisioning key from %s. Denying request.', ip)
-            log_security_msg('Invalid provisioning key from %s', ip)
+            log_security_msg(
+                'Invalid provisioning key from %s', self._get_client_ip(request)
+            )
             return self.unauthorized_resource
 
         # Inject tenant_uuid in request object

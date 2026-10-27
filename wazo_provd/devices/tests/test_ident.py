@@ -637,3 +637,5 @@ class TestRedactProvisioningKey(unittest.TestCase):
         assert redact_provisioning_key(b'/validkey-123') == b'/XXXXXXXX'
         assert redact_provisioning_key(b'/validkey-123?x=1') == b'/XXXXXXXX?x=1'
         assert redact_provisioning_key(b'/') == b'/XXXXXXXX'
+        assert redact_provisioning_key(b'//validkey-123/a.cfg') == b'/XXXXXXXX/a.cfg'
+        assert redact_provisioning_key(b'/%41validkey/a.cfg') == b'/XXXXXXXX/a.cfg'
