@@ -62,6 +62,9 @@ paths:
         '**Required ACL:** `provd.configure.{param_id}.read`'
 
         Wazo-Tenant header is only valid for `provisioning_key`
+
+        `http_auth_strategy` is read-only: `url_key` when HTTP provisioning
+        requires the tenant provisioning key, otherwise `null`.
       tags:
         - provd
       parameters:
@@ -76,7 +79,10 @@ paths:
           $ref: '#/responses/NoSuchResourceError'
     put:
       summary: Set the value of a parameter
-      description: '**Required ACL:** `provd.configure.{param_id}.update`'
+      description: |
+        **Required ACL:** `provd.configure.{param_id}.update`
+
+        Read-only parameters, such as `http_auth_strategy`, return 400.
       tags:
         - provd
       parameters:
@@ -85,6 +91,8 @@ paths:
       responses:
         '204':
           $ref: '#/responses/NoContentResponse'
+        '400':
+          $ref: '#/responses/InvalidParameterError'
         '404':
           $ref: '#/responses/NoSuchResourceError'
         '415':
@@ -1243,6 +1251,10 @@ responses:
       $ref: '#/definitions/ErrorMessage'
   InvalidJSONError:
     description: Invalid JSON document
+    schema:
+      $ref: '#/definitions/ErrorMessage'
+  InvalidParameterError:
+    description: Invalid value, or the parameter is read-only
     schema:
       $ref: '#/definitions/ErrorMessage'
   BadRequestError:

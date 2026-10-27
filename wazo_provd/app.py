@@ -1297,6 +1297,15 @@ class ApplicationConfigureService:
                 return tenant
         return None
 
+    # Read-only: set from the config file, needs a restart to change.
+    def _get_param_http_auth_strategy(
+        self, *args: Any, **kwargs: Any
+    ) -> Literal['url_key'] | None:
+        return 'url_key' if self._app.use_provisioning_key else None
+
+    def _set_param_http_auth_strategy(self, *args: Any, **kwargs: Any) -> None:
+        raise InvalidParameterError('`http_auth_strategy` is read-only')
+
     def _set_param_tenants(
         self, tenants: dict[str, dict[str, Any]], *args: Any, **kwargs: Any
     ) -> None:
@@ -1338,6 +1347,11 @@ class ApplicationConfigureService:
         ('locale', 'The current locale. Example: fr_FR'),
         ('NAT', 'Set to 1 if all the devices are behind a NAT.'),
         ('provisioning_key', 'The provisioning key for the tenant. [min: 8, max: 256]'),
+        (
+            'http_auth_strategy',
+            'Read-only. "url_key" when HTTP provisioning requires the '
+            'provisioning key, else null.',
+        ),
     ]
 
     description_fr = [
@@ -1356,5 +1370,10 @@ class ApplicationConfigureService:
         (
             'provisioning_key',
             'La clé de provisioning pour le tenant. [min: 8, max: 256]',
+        ),
+        (
+            'http_auth_strategy',
+            'Lecture seule. "url_key" si le provisioning HTTP exige la clé '
+            'de provisioning, sinon null.',
         ),
     ]

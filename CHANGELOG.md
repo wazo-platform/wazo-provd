@@ -9,6 +9,9 @@
 * HTTPS provisioning requests (`/device/provisioning/`) are now rate limited by
   nginx (`provd_provisioning` zone, 5 r/s per IP, burst 500, HTTP 429 when
   exceeded).
+* New read-only parameter `http_auth_strategy` on `GET /0.2/configure/http_auth_strategy`
+  and in `GET /0.2/configure`: `url_key` when HTTP provisioning requires the
+  tenant provisioning key, otherwise `null`. `PUT` on it returns 400.
 
 ## 26.09
 

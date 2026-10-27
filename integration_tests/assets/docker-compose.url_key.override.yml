@@ -1,0 +1,11 @@
+services:
+  sync:
+    depends_on:
+      - auth
+      - provd
+    environment:
+      TARGETS: "auth:9497,provd:8666"
+
+  provd:
+    volumes:
+      - "./etc/wazo-provd/config-url-key.yml:/etc/wazo-provd/config.yml"

@@ -1,7 +1,7 @@
 # Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from hamcrest import assert_that, calling, has_entry, has_key, has_properties
+from hamcrest import assert_that, calling, has_entry, has_item, has_key, has_properties
 from wazo_provd_client.exceptions import ProvdError
 from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
@@ -180,3 +180,36 @@ class TestParams(BaseIntegrationTest):
         provd.set_tenant(SUB_TENANT_2)
         # Should not raise an error since multiple tenants can have a null provisioning key
         provd.params.update('provisioning_key', None)
+
+    def test_http_auth_strategy_defaults_to_null(self) -> None:
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', None),
+        )
+
+    def test_http_auth_strategy_is_listed(self) -> None:
+        params = self._client.params.list()['params']
+        assert_that(params, has_item(has_entry('id', 'http_auth_strategy')))
+
+    def test_http_auth_strategy_is_read_only(self) -> None:
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'http_auth_strategy', 'url_key'
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', None),
+        )
+
+
+class TestParamsUrlKey(BaseIntegrationTest):
+    asset = 'url_key'
+    wait_strategy = NoWaitStrategy()
+
+    def test_http_auth_strategy_is_url_key(self) -> None:
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', 'url_key'),
+        )
