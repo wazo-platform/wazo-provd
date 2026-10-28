@@ -1,3 +1,12 @@
+wazo-provd (26.11) wazo-dev-bookworm; urgency=medium
+
+  * Report invalid and empty provisioning keys with the client IP to the
+    fail2ban log and keep provisioning keys out of the logs.
+  * Ship the provd_provisioning nginx rate-limit zone in
+    /etc/nginx/conf.d/wazo-provd.conf and rate limit HTTPS provisioning.
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Wed, 28 Oct 2026 09:20:00 +0000
+
 wazo-provd (26.06) wazo-dev-bookworm; urgency=medium
 
   * Run the service in the foreground (twistd --nodaemon) under systemd so its
