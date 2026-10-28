@@ -63,8 +63,9 @@ paths:
 
         Wazo-Tenant header is only valid for `provisioning_key`
 
-        `http_auth_strategy` is read-only: `url_key` when HTTP provisioning
-        requires the tenant provisioning key, otherwise `null`.
+        `http_auth_strategy`: `url_key` when HTTP provisioning requires the
+        tenant provisioning key, otherwise `null`. In both modes, devices of a
+        tenant with a key get key URLs once reconfigured, and those URLs work.
       tags:
         - provd
       parameters:
@@ -82,7 +83,9 @@ paths:
       description: |
         **Required ACL:** `provd.configure.{param_id}.update`
 
-        Read-only parameters, such as `http_auth_strategy`, return 400.
+        `http_auth_strategy` accepts `url_key` or `null`, and only from the
+        master tenant (400 otherwise). It takes effect at once and overrides
+        the `general.http_auth_strategy` configuration.
       tags:
         - provd
       parameters:
@@ -1254,7 +1257,7 @@ responses:
     schema:
       $ref: '#/definitions/ErrorMessage'
   InvalidParameterError:
-    description: Invalid value, or the parameter is read-only
+    description: Invalid value, or not allowed for this tenant
     schema:
       $ref: '#/definitions/ErrorMessage'
   BadRequestError:
