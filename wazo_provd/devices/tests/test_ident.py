@@ -608,11 +608,15 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
     def _observe_twisted(self, event) -> None:
         self.twisted_messages.append(formatEvent(event))
 
-    def _get(self, uri: bytes, method: bytes = b'GET') -> Request:
+    def _get(
+        self, uri: bytes, method: bytes = b'GET', referer: bytes | None = None
+    ) -> Request:
         channel = DummyChannel()
         channel.site = self.site
         channel.factory = self.site
         request = self.site.requestFactory(channel)
+        if referer:
+            request.requestHeaders.setRawHeaders(b'referer', [referer])
         request.gotLength(0)
         request.requestReceived(method, uri, b'HTTP/1.1')
         return request
@@ -642,6 +646,13 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
         assert b'validkey-123' in request.path
         assert 'validkey-123' not in self._all_logs()
         assert 'Processing HTTP request: ' in self._all_logs()
+
+    def test_key_in_referer_is_not_logged(self):
+        self._get(
+            b'/validkey-123/b.cfg', referer=b'http://provd:8667/validkey-123/a.cfg'
+        )
+
+        assert 'validkey-123' not in self._all_logs()
 
     @patch('wazo_provd.devices.ident.log_security_msg')
     def test_invalid_key_head_request_is_not_logged(self, mock_log_security_msg):

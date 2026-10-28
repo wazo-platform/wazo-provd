@@ -808,6 +808,12 @@ class _RedactedURIRequest:
     def uri(self) -> bytes:
         return redact_provisioning_key(self._request.uri)
 
+    def getHeader(self, key: bytes) -> bytes | None:
+        # the Referer can be another provisioning URL, key included
+        if key.lower() == b'referer':
+            return None
+        return self._request.getHeader(key)
+
     def __getattr__(self, name: str) -> Any:
         return getattr(self._request, name)
 
