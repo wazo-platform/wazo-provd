@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 26.11
 
 * With `http_auth_strategy: url_key`, invalid and empty provisioning keys are
   now logged with the client IP in `/var/log/wazo-provd-fail2ban.log`
