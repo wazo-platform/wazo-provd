@@ -209,15 +209,18 @@ class HTTPProxiedProcessService(Service):
             trusted_proxies_count,
             provisioning_key_in_url=app.use_provisioning_key,
         )
-        site_kwargs = {}
         if app.use_provisioning_key:
             logger.info('Using in-URL provisioning key')
             http_process_service = ident.HTTPKeyVerifyingHook(
                 app, http_process_service, trusted_proxies_count
             )
-            site_kwargs['logFormatter'] = ident.redacted_combined_log_formatter
-            site_kwargs['requestFactory'] = ident.ProvisioningKeyRequest
-        site = Site(http_process_service, **site_kwargs)
+            site = Site(
+                http_process_service,
+                requestFactory=ident.ProvisioningKeyRequest,
+                logFormatter=ident.redacted_combined_log_formatter,
+            )
+        else:
+            site = Site(http_process_service)
         interface = config['http_proxied_listen_interface']
         port = config['http_proxied_listen_port']
         logger.info('Binding HTTP-proxied provisioning service to port %s', port)
