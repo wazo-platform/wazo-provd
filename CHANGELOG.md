@@ -7,7 +7,7 @@
   (`Invalid provisioning key from <ip>` / `Empty provisioning key from <ip>`).
   The provisioning key is no longer written to `/var/log/wazo-provd.log`.
 * HTTPS provisioning requests (`/device/provisioning/`) are now rate limited by
-  nginx (`provd_provisioning` zone, 5 r/s per IP, burst 50, HTTP 429 when
+  nginx (`provd_provisioning` zone, 5 r/s per IP, burst 500, HTTP 429 when
   exceeded).
 
 ## 26.09
