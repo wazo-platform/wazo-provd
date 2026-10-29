@@ -1,4 +1,4 @@
-# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Request processing service definition."""
@@ -783,6 +783,13 @@ def redact_provisioning_key(uri: bytes) -> bytes:
     return _PROVISIONING_KEY_IN_URI.sub(b'/XXXXXXXX', uri, count=1)
 
 
+def _redacted_uri(request: Request) -> bytes:
+    # Set by HTTPKeyVerifyingHook; redact until it has seen the request
+    if getattr(request, 'provisioning_key_in_url', True):
+        return redact_provisioning_key(request.uri)
+    return request.uri
+
+
 class ProvisioningKeyRequest(Request):
     """Request whose repr hides the provisioning key.
 
@@ -795,7 +802,7 @@ class ProvisioningKeyRequest(Request):
             self.__class__.__name__,
             id(self),
             self.method.decode('ascii', 'backslashreplace'),
-            redact_provisioning_key(self.uri).decode('ascii', 'backslashreplace'),
+            _redacted_uri(self).decode('ascii', 'backslashreplace'),
             self.clientproto.decode('ascii', 'backslashreplace'),
         )
 
@@ -806,7 +813,7 @@ class _RedactedURIRequest:
 
     @property
     def uri(self) -> bytes:
-        return redact_provisioning_key(self._request.uri)
+        return _redacted_uri(self._request)
 
     def getHeader(self, key: bytes) -> bytes | None:
         # the Referer can be another provisioning URL, key included
@@ -862,21 +869,17 @@ class HTTPRequestProcessingService(Resource):
 
     default_service = NoResource('Nowhere to route this request.')
 
-    def __init__(
-        self, process_service, pg_mgr, num_http_proxies, provisioning_key_in_url=False
-    ) -> None:
+    def __init__(self, process_service, pg_mgr, num_http_proxies) -> None:
         super().__init__()
         self._process_service = process_service
         self._pg_mgr = pg_mgr
         self.service_factory = _null_service_factory
         self._num_http_proxies = num_http_proxies
-        # When the HTTPKeyVerifyingHook is in front of this service, the
-        # request URI and path still contain the provisioning key
-        self._provisioning_key_in_url = provisioning_key_in_url
 
     @defer.inlineCallbacks
     def getChild(self, path: bytes, request: Request):
-        if self._provisioning_key_in_url:
+        # HTTPKeyVerifyingHook leaves the provisioning key in the URI and path
+        if getattr(request, 'provisioning_key_in_url', False):
             logger.info(
                 'Processing HTTP request: %s', redact_provisioning_key(request.uri)
             )
@@ -936,16 +939,22 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
     def getChild(self, path: bytes, request: Request):
         # Never log the key: neither path nor the request (its repr has the URI)
         logger.debug('URL key verifying hook')
+        required = bool(self._app.use_provisioning_key)
+        request.provisioning_key_in_url = required
 
         try:
             prov_key = path.decode('utf-8')
         except UnicodeDecodeError:
+            if not required:
+                return self._next_service(path, request)
             log_security_msg(
                 'Invalid provisioning key from %s', self._get_client_ip(request)
             )
             return self.unauthorized_resource
 
         if not prov_key:
+            if not required:
+                return self._next_service(path, request)
             log_security_msg(
                 'Empty provisioning key from %s', self._get_client_ip(request)
             )
@@ -955,6 +964,9 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
             prov_key
         )
         if not tenant_uuid:
+            # Without `url_key`, a path not starting with a key is a plain request.
+            if not required:
+                return self._next_service(path, request)
             log_security_msg(
                 'Invalid provisioning key from %s', self._get_client_ip(request)
             )
@@ -962,6 +974,7 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
 
         # Inject tenant_uuid in request object
         request.tenant_uuid = tenant_uuid
+        request.provisioning_key_in_url = True
 
         path = self._strip_key_from_request(path, request)
 

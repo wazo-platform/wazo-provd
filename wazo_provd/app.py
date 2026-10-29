@@ -1,4 +1,4 @@
-# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import annotations
@@ -220,10 +220,10 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat: int = 0
         self.tenants: dict[str, dict] = self._split_config.get('tenants', {})
+        # From the config file; a value set through the API is persisted and wins.
         self.http_auth_strategy: Literal['url_key'] | None = self._split_config[
             'general'
         ].get('http_auth_strategy')
-        self.use_provisioning_key: bool = self.http_auth_strategy == 'url_key'
 
         self.pg_mgr = PluginManager(
             self,
@@ -264,6 +264,10 @@ class ProvisioningApplication:
         auth_client = auth.get_auth_client()
         token = tenant_helpers.Token(self._token, auth_client)
         self.set_tenant_uuid(Tenant.from_token(token).uuid)
+
+    @property
+    def use_provisioning_key(self) -> bool:
+        return self.http_auth_strategy == 'url_key'
 
     def tenant_uuid(self) -> str | None:
         return self._tenant_uuid
@@ -311,21 +315,24 @@ class ProvisioningApplication:
         # no exception were raised), else false.
         device_id = device[ID_KEY]
         logger.info('Configuring device %s with plugin %s', device_id, plugin.id)
-        if self.use_provisioning_key:
-            tenant_uuid = device.get('tenant_uuid', None)
-            if not tenant_uuid:
-                logger.warning(
-                    'Device %s is using provisioning key but has no tenant_uuid',
-                    device_id,
-                )
-                return False
-            provisioning_key = self.configure_service.get(
-                'provisioning_key', tenant_uuid
-            )
-
+        # Keyed whenever the tenant has a key, so devices can move to key URLs
+        # before `url_key` is enabled; the HTTP hook accepts them in both modes.
+        tenant_uuid = device.get('tenant_uuid', None)
+        provisioning_key = (
+            self.configure_service.get('provisioning_key', tenant_uuid)
+            if tenant_uuid
+            else None
+        )
+        if provisioning_key:
             raw_config = deepcopy(raw_config)
-            http_base_url = raw_config['http_base_url']
+            http_base_url = raw_config['http_base_url'].rstrip('/')
             raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
+        elif self.use_provisioning_key:
+            logger.warning(
+                'Device %s is using provisioning key but its tenant has none',
+                device_id,
+            )
+            return False
 
         _set_defaults_raw_config(raw_config)
         try:
@@ -1297,6 +1304,26 @@ class ApplicationConfigureService:
                 return tenant
         return None
 
+    # Read-only: set from the config file, needs a restart to change.
+    def _get_param_http_auth_strategy(
+        self, *args: Any, **kwargs: Any
+    ) -> Literal['url_key'] | None:
+        return 'url_key' if self._app.http_auth_strategy == 'url_key' else None
+
+    def _set_param_http_auth_strategy(
+        self, value: str | None, tenant_uuid: str | None = None
+    ) -> None:
+        # Stack-wide, so master tenant only. No tenant: value replayed at startup.
+        if tenant_uuid is not None and tenant_uuid != self._app.tenant_uuid():
+            raise InvalidParameterError(
+                '`http_auth_strategy` can only be changed by the master tenant.'
+            )
+        if value not in (None, '', 'url_key'):
+            raise InvalidParameterError(
+                '`http_auth_strategy` should be "url_key" or null.'
+            )
+        self._app.http_auth_strategy = 'url_key' if value else None
+
     def _set_param_tenants(
         self, tenants: dict[str, dict[str, Any]], *args: Any, **kwargs: Any
     ) -> None:
@@ -1338,6 +1365,11 @@ class ApplicationConfigureService:
         ('locale', 'The current locale. Example: fr_FR'),
         ('NAT', 'Set to 1 if all the devices are behind a NAT.'),
         ('provisioning_key', 'The provisioning key for the tenant. [min: 8, max: 256]'),
+        (
+            'http_auth_strategy',
+            '"url_key" to require the tenant provisioning key in HTTP '
+            'provisioning URLs, else null. Master tenant only.',
+        ),
     ]
 
     description_fr = [
@@ -1356,5 +1388,10 @@ class ApplicationConfigureService:
         (
             'provisioning_key',
             'La clé de provisioning pour le tenant. [min: 8, max: 256]',
+        ),
+        (
+            'http_auth_strategy',
+            '"url_key" pour exiger la clé de provisioning du tenant dans les '
+            'URL de provisioning HTTP, sinon null. Tenant maître uniquement.',
         ),
     ]

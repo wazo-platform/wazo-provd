@@ -1,7 +1,8 @@
-# Copyright 2018-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2018-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from hamcrest import assert_that, calling, has_entry, has_key, has_properties
+import requests
+from hamcrest import assert_that, calling, has_entry, has_item, has_key, has_properties
 from wazo_provd_client.exceptions import ProvdError
 from wazo_test_helpers import until
 from wazo_test_helpers.hamcrest.raises import raises
@@ -180,3 +181,82 @@ class TestParams(BaseIntegrationTest):
         provd.set_tenant(SUB_TENANT_2)
         # Should not raise an error since multiple tenants can have a null provisioning key
         provd.params.update('provisioning_key', None)
+
+    def test_http_auth_strategy_defaults_to_null(self) -> None:
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', None),
+        )
+
+    def test_http_auth_strategy_is_listed(self) -> None:
+        params = self._client.params.list()['params']
+        assert_that(params, has_item(has_entry('id', 'http_auth_strategy')))
+
+    def test_http_auth_strategy_set_by_master_tenant(self) -> None:
+        self._client.params.update('http_auth_strategy', 'url_key')
+        self.addCleanup(self._client.params.update, 'http_auth_strategy', None)
+
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', 'url_key'),
+        )
+
+    def test_http_auth_strategy_invalid_value(self) -> None:
+        assert_that(
+            calling(self._client.params.update).with_args(
+                'http_auth_strategy', 'invalid'
+            ),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', None),
+        )
+
+    def test_http_auth_strategy_refused_for_sub_tenant(self) -> None:
+        provd = self.make_provd(VALID_TOKEN_MULTITENANT)
+        provd.set_tenant(SUB_TENANT_1)
+
+        assert_that(
+            calling(provd.params.update).with_args('http_auth_strategy', 'url_key'),
+            raises(ProvdError).matching(has_properties('status_code', 400)),
+        )
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', None),
+        )
+
+
+class TestParamsUrlKey(BaseIntegrationTest):
+    asset = 'url_key'
+    wait_strategy = NoWaitStrategy()
+
+    def test_http_auth_strategy_is_url_key(self) -> None:
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', 'url_key'),
+        )
+
+    def test_api_value_overrides_config_file_after_restart(self) -> None:
+        self._client.params.update('http_auth_strategy', None)
+        # Resolved at cleanup: the restart gives provd a new port, hence a new client.
+        self.addCleanup(
+            lambda: self._client.params.update('http_auth_strategy', 'url_key')
+        )
+
+        self.restart_service('provd')
+        self.set_client()
+        until.assert_(self._rest_api_is_ready, tries=60)
+
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', None),
+        )
+
+    def _rest_api_is_ready(self) -> None:
+        # Only the REST API is needed; the bus consumer still reports fail after a restart.
+        try:
+            status = self._client.status.get()
+        except requests.RequestException:
+            status = {}
+        assert_that(status, has_entry('rest_api', 'ok'))
