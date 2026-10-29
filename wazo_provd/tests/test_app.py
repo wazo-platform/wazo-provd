@@ -137,6 +137,13 @@ class TestDevConfigure(unittest.TestCase):
 
         assert self._configured_base_url() == 'http://provd:8667/tenant-key'
 
+    def test_appends_the_tenant_key_without_double_slash(self):
+        self.raw_config['http_base_url'] = 'http://provd:8667/'
+
+        assert self._configure({'id': 'd1', 'tenant_uuid': 'tenant'})
+
+        assert self._configured_base_url() == 'http://provd:8667/tenant-key'
+
     def test_keeps_the_base_url_for_a_tenant_without_key_when_url_key_is_off(self):
         self.app.configure_service.get.return_value = None
 

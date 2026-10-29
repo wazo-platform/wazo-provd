@@ -325,7 +325,7 @@ class ProvisioningApplication:
         )
         if provisioning_key:
             raw_config = deepcopy(raw_config)
-            http_base_url = raw_config['http_base_url']
+            http_base_url = raw_config['http_base_url'].rstrip('/')
             raw_config['http_base_url'] = f'{http_base_url}/{provisioning_key}'
         elif self.use_provisioning_key:
             logger.warning(
