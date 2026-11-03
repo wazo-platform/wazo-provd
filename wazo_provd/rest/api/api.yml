@@ -84,8 +84,9 @@ paths:
         **Required ACL:** `provd.configure.{param_id}.update`
 
         `http_auth_strategy` accepts `url_key` or `null`, and only from the
-        master tenant (400 otherwise). It takes effect at once and overrides
-        the `general.http_auth_strategy` configuration.
+        master tenant (400 otherwise). It takes effect at once. `url_key`
+        overrides the `general.http_auth_strategy` configuration, even after a
+        restart; `null` drops that override, so the configuration applies again.
       tags:
         - provd
       parameters:

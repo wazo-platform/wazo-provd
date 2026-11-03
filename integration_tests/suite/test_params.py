@@ -237,12 +237,23 @@ class TestParamsUrlKey(BaseIntegrationTest):
             has_entry('value', 'url_key'),
         )
 
-    def test_api_value_overrides_config_file_after_restart(self) -> None:
+    def test_null_restores_the_config_file_value(self) -> None:
         self._client.params.update('http_auth_strategy', None)
-        # Resolved at cleanup: the restart gives provd a new port, hence a new client.
-        self.addCleanup(
-            lambda: self._client.params.update('http_auth_strategy', 'url_key')
+
+        assert_that(
+            self._client.params.get('http_auth_strategy'),
+            has_entry('value', 'url_key'),
         )
+
+
+class TestParamsRestart(BaseIntegrationTest):
+    asset = 'base'
+    wait_strategy = NoWaitStrategy()
+
+    def test_api_value_overrides_config_file_after_restart(self) -> None:
+        self._client.params.update('http_auth_strategy', 'url_key')
+        # Resolved at cleanup: the restart gives provd a new port, hence a new client.
+        self.addCleanup(lambda: self._client.params.update('http_auth_strategy', None))
 
         self.restart_service('provd')
         self.set_client()
@@ -250,7 +261,7 @@ class TestParamsUrlKey(BaseIntegrationTest):
 
         assert_that(
             self._client.params.get('http_auth_strategy'),
-            has_entry('value', None),
+            has_entry('value', 'url_key'),
         )
 
     def _rest_api_is_ready(self) -> None:

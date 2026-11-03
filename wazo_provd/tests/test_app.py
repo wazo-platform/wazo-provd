@@ -50,6 +50,7 @@ class TestAppConfigureService(unittest.TestCase):
     def test_set_http_auth_strategy_from_master_tenant(self) -> None:
         self.app.tenant_uuid.return_value = 'master'
         self.app.http_auth_strategy = None
+        self.app.config_http_auth_strategy = None
 
         self.service.set('http_auth_strategy', 'url_key', tenant_uuid='master')
         assert_that(self.app.http_auth_strategy, equal_to('url_key'))
@@ -58,6 +59,17 @@ class TestAppConfigureService(unittest.TestCase):
             self.app.http_auth_strategy = 'url_key'
             self.service.set('http_auth_strategy', disabled, tenant_uuid='master')
             assert_that(self.app.http_auth_strategy, equal_to(None))
+
+    def test_set_http_auth_strategy_to_null_restores_the_config_file_value(
+        self,
+    ) -> None:
+        self.app.tenant_uuid.return_value = 'master'
+        self.app.config_http_auth_strategy = 'url_key'
+
+        for disabled in [None, '']:
+            self.app.http_auth_strategy = None
+            self.service.set('http_auth_strategy', disabled, tenant_uuid='master')
+            assert_that(self.app.http_auth_strategy, equal_to('url_key'))
 
     def test_set_http_auth_strategy_without_tenant(self) -> None:
         # Persisted values are replayed at startup, before any request.

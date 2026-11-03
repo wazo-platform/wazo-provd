@@ -11,8 +11,9 @@
   exceeded).
 * New parameter `http_auth_strategy` on `/0.2/configure/http_auth_strategy` and in
   `GET /0.2/configure`: `url_key` requires the tenant provisioning key in HTTP
-  provisioning URLs, `null` does not. Only the master tenant can `PUT` it; a value
-  set through the API overrides the `general.http_auth_strategy` configuration.
+  provisioning URLs, `null` does not. Only the master tenant can `PUT` it. `PUT`
+  `url_key` overrides the `general.http_auth_strategy` configuration; `PUT` `null`
+  drops that override, so the configuration applies again.
 
 ## 26.09
 

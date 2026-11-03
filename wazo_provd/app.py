@@ -220,10 +220,11 @@ class ProvisioningApplication:
         self.proxies = self._split_config.get('proxy', {})
         self.nat: int = 0
         self.tenants: dict[str, dict] = self._split_config.get('tenants', {})
-        # From the config file; a value set through the API is persisted and wins.
-        self.http_auth_strategy: Literal['url_key'] | None = self._split_config[
+        self.config_http_auth_strategy: Literal['url_key'] | None = self._split_config[
             'general'
         ].get('http_auth_strategy')
+        # A value set through the API is persisted and wins over the config file.
+        self.http_auth_strategy = self.config_http_auth_strategy
 
         self.pg_mgr = PluginManager(
             self,
@@ -242,6 +243,13 @@ class ProvisioningApplication:
         self.configure_service = PersistentConfigurationServiceDecorator(
             cfg_service, persister
         )
+        if self.http_auth_strategy != self.config_http_auth_strategy:
+            logger.warning(
+                'http_auth_strategy %s, set through the API, overrides %s from the '
+                'configuration file',
+                self.http_auth_strategy,
+                self.config_http_auth_strategy,
+            )
 
         self._base_raw_config = config['general']['base_raw_config']
         logger.info('Using base raw config %s', self._base_raw_config)
@@ -315,8 +323,7 @@ class ProvisioningApplication:
         # no exception were raised), else false.
         device_id = device[ID_KEY]
         logger.info('Configuring device %s with plugin %s', device_id, plugin.id)
-        # Keyed whenever the tenant has a key, so devices can move to key URLs
-        # before `url_key` is enabled; the HTTP hook accepts them in both modes.
+        # Keyed whenever the tenant has a key, so `url_key` can be enabled later.
         tenant_uuid = device.get('tenant_uuid', None)
         provisioning_key = (
             self.configure_service.get('provisioning_key', tenant_uuid)
@@ -1176,6 +1183,8 @@ def _is_string_url_safe(value: str) -> bool:
 
 class ApplicationConfigureService:
     VIRTUAL_ATTRIBUTES = {'provisioning_key': {'parent': 'tenants'}}
+    # Setting these to null drops the stored value, so the config file applies again.
+    RESET_ON_NULL = {'http_auth_strategy'}
 
     def __init__(self, pg_mgr: PluginManager, proxies, app: ProvisioningApplication):
         self._pg_mgr = pg_mgr
@@ -1304,7 +1313,6 @@ class ApplicationConfigureService:
                 return tenant
         return None
 
-    # Read-only: set from the config file, needs a restart to change.
     def _get_param_http_auth_strategy(
         self, *args: Any, **kwargs: Any
     ) -> Literal['url_key'] | None:
@@ -1322,7 +1330,9 @@ class ApplicationConfigureService:
             raise InvalidParameterError(
                 '`http_auth_strategy` should be "url_key" or null.'
             )
-        self._app.http_auth_strategy = 'url_key' if value else None
+        self._app.http_auth_strategy = (
+            'url_key' if value else self._app.config_http_auth_strategy
+        )
 
     def _set_param_tenants(
         self, tenants: dict[str, dict[str, Any]], *args: Any, **kwargs: Any

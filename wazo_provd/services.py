@@ -293,6 +293,9 @@ class PersistentConfigurationServiceDecorator:
 
     def set(self, name: str, value: Any, *args, **kwargs) -> None:
         self._cfg_service.set(name, value, *args, **kwargs)
+        if not value and name in getattr(self._cfg_service, 'RESET_ON_NULL', ()):
+            self._persister.delete(name)
+            return
         if name in getattr(self._cfg_service, 'VIRTUAL_ATTRIBUTES'):
             name = self._cfg_service.VIRTUAL_ATTRIBUTES[name]['parent']
             value = self._cfg_service.get(name)
@@ -330,3 +333,8 @@ class JsonConfigPersister:
     def update(self, name: str, value: Any) -> None:
         self._cache[name] = value
         self._save()
+
+    def delete(self, name: str) -> None:
+        if name in self._cache:
+            del self._cache[name]
+            self._save()
