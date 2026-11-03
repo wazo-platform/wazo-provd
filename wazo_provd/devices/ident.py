@@ -939,8 +939,12 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
     def getChild(self, path: bytes, request: Request):
         # Never log the key: neither path nor the request (its repr has the URI)
         logger.debug('URL key verifying hook')
-        required = bool(self._app.use_provisioning_key)
+        required = self._app.use_provisioning_key
         request.provisioning_key_in_url = required
+
+        # Without `url_key`, a lone segment is a file: a key may look like one.
+        if not required and not request.postpath:
+            return self._next_service(path, request)
 
         try:
             prov_key = path.decode('utf-8')

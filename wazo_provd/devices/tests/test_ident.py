@@ -497,6 +497,36 @@ class TestHTTPKeyVerifyingHook(unittest.TestCase):
         assert self.request.tenant_uuid == 'tenant'
         service.getChildWithDefault.assert_called_once_with('my-file', self.request)
 
+    # A tenant key may look like a file, e.g. `SEPDefault.cnf.xml`.
+    def test_get_child_passes_a_lone_segment_through_without_url_key(self):
+        app = Mock(use_provisioning_key=False)
+        app.configure_service.get_tenant_from_provisioning_key.return_value = 'tenant'
+        service = Mock(isLeaf=False)
+        self.request.prepath = [b'SEPDefault.cnf.xml']
+        self.request.postpath = []
+        hook = HTTPKeyVerifyingHook(app, service)
+
+        hook.getChild(b'SEPDefault.cnf.xml', self.request)
+
+        service.getChildWithDefault.assert_called_once_with(
+            b'SEPDefault.cnf.xml', self.request
+        )
+        app.configure_service.get_tenant_from_provisioning_key.assert_not_called()
+        assert self.request.prepath == [b'SEPDefault.cnf.xml']
+
+    def test_get_child_strips_a_lone_known_key_in_url_key_mode(self):
+        app = Mock(use_provisioning_key=True)
+        app.configure_service.get_tenant_from_provisioning_key.return_value = 'tenant'
+        service = Mock(isLeaf=False)
+        self.request.prepath = ['my-key']
+        self.request.postpath = []
+        hook = HTTPKeyVerifyingHook(app, service)
+
+        hook.getChild(b'my-key', self.request)
+
+        assert self.request.tenant_uuid == 'tenant'
+        service.getChildWithDefault.assert_called_once_with('', self.request)
+
     def test_get_child_passes_an_empty_path_through_without_url_key(self):
         app = Mock(use_provisioning_key=False)
         service = Mock(isLeaf=False)
@@ -532,7 +562,7 @@ class TestHTTPKeyVerifyingHook(unittest.TestCase):
         service.getChildWithDefault.assert_not_called()
 
     def _new_hook(self, tenant_uuid=None, trusted_proxies_count=0):
-        app = Mock()
+        app = Mock(use_provisioning_key=True)
         app.configure_service.get_tenant_from_provisioning_key.return_value = (
             tenant_uuid
         )
@@ -642,7 +672,7 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
         self.twisted_messages: list[str] = []
         globalLogPublisher.addObserver(self._observe_twisted)
 
-        self.app = Mock()
+        self.app = Mock(use_provisioning_key=True)
         self.app.configure_service.get_tenant_from_provisioning_key.side_effect = (
             lambda key: 'tenant-uuid' if key == 'validkey-123' else None
         )
