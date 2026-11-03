@@ -97,6 +97,28 @@ def test_raw_config_invalid() -> None:
     ]
 
 
+def test_raw_config_vlan_enabled_without_id_means_untagged() -> None:
+    values = {
+        'ip': 'localhost',
+        'vlan_enabled': True,
+        'vlan_pc_port_id': 10,
+    }
+    config = RawConfigSchema(**values)
+    assert config.dict()['vlan_id'] is None
+    assert config.dict()['vlan_pc_port_id'] == 10
+
+
+def test_raw_config_vlan_id_zero_is_still_accepted() -> None:
+    values = {
+        'ip': 'localhost',
+        'vlan_enabled': True,
+        'vlan_id': 0,
+        'vlan_pc_port_id': 10,
+    }
+    config = RawConfigSchema(**values)
+    assert config.dict()['vlan_id'] == 0
+
+
 def test_sip_line() -> None:
     config: dict[str, Any] = {'raw_config': {}}
     result = build_autocreate_config(config)  # type: ignore

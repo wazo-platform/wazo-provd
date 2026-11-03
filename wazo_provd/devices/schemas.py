@@ -195,7 +195,6 @@ def validate_values(cls: type[BaseModel], values: dict[str, Any]) -> dict[str, A
     required_if_enabled = (
         ('dns', 'ip'),
         ('ntp', 'ip'),
-        ('vlan', 'id'),
         ('syslog', 'ip'),
     )
     for field, name in required_if_enabled:
