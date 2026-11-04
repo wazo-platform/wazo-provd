@@ -1,4 +1,4 @@
-# Copyright 2010-2024 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2010-2026 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import annotations
@@ -204,23 +204,17 @@ class HTTPProxiedProcessService(Service):
         process_service = self._process_service.request_processing
         trusted_proxies_count = config['http_proxied_trusted_proxies_count']
         http_process_service = ident.HTTPRequestProcessingService(
-            process_service,
-            app.pg_mgr,
-            trusted_proxies_count,
-            provisioning_key_in_url=app.use_provisioning_key,
+            process_service, app.pg_mgr, trusted_proxies_count
         )
-        if app.use_provisioning_key:
-            logger.info('Using in-URL provisioning key')
-            http_process_service = ident.HTTPKeyVerifyingHook(
-                app, http_process_service, trusted_proxies_count
-            )
-            site = Site(
-                http_process_service,
-                requestFactory=ident.ProvisioningKeyRequest,
-                logFormatter=ident.redacted_combined_log_formatter,
-            )
-        else:
-            site = Site(http_process_service)
+        # Always installed: strips known keys in every mode, requires one with `url_key`.
+        http_process_service = ident.HTTPKeyVerifyingHook(
+            app, http_process_service, trusted_proxies_count
+        )
+        site = Site(
+            http_process_service,
+            requestFactory=ident.ProvisioningKeyRequest,
+            logFormatter=ident.redacted_combined_log_formatter,
+        )
         interface = config['http_proxied_listen_interface']
         port = config['http_proxied_listen_port']
         logger.info('Binding HTTP-proxied provisioning service to port %s', port)
