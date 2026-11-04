@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
-from twisted.web import http, rewrite
+from twisted.python.filepath import InsecurePath
+from twisted.web import http, rewrite, static
 from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.iweb import IAccessLogFormatter
 from twisted.web.resource import ErrorPage, NoResource, Resource
@@ -976,6 +977,11 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
             )
             return self.unauthorized_resource
 
+        # Without `url_key`, a key may be named like a plugin directory (e.g.
+        # `Grandstream`); the plugin's files win. The device's plugin is not known yet.
+        if not required and self._is_plugin_path(path):
+            return self._next_service(path, request)
+
         # Inject tenant_uuid in request object
         request.tenant_uuid = tenant_uuid
         request.provisioning_key_in_url = True
@@ -989,6 +995,23 @@ class HTTPKeyVerifyingHook(BaseHTTPHookService):
             request.postpath,
         )
         return self._next_service(path, request)
+
+    def _is_plugin_path(self, segment: bytes) -> bool:
+        return any(
+            self._serves(plugin.http_service, segment)
+            for plugin in self._app.pg_mgr.values()
+        )
+
+    @staticmethod
+    def _serves(service: Resource | None, segment: bytes) -> bool:
+        if isinstance(service, static.File):
+            try:
+                # Rejects separators and `..`; the basename check rejects `.`.
+                child = service.child(segment)
+            except InsecurePath:
+                return False
+            return child.basename() == segment and child.exists()
+        return segment in getattr(service, 'children', {})
 
     def _get_client_ip(self, request: Request) -> str:
         # request.num_http_proxies is only set later, by

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from collections.abc import Generator
 from io import BytesIO
 from typing import Any
@@ -14,6 +16,8 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.logger import formatEvent, globalLogPublisher
 from twisted.trial import unittest
+from twisted.web import static
+from twisted.web.resource import Resource
 from twisted.web.test.requesthelper import DummyChannel
 
 from wazo_provd.devices import ident
@@ -487,6 +491,7 @@ class TestHTTPKeyVerifyingHook(unittest.TestCase):
     def test_get_child_strips_a_known_key_without_url_key(self):
         app = Mock(use_provisioning_key=False)
         app.configure_service.get_tenant_from_provisioning_key.return_value = 'tenant'
+        app.pg_mgr.values.return_value = []
         service = Mock(isLeaf=False)
         self.request.prepath = ['my-key']
         self.request.postpath = ['my-file']
@@ -526,6 +531,83 @@ class TestHTTPKeyVerifyingHook(unittest.TestCase):
 
         assert self.request.tenant_uuid == 'tenant'
         service.getChildWithDefault.assert_called_once_with('', self.request)
+
+    def _plugin_serving(self, *names: str) -> Mock:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        for name in names:
+            os.mkdir(os.path.join(directory.name, name))
+        return Mock(http_service=static.File(directory.name))
+
+    def _known_key_hook(self, required: bool, *plugins: Mock):
+        app = Mock(use_provisioning_key=required)
+        app.configure_service.get_tenant_from_provisioning_key.return_value = 'tenant'
+        app.pg_mgr.values.return_value = list(plugins)
+        service = Mock(isLeaf=False)
+        self.request = Mock(spec=['prepath', 'postpath'])
+        self.request.prepath = [b'Grandstream']
+        self.request.postpath = [b'file.cfg']
+        return HTTPKeyVerifyingHook(app, service), service
+
+    # A tenant key named like a plugin directory would take it over for every tenant.
+    def test_get_child_serves_a_plugin_path_named_like_a_key_without_url_key(self):
+        hook, service = self._known_key_hook(
+            False, self._plugin_serving(), self._plugin_serving('Grandstream')
+        )
+
+        hook.getChild(b'Grandstream', self.request)
+
+        service.getChildWithDefault.assert_called_once_with(
+            b'Grandstream', self.request
+        )
+        assert self.request.prepath == [b'Grandstream']
+        assert not hasattr(self.request, 'tenant_uuid')
+
+    def test_get_child_strips_a_key_not_served_by_a_plugin_without_url_key(self):
+        hook, service = self._known_key_hook(False, self._plugin_serving('Yealink'))
+
+        hook.getChild(b'Grandstream', self.request)
+
+        assert self.request.tenant_uuid == 'tenant'
+        service.getChildWithDefault.assert_called_once_with(b'file.cfg', self.request)
+
+    def test_get_child_strips_a_key_named_like_a_plugin_path_in_url_key_mode(self):
+        hook, service = self._known_key_hook(True, self._plugin_serving('Grandstream'))
+
+        hook.getChild(b'Grandstream', self.request)
+
+        assert self.request.tenant_uuid == 'tenant'
+        service.getChildWithDefault.assert_called_once_with(b'file.cfg', self.request)
+
+    def test_get_child_only_checks_plugin_paths_for_a_known_key(self):
+        app = Mock(use_provisioning_key=False)
+        app.configure_service.get_tenant_from_provisioning_key.return_value = None
+        self.request.postpath = [b'file.cfg']
+        hook = HTTPKeyVerifyingHook(app, Mock(isLeaf=False))
+
+        hook.getChild(b'unknown', self.request)
+
+        app.pg_mgr.values.assert_not_called()
+
+    def test_serves_a_file_child(self):
+        service = self._plugin_serving('Grandstream').http_service
+
+        assert HTTPKeyVerifyingHook._serves(service, b'Grandstream')
+        assert not HTTPKeyVerifyingHook._serves(service, b'Yealink')
+
+    def test_serves_nothing_outside_the_plugin_dir(self):
+        service = self._plugin_serving().http_service
+
+        assert not HTTPKeyVerifyingHook._serves(service, b'..')
+        assert not HTTPKeyVerifyingHook._serves(service, b'.')
+
+    def test_serves_a_resource_child(self):
+        root = Resource()
+        root.putChild(b'jitsi', Resource())
+
+        assert HTTPKeyVerifyingHook._serves(root, b'jitsi')
+        assert not HTTPKeyVerifyingHook._serves(root, b'other')
+        assert not HTTPKeyVerifyingHook._serves(None, b'jitsi')
 
     def test_get_child_passes_an_empty_path_through_without_url_key(self):
         app = Mock(use_provisioning_key=False)
@@ -673,6 +755,7 @@ class TestProvisioningKeyNotLogged(unittest.TestCase):
         globalLogPublisher.addObserver(self._observe_twisted)
 
         self.app = Mock(use_provisioning_key=True)
+        self.app.pg_mgr.values.return_value = []
         self.app.configure_service.get_tenant_from_provisioning_key.side_effect = (
             lambda key: 'tenant-uuid' if key == 'validkey-123' else None
         )
